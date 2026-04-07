@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>木子家線上訂單系統</title>
+  <title>木子家MUZI-MAISON線上訂單系統</title>
   
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
@@ -526,7 +526,7 @@
         
         confirmedOrders.forEach(o => {
           html += `<div class="print-page">
-            <h1>木子家 - 出貨明細單</h1>
+            <h1>木子家MUZI-MAISON - 出貨明細單</h1>
             <p style="text-align:right; font-size: 0.9em; margin-top:-10px;">列印時間：${new Date().toLocaleString()}</p>
             <div class="order-header"><span>訂單編號：${o.id}</span><span>${o.deliveryMethod === 'delivery' ? '🚚 宅配' : '🏪 自取'}</span></div>
             <div class="info-grid">
