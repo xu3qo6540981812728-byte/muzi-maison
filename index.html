@@ -8,10 +8,15 @@
   <!-- 載入 React 核心 -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  <!-- 載入 Babel (讓瀏覽器看得懂現代 React 語法) -->
+  <!-- 載入 Babel -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <!-- 載入 Tailwind CSS 樣式 -->
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- 🚀 載入 Firebase 核心套件 (V8版本，最適合單檔整合) -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
 </head>
 <body class="bg-stone-100">
@@ -20,7 +25,25 @@
   <script type="text/babel">
     const { useState, useMemo, useEffect } = React;
 
-    // --- 圖示元件 (取代原本需要安裝的套件) ---
+    // === 👇 步驟1：請將這裡替換為您在 Firebase 取得的專屬金鑰 ===
+    const firebaseConfig = {
+      apiKey: "請填入您的apiKey",
+      authDomain: "請填入您的authDomain",
+      projectId: "請填入您的projectId",
+      storageBucket: "請填入您的storageBucket",
+      messagingSenderId: "請填入您的messagingSenderId",
+      appId: "請填入您的appId"
+    };
+
+    // 初始化 Firebase (防呆機制：確保只初始化一次)
+    if (!firebase.apps.length && !firebaseConfig.apiKey.includes("請填入")) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.apps.length ? firebase.firestore() : null;
+    const auth = firebase.apps.length ? firebase.auth() : null;
+    // =========================================================
+
+    // --- 圖示元件 ---
     const ShoppingCart = ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>;
     const Plus = ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>;
     const Minus = ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/></svg>;
@@ -31,8 +54,10 @@
     const Settings = ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>;
     const Camera = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>;
     const ImageIcon = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>;
+    const Lock = ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>;
+    const LogOut = ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>;
 
-    // --- 預設商品資料 ---
+    // 預設商品資料
     const defaultProducts = [
       { id: 'AA01', name: '綜合原味堅果', desc: '含腰果、杏仁、核桃、夏威夷豆、胡桃', weight: '400克', price: 300, category: '堅果系列', image: 'https://images.unsplash.com/photo-1599598425947-33002620dc24?auto=format&fit=crop&w=300&q=80' },
       { id: 'AA02', name: '原味腰果', desc: '產地: 越南', weight: '420克', price: 290, category: '堅果系列', image: 'https://images.unsplash.com/photo-1596591321045-812bc6547847?auto=format&fit=crop&w=300&q=80' },
@@ -51,15 +76,15 @@
       { id: 'C03', name: '南瓜子酥', desc: '任選3包優惠價550元', weight: '200克', price: 200, category: '酥糖系列(3包550)', image: 'https://images.unsplash.com/photo-1598155523122-3842334d6c1f?auto=format&fit=crop&w=300&q=80' }
     ];
 
-    // --- 主程式開始 ---
     function App() {
+      // --- 狀態管理 ---
       const [isAdminMode, setIsAdminMode] = useState(false);
-      const [logo, setLogo] = useState(() => localStorage.getItem('muzi_logo') || null);
-      
-      const [products, setProducts] = useState(() => {
-        const saved = localStorage.getItem('muzi_products');
-        return saved ? JSON.parse(saved) : defaultProducts;
-      });
+      const [showLoginModal, setShowLoginModal] = useState(false);
+      const [emailInput, setEmailInput] = useState('');
+      const [passwordInput, setPasswordInput] = useState('');
+
+      const [logo, setLogo] = useState(null);
+      const [products, setProducts] = useState(defaultProducts);
 
       const [cart, setCart] = useState({});
       const [isCartOpen, setIsCartOpen] = useState(false);
@@ -67,9 +92,71 @@
       const [activeCategory, setActiveCategory] = useState('全部');
       const [deliveryMethod, setDeliveryMethod] = useState('delivery');
 
-      useEffect(() => { localStorage.setItem('muzi_products', JSON.stringify(products)); }, [products]);
-      useEffect(() => { if (logo) localStorage.setItem('muzi_logo', logo); }, [logo]);
+      // --- 🚀 Firebase 資料庫與驗證邏輯 ---
+      useEffect(() => {
+        if (!db || !auth) return; // 如果還沒設定 Firebase 金鑰，就不執行雲端同步
 
+        // 1. 監聽登入狀態
+        const unsubscribeAuth = auth.onAuthStateChanged(user => {
+          setIsAdminMode(!!user); // 有 user 代表已登入，開啟管理模式
+        });
+
+        // 2. 監聽 Logo 資料
+        const unsubscribeLogo = db.collection('settings').doc('store').onSnapshot(doc => {
+          if (doc.exists && doc.data().logo) {
+            setLogo(doc.data().logo);
+          }
+        });
+
+        // 3. 監聽商品資料
+        const unsubscribeProducts = db.collection('products').onSnapshot(snapshot => {
+          if (snapshot.empty) {
+            // 如果資料庫是空的 (第一次用)，把預設商品寫入資料庫
+            defaultProducts.forEach(p => {
+              db.collection('products').doc(p.id).set(p);
+            });
+          } else {
+            // 從資料庫讀取最新資料
+            const items = snapshot.docs.map(doc => doc.data());
+            items.sort((a, b) => a.id.localeCompare(b.id)); // 依據品號排序
+            setProducts(items);
+          }
+        });
+
+        return () => {
+          unsubscribeAuth();
+          unsubscribeLogo();
+          unsubscribeProducts();
+        };
+      }, []);
+
+      // --- 登入與登出邏輯 ---
+      const handleAdminClick = () => {
+        if (isAdminMode && auth) {
+          auth.signOut(); // 登出
+        } else {
+          setShowLoginModal(true); // 顯示登入框
+        }
+      };
+
+      const handleLoginSubmit = () => {
+        if (!auth) {
+          alert("請先完成 Firebase 金鑰設定哦！");
+          return;
+        }
+        auth.signInWithEmailAndPassword(emailInput, passwordInput)
+          .then(() => {
+            setShowLoginModal(false);
+            setEmailInput('');
+            setPasswordInput('');
+          })
+          .catch((error) => {
+            alert("登入失敗，請檢查帳號密碼是否正確！");
+            console.error(error);
+          });
+      };
+
+      // --- 圖片壓縮與上傳 (上傳到資料庫) ---
       const handleImageUpload = (file, callback) => {
         if (!file) return;
         const reader = new FileReader();
@@ -95,16 +182,27 @@
         reader.readAsDataURL(file);
       };
 
-      const onLogoChange = (e) => handleImageUpload(e.target.files[0], setLogo);
-      const onProductImageChange = (productId, e) => {
+      const onLogoChange = (e) => {
         handleImageUpload(e.target.files[0], (base64Str) => {
-          setProducts(prev => prev.map(p => p.id === productId ? { ...p, image: base64Str } : p));
+          if (db) db.collection('settings').doc('store').set({ logo: base64Str }, { merge: true });
+          else setLogo(base64Str); // 若未連線資料庫，暫存本地預覽
         });
       };
-      const onProductPriceChange = (productId, newPrice) => {
-        setProducts(prev => prev.map(p => p.id === productId ? { ...p, price: Number(newPrice) || 0 } : p));
+
+      const onProductImageChange = (productId, e) => {
+        handleImageUpload(e.target.files[0], (base64Str) => {
+          if (db) db.collection('products').doc(productId).update({ image: base64Str });
+          else setProducts(prev => prev.map(p => p.id === productId ? { ...p, image: base64Str } : p));
+        });
       };
 
+      const onProductPriceChange = (productId, newPrice) => {
+        const numPrice = Number(newPrice) || 0;
+        if (db) db.collection('products').doc(productId).update({ price: numPrice });
+        else setProducts(prev => prev.map(p => p.id === productId ? { ...p, price: numPrice } : p));
+      };
+
+      // --- 購物車與結帳邏輯 ---
       const categories = ['全部', ...new Set(products.map(p => p.category))];
       const displayedCategories = activeCategory === '全部' ? categories.filter(c => c !== '全部') : [activeCategory];
 
@@ -181,9 +279,15 @@
                   <p className="text-[10px] text-stone-400 font-semibold tracking-widest uppercase">Muzi Maison</p>
                 </div>
               </div>
-              <button onClick={() => setIsAdminMode(!isAdminMode)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${isAdminMode ? 'bg-rose-100 text-rose-700' : 'bg-stone-100 text-stone-500'}`}>
-                <Settings size={14} />{isAdminMode ? '完成編輯' : '管理'}
+              
+              <button 
+                onClick={handleAdminClick} 
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${isAdminMode ? 'bg-rose-100 text-rose-700' : 'bg-stone-100 text-stone-500 hover:bg-stone-200'}`}
+              >
+                {isAdminMode ? <LogOut size={14} /> : <Lock size={14} />}
+                {isAdminMode ? '登出管理' : '管理員'}
               </button>
+
             </header>
             <div className="px-4 pb-3 flex gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {categories.map(category => (
@@ -237,6 +341,7 @@
             ))}
           </main>
 
+          {/* 購物車懸浮按鈕 */}
           {cartData.totalQty > 0 && !isAdminMode && (
             <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto p-4 bg-gradient-to-t from-white via-white to-transparent pointer-events-none">
               <button onClick={() => setIsCartOpen(true)} className="w-full bg-stone-800 text-white rounded-2xl p-4 flex items-center justify-between shadow-xl pointer-events-auto active:scale-95 transition-transform">
@@ -252,6 +357,7 @@
             </div>
           )}
 
+          {/* 購物車結帳彈窗 (與之前相同，省略重複修改以節省版面) */}
           {isCartOpen && (
             <div className="fixed inset-0 z-50 flex justify-center items-end bg-black/50 backdrop-blur-sm sm:items-center">
               <div className="w-full max-w-md bg-[#Fdfbf7] rounded-t-3xl sm:rounded-3xl h-[85vh] sm:h-auto sm:max-h-[85vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-full duration-300">
@@ -314,6 +420,55 @@
               </div>
             </div>
           )}
+
+          {/* === 登入彈出視窗 (更新為信箱+密碼) === */}
+          {showLoginModal && (
+            <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4">
+              <div className="bg-white p-6 rounded-3xl shadow-2xl w-full max-w-xs animate-in zoom-in-95 duration-200">
+                <h3 className="text-lg font-bold text-stone-800 mb-4 flex items-center gap-2 justify-center">
+                  <Lock size={20} className="text-amber-600" /> 管理員登入
+                </h3>
+                <p className="text-xs text-stone-500 text-center mb-4">請輸入資料庫管理員帳號密碼</p>
+                
+                <input
+                  type="email"
+                  placeholder="請輸入 Email 帳號"
+                  value={emailInput}
+                  onChange={(e) => setEmailInput(e.target.value)}
+                  className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 mb-3 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 font-medium text-stone-700"
+                />
+                
+                <input
+                  type="password"
+                  placeholder="請輸入密碼"
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleLoginSubmit()}
+                  className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 mb-5 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 font-medium text-stone-700"
+                />
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowLoginModal(false);
+                      setEmailInput('');
+                      setPasswordInput('');
+                    }}
+                    className="flex-1 bg-stone-100 text-stone-600 font-bold py-3 rounded-xl active:scale-95 transition-transform"
+                  >
+                    取消
+                  </button>
+                  <button
+                    onClick={handleLoginSubmit}
+                    className="flex-1 bg-amber-500 text-white font-bold py-3 rounded-xl shadow-md active:scale-95 transition-transform"
+                  >
+                    登入
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
       );
     }
