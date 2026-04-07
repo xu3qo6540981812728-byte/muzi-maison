@@ -7,11 +7,21 @@
   <!-- === 👇 步驟1：社群分享預覽設定 (Open Graph Meta Tags) === -->
   <!-- 這是為了讓別人把網址傳到 LINE 或 FB 時，會有預覽圖跟標題 -->
   <title>木子家MUZI MAISON線上訂單系統</title>
+  
+  <!-- 基本 FB/LINE 預覽標籤 -->
   <meta property="og:title" content="木子家MUZI MAISON線上訂單系統">
   <meta property="og:description" content="嚴選優質商品，提供最便利的線上訂購體驗。快來逛逛吧！">
-  <!-- ⚠️ 重要：請將下方的 content 替換成您自己的 LOGO 或商品圖的「絕對公開網址」 (例如上傳到 imgur 或 Firebase Storage 取得的網址) -->
-  <meta property="og:image" content="https://raw.githubusercontent.com/xu3qo6540981812728-byte/muzi-maison/refs/heads/main/logo.png">
   <meta property="og:type" content="website">
+  <!-- ⚠️ 使用正式的 GitHub Pages 網址 -->
+  <meta property="og:url" content="https://xu3qo6540981812728-byte.github.io/muzi-maison/">
+  <meta property="og:image" content="https://raw.githubusercontent.com/xu3qo6540981812728-byte/muzi-maison/refs/heads/main/logo.png">
+  <meta property="og:image:secure_url" content="https://raw.githubusercontent.com/xu3qo6540981812728-byte/muzi-maison/refs/heads/main/logo.png">
+  
+  <!-- Twitter/IG 等其他平台預覽標籤 -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="木子家MUZI MAISON線上訂單系統">
+  <meta name="twitter:description" content="嚴選優質商品，提供最便利的線上訂購體驗。快來逛逛吧！">
+  <meta name="twitter:image" content="https://raw.githubusercontent.com/xu3qo6540981812728-byte/muzi-maison/refs/heads/main/logo.png">
   
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
@@ -139,7 +149,8 @@
       const [mergeSelection, setMergeSelection] = useState([]);
 
       // --- 資料狀態 ---
-      const [logo, setLogo] = useState(null);
+      // 👇 這裡改為直接抓取 GitHub 資料夾內的相對路徑
+      const [logo, setLogo] = useState('./logo.png');
       const [products, setProducts] = useState(defaultProducts);
       const [storeConfig, setStoreConfig] = useState(defaultStoreConfig);
       const [cart, setCart] = useState({});
