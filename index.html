@@ -76,28 +76,8 @@
       'cancelled': { label: '已取消', color: 'bg-stone-200 text-stone-600' }
     };
 
-    // 預設商品資料
-    const getBaseProduct = (id, name, desc, weight, price, category, image, isPromo = false) => ({
-      id, name, desc, weight, price, category, image, intro: '', ingredients: '', notices: '', extraImages: [], isPromo
-    });
-
-    const defaultProducts = [
-      getBaseProduct('AA01', '綜合原味堅果', '含腰果、杏仁、核桃、夏威夷豆、胡桃', '400克', 300, '堅果系列', 'https://images.unsplash.com/photo-1599598425947-33002620dc24?auto=format&fit=crop&w=300&q=80'),
-      getBaseProduct('AA02', '原味腰果', '產地: 越南', '420克', 290, '堅果系列', 'https://images.unsplash.com/photo-1596591321045-812bc6547847?auto=format&fit=crop&w=300&q=80'),
-      getBaseProduct('AA03', '原味杏仁果', '產地: 美國', '480克', 290, '堅果系列', 'https://images.unsplash.com/photo-1600189021966-38448880e6fc?auto=format&fit=crop&w=300&q=80'),
-      getBaseProduct('AA04', '原味核桃', '產地: 美國', '420克', 290, '堅果系列', 'https://images.unsplash.com/photo-1595089601334-032228807d9f?auto=format&fit=crop&w=300&q=80'),
-      getBaseProduct('AA05', '原味夏威夷豆', '產地: 澳洲', '250克', 290, '堅果系列', 'https://images.unsplash.com/photo-1560064560-692556af10c2?auto=format&fit=crop&w=300&q=80'),
-      getBaseProduct('AA06', '原味胡桃', '產地: 美國', '280克', 290, '堅果系列', 'https://images.unsplash.com/photo-1574345229051-5079a40594db?auto=format&fit=crop&w=300&q=80'),
-      getBaseProduct('AA07', '原味南瓜子', '', '430克', 290, '堅果系列', 'https://images.unsplash.com/photo-1600854298132-72cba2dfbb61?auto=format&fit=crop&w=300&q=80'),
-      getBaseProduct('AA09', '蔓越莓果粒', '', '600克', 290, '果乾系列', 'https://images.unsplash.com/photo-1628588523555-52077e68270d?auto=format&fit=crop&w=300&q=80'),
-      getBaseProduct('BB02', '南棗核桃糕', '', '300克', 270, '糖果軟糕', 'https://images.unsplash.com/photo-1582293041079-7814c2f12063?auto=format&fit=crop&w=300&q=80'),
-      getBaseProduct('BB03', '南棗夏威夷豆軟糕', '', '300克', 350, '糖果軟糕', 'https://images.unsplash.com/photo-1621236166155-3818e697d446?auto=format&fit=crop&w=300&q=80'),
-      getBaseProduct('B06', '夏威夷豆牛軋糖', '', '300克', 320, '糖果軟糕', 'https://images.unsplash.com/photo-1549449339-bb46cb2ce963?auto=format&fit=crop&w=300&q=80'),
-      getBaseProduct('B10', '夏威夷豆牛奶糖', '', '300克', 350, '糖果軟糕', 'https://images.unsplash.com/photo-1506458961255-571f40df5aad?auto=format&fit=crop&w=300&q=80'),
-      getBaseProduct('CC19', '黑金磚養生芝麻軟糖', '參與任選優惠活動', '300克', 200, '酥糖系列(3包550)', 'https://images.unsplash.com/photo-1610435427181-229ea45147be?auto=format&fit=crop&w=300&q=80', true),
-      getBaseProduct('C02', '杏仁酥', '參與任選優惠活動', '200克', 200, '酥糖系列(3包550)', 'https://images.unsplash.com/photo-1605206786523-22870ad46718?auto=format&fit=crop&w=300&q=80', true),
-      getBaseProduct('C03', '南瓜子酥', '參與任選優惠活動', '200克', 200, '酥糖系列(3包550)', 'https://images.unsplash.com/photo-1598155523122-3842334d6c1f?auto=format&fit=crop&w=300&q=80', true)
-    ];
+    // 清空預設商品，不再自動寫入範例資料
+    const defaultProducts = [];
 
     const defaultStoreConfig = { shippingFee: 100, freeShippingThreshold: 12, promoQty: 3, promoPrice: 550, wholesaleThreshold: 12 };
 
@@ -202,7 +182,7 @@
 
         const unsubscribeProducts = db.collection('products').onSnapshot(snapshot => {
           if (snapshot.empty) {
-            defaultProducts.forEach(p => db.collection('products').doc(p.id).set(p));
+             // 如果沒資料，也不再塞預設商品了，保持空資料即可
           } else {
             const items = snapshot.docs.map(doc => doc.data());
             items.sort((a, b) => a.id.localeCompare(b.id));
@@ -509,7 +489,7 @@
         const confirmedOrders = allOrders.filter(o => o.status === 'confirmed');
         if (confirmedOrders.length === 0) return alert("目前沒有「已匯款，確認訂單」狀態的訂單可以列印！");
         
-        let html = `<html><head><title>木子家 - 出貨明細單</title>
+        let html = `<html><head><title>木子家MUZI-MAISON - 出貨明細單</title>
         <style>
           body { font-family: "Microsoft JhengHei", sans-serif; line-height: 1.5; margin: 0; padding: 0; background: #fff; color: #000; }
           .print-page { page-break-after: always; break-after: page; padding: 20px; box-sizing: border-box; width: 100%; max-width: 800px; margin: 0 auto; }
@@ -520,7 +500,9 @@
           table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 15px; }
           th, td { border: 1px solid #333; padding: 10px; text-align: left; }
           th { background: #f0f0f0; }
-          .total { text-align: right; font-weight: bold; font-size: 1.4em; margin-top: 20px; color: #000; }
+          .total-box { margin-top: 20px; padding-top: 15px; border-top: 2px solid #333; text-align: right; font-size: 1.1em; }
+          .total-row { display: flex; justify-content: flex-end; gap: 20px; margin-bottom: 5px; }
+          .total-final { font-weight: bold; font-size: 1.4em; margin-top: 10px; color: #000; }
           .note-box { margin-top: 15px; padding: 10px; border: 1px solid #333; background: #fafafa; font-size: 1em; }
         </style></head><body>`;
         
@@ -539,9 +521,16 @@
               <tr><th>商品名稱</th><th>單價</th><th>重量</th><th>數量</th><th>小計</th></tr>
               ${o.items.map(i => `<tr><td>${i.name}</td><td>$${i.price}</td><td>${i.weight}</td><td>${i.qty}</td><td>$${i.price * i.qty}</td></tr>`).join('')}
             </table>
+            
             ${o.orderNote ? `<div class="note-box"><strong>買家/訂單備註：</strong><br/>${o.orderNote.replace(/\n/g, '<br/>')}</div>` : ''}
             ${o.mergeNote ? `<div class="note-box"><strong>系統備註：</strong><br/>${o.mergeNote}</div>` : ''}
-            <div class="total">總計金額：$${o.totals.finalPrice}</div>
+            
+            <div class="total-box">
+              <div class="total-row"><span>商品小計：</span><span>$${o.totals.itemsBaseTotal}</span></div>
+              ${o.totals.discountAmount > 0 ? `<div class="total-row" style="color: #e11d48;"><span>活動折抵：</span><span>-$${o.totals.discountAmount}</span></div>` : ''}
+              <div class="total-row"><span>運費：</span><span>$${o.totals.shippingFee}</span></div>
+              <div class="total-final"><span>總計金額：</span><span>$${o.totals.finalPrice}</span></div>
+            </div>
           </div>`;
         });
         html += '</body></html>';
@@ -969,9 +958,14 @@
                                 <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs font-bold text-blue-700 text-center">💡 為保持良好的賞味，皆 7～15 天出貨，感謝您的耐心等候！</div>
                               )}
 
-                              <div className="flex justify-between items-center mt-2 pt-2 border-t border-stone-100">
-                                {isCancellable ? <button onClick={() => requestCancelOrder(order.id)} className="text-xs text-stone-400 hover:text-rose-500 font-bold transition-colors underline">申請取消訂單</button> : <div></div>}
-                                <div className="font-black text-amber-600 text-lg">總計：${order.totals.finalPrice}</div>
+                              <div className="flex justify-between items-end mt-4 pt-3 border-t border-stone-100">
+                                {isCancellable ? <button onClick={() => requestCancelOrder(order.id)} className="text-xs text-stone-400 hover:text-rose-500 font-bold transition-colors underline mb-1">申請取消訂單</button> : <div></div>}
+                                <div className="text-right text-xs text-stone-500 space-y-1">
+                                  <div>商品小計：${order.totals.itemsBaseTotal}</div>
+                                  {order.totals.discountAmount > 0 && <div className="text-rose-500">活動折抵：-${order.totals.discountAmount}</div>}
+                                  <div>運費：${order.totals.shippingFee}</div>
+                                  <div className="font-black text-amber-600 text-xl pt-1">總計：${order.totals.finalPrice}</div>
+                                </div>
                               </div>
                             </div>
                           );
@@ -1083,9 +1077,16 @@
                               </div>
                             </div>
                             
-                            <div className="border-t border-stone-100 pt-3 flex justify-between items-center mt-auto">
-                              <span className="text-xs text-stone-400 font-bold">運費 ${order.totals.shippingFee}</span>
-                              <span className="font-black text-amber-600 text-xl">${order.totals.finalPrice}</span>
+                            <div className="mt-auto border-t border-stone-100 pt-3">
+                              <div className="bg-stone-50 p-2 rounded-lg text-right text-xs text-stone-500 mb-2 space-y-1">
+                                 <div className="flex justify-between"><span>商品小計</span><span>${order.totals.itemsBaseTotal}</span></div>
+                                 {order.totals.discountAmount > 0 && <div className="flex justify-between text-rose-500"><span>活動折抵</span><span>-${order.totals.discountAmount}</span></div>}
+                                 <div className="flex justify-between"><span>運費</span><span>${order.totals.shippingFee}</span></div>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs text-stone-500 font-bold">總金額</span>
+                                <span className="font-black text-amber-600 text-xl">${order.totals.finalPrice}</span>
+                              </div>
                             </div>
                           </div>
                         );
@@ -1208,7 +1209,19 @@
                                     )}
                                     <div>
                                       <div className="flex items-center gap-2">
-                                        <span className="font-black text-stone-800 text-lg tracking-wide">{order.id}</span>
+                                        <span 
+                                          className="font-black text-blue-600 hover:text-blue-800 text-lg tracking-wide cursor-pointer underline"
+                                          title="點擊前往訂單詳情"
+                                          onClick={(e) => {
+                                            e.stopPropagation(); // 避免觸發外層的合併選擇
+                                            setShowAdminCustomers(false);
+                                            setOrderSearchId(order.id);
+                                            setOrderStatusFilter('all');
+                                            setShowAdminOrders(true);
+                                          }}
+                                        >
+                                          {order.id}
+                                        </span>
                                         <span className={`px-2 py-0.5 rounded text-xs font-bold ${STATUS_MAP[order.status]?.color || 'bg-stone-100'}`}>{STATUS_MAP[order.status]?.label}</span>
                                         {order.isMerged && <span className="text-[10px] bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded inline-block">已合併</span>}
                                       </div>
@@ -1223,8 +1236,10 @@
                                     </div>
                                   </div>
                                   <div className="text-right shrink-0">
-                                    <div className="text-xs text-stone-400 mb-1">總計金額</div>
-                                    <div className="font-black text-amber-600 text-xl">${order.totals.finalPrice}</div>
+                                    <div className="text-xs text-stone-500">商品小計: ${order.totals.itemsBaseTotal}</div>
+                                    {order.totals.discountAmount > 0 && <div className="text-xs text-rose-500">折抵: -${order.totals.discountAmount}</div>}
+                                    <div className="text-xs text-stone-500">運費: ${order.totals.shippingFee}</div>
+                                    <div className="font-black text-amber-600 text-xl mt-1">${order.totals.finalPrice}</div>
                                   </div>
                                 </div>
                               );
