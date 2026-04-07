@@ -13,7 +13,7 @@
   <!-- 載入 Tailwind CSS 樣式 -->
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- 🚀 載入 Firebase 核心套件 (V8版本，最適合單檔整合) -->
+  <!-- 🚀 載入 Firebase 核心套件 -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -27,15 +27,15 @@
 
     // === 👇 步驟1：請將這裡替換為您在 Firebase 取得的專屬金鑰 ===
     const firebaseConfig = {
-    apiKey: "AIzaSyCrZX5PnfzLEAyxLBoHpuM59VoW3kXVxBY",
-    authDomain: "muzi-maison-db.firebaseapp.com",
-    projectId: "muzi-maison-db",
-    storageBucket: "muzi-maison-db.firebasestorage.app",
-    messagingSenderId: "270446372915",
-    appId: "1:270446372915:web:905cd2e7153ab450e8db46"
-  };
+      apiKey: "請填入您的apiKey",
+      authDomain: "請填入您的authDomain",
+      projectId: "請填入您的projectId",
+      storageBucket: "請填入您的storageBucket",
+      messagingSenderId: "請填入您的messagingSenderId",
+      appId: "請填入您的appId"
+    };
 
-    // 初始化 Firebase (防呆機制：確保只初始化一次)
+    // 初始化 Firebase
     if (!firebase.apps.length && !firebaseConfig.apiKey.includes("請填入")) {
       firebase.initializeApp(firebaseConfig);
     }
@@ -49,31 +49,39 @@
     const Minus = ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/></svg>;
     const X = ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>;
     const Info = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>;
-    const Store = ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m2 7 4.41-2.205a2 2 0 0 1 1.79 0L12 7l3.8-1.9a2 2 0 0 1 1.8 0L22 7v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7Z"/><path d="M16 14v-2"/><path d="M8 14v-2"/><path d="M12 14v-2"/></svg>;
+    const Store = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m2 7 4.41-2.205a2 2 0 0 1 1.79 0L12 7l3.8-1.9a2 2 0 0 1 1.8 0L22 7v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7Z"/><path d="M16 14v-2"/><path d="M8 14v-2"/><path d="M12 14v-2"/></svg>;
     const MessageCircle = ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>;
     const Settings = ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>;
     const Camera = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>;
     const ImageIcon = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>;
     const Lock = ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>;
     const LogOut = ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>;
+    const ImagePlus = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/><line x1="16" y1="5" x2="22" y2="5"/><line x1="19" y1="2" x2="19" y2="8"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>;
+    const Trash2 = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>;
+    const ChevronRight = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>;
 
-    // 預設商品資料
+    // 預設商品資料 (新增了成分、介紹、注意事項、額外照片陣列)
+    const getBaseProduct = (id, name, desc, weight, price, category, image) => ({
+      id, name, desc, weight, price, category, image,
+      intro: '', ingredients: '', notices: '', extraImages: []
+    });
+
     const defaultProducts = [
-      { id: 'AA01', name: '綜合原味堅果', desc: '含腰果、杏仁、核桃、夏威夷豆、胡桃', weight: '400克', price: 300, category: '堅果系列', image: 'https://images.unsplash.com/photo-1599598425947-33002620dc24?auto=format&fit=crop&w=300&q=80' },
-      { id: 'AA02', name: '原味腰果', desc: '產地: 越南', weight: '420克', price: 290, category: '堅果系列', image: 'https://images.unsplash.com/photo-1596591321045-812bc6547847?auto=format&fit=crop&w=300&q=80' },
-      { id: 'AA03', name: '原味杏仁果', desc: '產地: 美國', weight: '480克', price: 290, category: '堅果系列', image: 'https://images.unsplash.com/photo-1600189021966-38448880e6fc?auto=format&fit=crop&w=300&q=80' },
-      { id: 'AA04', name: '原味核桃', desc: '產地: 美國', weight: '420克', price: 290, category: '堅果系列', image: 'https://images.unsplash.com/photo-1595089601334-032228807d9f?auto=format&fit=crop&w=300&q=80' },
-      { id: 'AA05', name: '原味夏威夷豆', desc: '產地: 澳洲', weight: '250克', price: 290, category: '堅果系列', image: 'https://images.unsplash.com/photo-1560064560-692556af10c2?auto=format&fit=crop&w=300&q=80' },
-      { id: 'AA06', name: '原味胡桃', desc: '產地: 美國', weight: '280克', price: 290, category: '堅果系列', image: 'https://images.unsplash.com/photo-1574345229051-5079a40594db?auto=format&fit=crop&w=300&q=80' },
-      { id: 'AA07', name: '原味南瓜子', desc: '', weight: '430克', price: 290, category: '堅果系列', image: 'https://images.unsplash.com/photo-1600854298132-72cba2dfbb61?auto=format&fit=crop&w=300&q=80' },
-      { id: 'AA09', name: '蔓越莓果粒', desc: '', weight: '600克', price: 290, category: '果乾系列', image: 'https://images.unsplash.com/photo-1628588523555-52077e68270d?auto=format&fit=crop&w=300&q=80' },
-      { id: 'BB02', name: '南棗核桃糕', desc: '', weight: '300克', price: 270, category: '糖果軟糕', image: 'https://images.unsplash.com/photo-1582293041079-7814c2f12063?auto=format&fit=crop&w=300&q=80' },
-      { id: 'BB03', name: '南棗夏威夷豆軟糕', desc: '', weight: '300克', price: 350, category: '糖果軟糕', image: 'https://images.unsplash.com/photo-1621236166155-3818e697d446?auto=format&fit=crop&w=300&q=80' },
-      { id: 'B06', name: '夏威夷豆牛軋糖', desc: '', weight: '300克', price: 320, category: '糖果軟糕', image: 'https://images.unsplash.com/photo-1549449339-bb46cb2ce963?auto=format&fit=crop&w=300&q=80' },
-      { id: 'B10', name: '夏威夷豆牛奶糖', desc: '', weight: '300克', price: 350, category: '糖果軟糕', image: 'https://images.unsplash.com/photo-1506458961255-571f40df5aad?auto=format&fit=crop&w=300&q=80' },
-      { id: 'CC19', name: '黑金磚養生芝麻軟糖', desc: '任選3包優惠價550元', weight: '300克', price: 200, category: '酥糖系列(3包550)', image: 'https://images.unsplash.com/photo-1610435427181-229ea45147be?auto=format&fit=crop&w=300&q=80' },
-      { id: 'C02', name: '杏仁酥', desc: '任選3包優惠價550元', weight: '200克', price: 200, category: '酥糖系列(3包550)', image: 'https://images.unsplash.com/photo-1605206786523-22870ad46718?auto=format&fit=crop&w=300&q=80' },
-      { id: 'C03', name: '南瓜子酥', desc: '任選3包優惠價550元', weight: '200克', price: 200, category: '酥糖系列(3包550)', image: 'https://images.unsplash.com/photo-1598155523122-3842334d6c1f?auto=format&fit=crop&w=300&q=80' }
+      getBaseProduct('AA01', '綜合原味堅果', '含腰果、杏仁、核桃、夏威夷豆、胡桃', '400克', 300, '堅果系列', 'https://images.unsplash.com/photo-1599598425947-33002620dc24?auto=format&fit=crop&w=300&q=80'),
+      getBaseProduct('AA02', '原味腰果', '產地: 越南', '420克', 290, '堅果系列', 'https://images.unsplash.com/photo-1596591321045-812bc6547847?auto=format&fit=crop&w=300&q=80'),
+      getBaseProduct('AA03', '原味杏仁果', '產地: 美國', '480克', 290, '堅果系列', 'https://images.unsplash.com/photo-1600189021966-38448880e6fc?auto=format&fit=crop&w=300&q=80'),
+      getBaseProduct('AA04', '原味核桃', '產地: 美國', '420克', 290, '堅果系列', 'https://images.unsplash.com/photo-1595089601334-032228807d9f?auto=format&fit=crop&w=300&q=80'),
+      getBaseProduct('AA05', '原味夏威夷豆', '產地: 澳洲', '250克', 290, '堅果系列', 'https://images.unsplash.com/photo-1560064560-692556af10c2?auto=format&fit=crop&w=300&q=80'),
+      getBaseProduct('AA06', '原味胡桃', '產地: 美國', '280克', 290, '堅果系列', 'https://images.unsplash.com/photo-1574345229051-5079a40594db?auto=format&fit=crop&w=300&q=80'),
+      getBaseProduct('AA07', '原味南瓜子', '', '430克', 290, '堅果系列', 'https://images.unsplash.com/photo-1600854298132-72cba2dfbb61?auto=format&fit=crop&w=300&q=80'),
+      getBaseProduct('AA09', '蔓越莓果粒', '', '600克', 290, '果乾系列', 'https://images.unsplash.com/photo-1628588523555-52077e68270d?auto=format&fit=crop&w=300&q=80'),
+      getBaseProduct('BB02', '南棗核桃糕', '', '300克', 270, '糖果軟糕', 'https://images.unsplash.com/photo-1582293041079-7814c2f12063?auto=format&fit=crop&w=300&q=80'),
+      getBaseProduct('BB03', '南棗夏威夷豆軟糕', '', '300克', 350, '糖果軟糕', 'https://images.unsplash.com/photo-1621236166155-3818e697d446?auto=format&fit=crop&w=300&q=80'),
+      getBaseProduct('B06', '夏威夷豆牛軋糖', '', '300克', 320, '糖果軟糕', 'https://images.unsplash.com/photo-1549449339-bb46cb2ce963?auto=format&fit=crop&w=300&q=80'),
+      getBaseProduct('B10', '夏威夷豆牛奶糖', '', '300克', 350, '糖果軟糕', 'https://images.unsplash.com/photo-1506458961255-571f40df5aad?auto=format&fit=crop&w=300&q=80'),
+      getBaseProduct('CC19', '黑金磚養生芝麻軟糖', '任選3包優惠價550元', '300克', 200, '酥糖系列(3包550)', 'https://images.unsplash.com/photo-1610435427181-229ea45147be?auto=format&fit=crop&w=300&q=80'),
+      getBaseProduct('C02', '杏仁酥', '任選3包優惠價550元', '200克', 200, '酥糖系列(3包550)', 'https://images.unsplash.com/photo-1605206786523-22870ad46718?auto=format&fit=crop&w=300&q=80'),
+      getBaseProduct('C03', '南瓜子酥', '任選3包優惠價550元', '200克', 200, '酥糖系列(3包550)', 'https://images.unsplash.com/photo-1598155523122-3842334d6c1f?auto=format&fit=crop&w=300&q=80')
     ];
 
     function App() {
@@ -92,33 +100,26 @@
       const [activeCategory, setActiveCategory] = useState('全部');
       const [deliveryMethod, setDeliveryMethod] = useState('delivery');
 
+      // 詳情彈窗狀態
+      const [editingProduct, setEditingProduct] = useState(null); // 目前選中的商品 (包含編輯暫存)
+      const [mainDisplayImg, setMainDisplayImg] = useState(''); // 彈窗中主要顯示的大圖
+
       // --- 🚀 Firebase 資料庫與驗證邏輯 ---
       useEffect(() => {
-        if (!db || !auth) return; // 如果還沒設定 Firebase 金鑰，就不執行雲端同步
+        if (!db || !auth) return;
 
-        // 1. 監聽登入狀態
-        const unsubscribeAuth = auth.onAuthStateChanged(user => {
-          setIsAdminMode(!!user); // 有 user 代表已登入，開啟管理模式
-        });
+        const unsubscribeAuth = auth.onAuthStateChanged(user => setIsAdminMode(!!user));
 
-        // 2. 監聽 Logo 資料
         const unsubscribeLogo = db.collection('settings').doc('store').onSnapshot(doc => {
-          if (doc.exists && doc.data().logo) {
-            setLogo(doc.data().logo);
-          }
+          if (doc.exists && doc.data().logo) setLogo(doc.data().logo);
         });
 
-        // 3. 監聽商品資料
         const unsubscribeProducts = db.collection('products').onSnapshot(snapshot => {
           if (snapshot.empty) {
-            // 如果資料庫是空的 (第一次用)，把預設商品寫入資料庫
-            defaultProducts.forEach(p => {
-              db.collection('products').doc(p.id).set(p);
-            });
+            defaultProducts.forEach(p => db.collection('products').doc(p.id).set(p));
           } else {
-            // 從資料庫讀取最新資料
             const items = snapshot.docs.map(doc => doc.data());
-            items.sort((a, b) => a.id.localeCompare(b.id)); // 依據品號排序
+            items.sort((a, b) => a.id.localeCompare(b.id));
             setProducts(items);
           }
         });
@@ -130,33 +131,7 @@
         };
       }, []);
 
-      // --- 登入與登出邏輯 ---
-      const handleAdminClick = () => {
-        if (isAdminMode && auth) {
-          auth.signOut(); // 登出
-        } else {
-          setShowLoginModal(true); // 顯示登入框
-        }
-      };
-
-      const handleLoginSubmit = () => {
-        if (!auth) {
-          alert("請先完成 Firebase 金鑰設定哦！");
-          return;
-        }
-        auth.signInWithEmailAndPassword(emailInput, passwordInput)
-          .then(() => {
-            setShowLoginModal(false);
-            setEmailInput('');
-            setPasswordInput('');
-          })
-          .catch((error) => {
-            alert("登入失敗，請檢查帳號密碼是否正確！");
-            console.error(error);
-          });
-      };
-
-      // --- 圖片壓縮與上傳 (上傳到資料庫) ---
+      // --- 圖片壓縮與上傳 ---
       const handleImageUpload = (file, callback) => {
         if (!file) return;
         const reader = new FileReader();
@@ -164,7 +139,7 @@
           const img = new Image();
           img.onload = () => {
             const canvas = document.createElement('canvas');
-            const MAX_WIDTH = 400;
+            const MAX_WIDTH = 500; // 稍微調大一點讓大圖更清晰
             let width = img.width;
             let height = img.height;
             if (width > MAX_WIDTH) {
@@ -185,21 +160,8 @@
       const onLogoChange = (e) => {
         handleImageUpload(e.target.files[0], (base64Str) => {
           if (db) db.collection('settings').doc('store').set({ logo: base64Str }, { merge: true });
-          else setLogo(base64Str); // 若未連線資料庫，暫存本地預覽
+          else setLogo(base64Str);
         });
-      };
-
-      const onProductImageChange = (productId, e) => {
-        handleImageUpload(e.target.files[0], (base64Str) => {
-          if (db) db.collection('products').doc(productId).update({ image: base64Str });
-          else setProducts(prev => prev.map(p => p.id === productId ? { ...p, image: base64Str } : p));
-        });
-      };
-
-      const onProductPriceChange = (productId, newPrice) => {
-        const numPrice = Number(newPrice) || 0;
-        if (db) db.collection('products').doc(productId).update({ price: numPrice });
-        else setProducts(prev => prev.map(p => p.id === productId ? { ...p, price: numPrice } : p));
       };
 
       // --- 購物車與結帳邏輯 ---
@@ -220,17 +182,14 @@
       };
 
       const cartData = useMemo(() => {
-        let totalQty = 0;
-        let totalPrice = 0;
-        let promoQty = 0;
+        let totalQty = 0; let totalPrice = 0; let promoQty = 0;
         const promoItemIds = ['CC19', 'C02', 'C03'];
 
         const items = Object.entries(cart).map(([id, qty]) => {
           const product = products.find(p => p.id === id);
           if(!product) return null;
           totalQty += qty;
-          if (promoItemIds.includes(id)) { promoQty += qty; } 
-          else { totalPrice += product.price * qty; }
+          if (promoItemIds.includes(id)) { promoQty += qty; } else { totalPrice += product.price * qty; }
           return { ...product, qty };
         }).filter(Boolean);
 
@@ -264,14 +223,56 @@
         window.open(`https://line.me/R/msg/text/?${encodeURIComponent(orderText)}`, '_blank');
       };
 
+      // --- 登入邏輯 ---
+      const handleLoginSubmit = () => {
+        if (!auth) return alert("請先完成 Firebase 金鑰設定哦！");
+        auth.signInWithEmailAndPassword(emailInput, passwordInput)
+          .then(() => { setShowLoginModal(false); setEmailInput(''); setPasswordInput(''); })
+          .catch((error) => { alert("登入失敗，請檢查帳號密碼是否正確！"); console.error(error); });
+      };
+
+      // --- 商品詳情視窗控制 ---
+      const openProductDetail = (product) => {
+        // 確保產品物件擁有所有必要屬性 (舊資料防呆)
+        const fullProduct = { 
+          intro: '', ingredients: '', notices: '', extraImages: [], ...product 
+        };
+        setEditingProduct(fullProduct);
+        setMainDisplayImg(fullProduct.image);
+      };
+
+      const saveProductDetail = async () => {
+        if (db) {
+          await db.collection('products').doc(editingProduct.id).update({
+            price: Number(editingProduct.price) || 0,
+            weight: editingProduct.weight || '',
+            intro: editingProduct.intro || '',
+            ingredients: editingProduct.ingredients || '',
+            notices: editingProduct.notices || '',
+            image: editingProduct.image,
+            extraImages: editingProduct.extraImages || []
+          });
+        } else {
+          setProducts(prev => prev.map(p => p.id === editingProduct.id ? editingProduct : p));
+        }
+        setEditingProduct(null); // 儲存後關閉視窗
+      };
+
       return (
         <div className="max-w-md mx-auto bg-[#Fdfbf7] min-h-screen relative font-sans text-stone-800 shadow-xl overflow-hidden flex flex-col">
           <div className="sticky top-0 z-20 bg-white shadow-sm">
-            <header className="px-4 py-4 flex items-center justify-between">
+            <header className="px-4 py-3 flex items-center justify-between">
               <div className="flex items-center gap-3 relative">
-                <label className={`relative block w-11 h-11 rounded-full overflow-hidden shadow-inner flex items-center justify-center bg-amber-100 text-amber-700 ${isAdminMode ? 'cursor-pointer hover:ring-2 hover:ring-amber-400' : ''}`}>
-                  {logo ? <img src={logo} alt="Logo" className="w-full h-full object-cover" /> : <Store size={22} />}
-                  {isAdminMode && <div className="absolute inset-0 bg-black/40 flex items-center justify-center"><Camera size={18} className="text-white" /></div>}
+                {/* 🌟 升級版 Logo 區域：移除圓形限制，自動適應長寬比 */}
+                <label className={`relative block h-12 min-w-[3rem] max-w-[150px] flex items-center justify-center ${isAdminMode ? 'cursor-pointer hover:ring-2 hover:ring-amber-400 p-1 rounded-lg border border-dashed border-stone-300' : ''}`}>
+                  {logo ? (
+                    <img src={logo} alt="Logo" className="max-w-full max-h-full object-contain" />
+                  ) : (
+                    <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+                      <Store size={20} className="text-amber-700" />
+                    </div>
+                  )}
+                  {isAdminMode && <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-lg"><Camera size={18} className="text-white" /></div>}
                   {isAdminMode && <input type="file" accept="image/*" className="hidden" onChange={onLogoChange} />}
                 </label>
                 <div>
@@ -281,13 +282,12 @@
               </div>
               
               <button 
-                onClick={handleAdminClick} 
+                onClick={() => isAdminMode && auth ? auth.signOut() : setShowLoginModal(true)} 
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${isAdminMode ? 'bg-rose-100 text-rose-700' : 'bg-stone-100 text-stone-500 hover:bg-stone-200'}`}
               >
                 {isAdminMode ? <LogOut size={14} /> : <Lock size={14} />}
                 {isAdminMode ? '登出管理' : '管理員'}
               </button>
-
             </header>
             <div className="px-4 pb-3 flex gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {categories.map(category => (
@@ -298,7 +298,7 @@
             </div>
           </div>
 
-          {isAdminMode && <div className="bg-rose-50 text-rose-700 text-xs py-2 px-4 text-center font-bold">您正在管理員模式：點擊圖片可更換照片，可直接修改價格。</div>}
+          {isAdminMode && <div className="bg-rose-50 text-rose-700 text-xs py-2 px-4 text-center font-bold">🛠️ 管理模式：點擊商品可編輯照片與詳細內容。</div>}
           {!isAdminMode && <div className="bg-amber-50 text-amber-700 text-xs py-2 px-4 flex items-center gap-2"><Info size={14} className="shrink-0" /><span>酥糖/芝麻糖系列任選 <strong>3包優惠550元</strong>！滿12包另有優惠。</span></div>}
 
           <main className="flex-1 overflow-y-auto pb-24 px-4">
@@ -307,24 +307,33 @@
                 <h2 className="text-lg font-bold mb-3 text-stone-700 flex items-center gap-2 border-b border-stone-200 pb-1">{category}</h2>
                 <div className="flex flex-col gap-4">
                   {products.filter(p => p.category === category).map(product => (
-                    <div key={product.id} className="bg-white rounded-2xl p-3 shadow-sm flex gap-4 border border-stone-100">
-                      <label className={`relative block w-24 h-24 rounded-xl shrink-0 overflow-hidden ${isAdminMode ? 'cursor-pointer hover:ring-2 hover:ring-amber-400' : ''}`}>
+                    <div key={product.id} className="bg-white rounded-2xl p-3 shadow-sm flex gap-4 border border-stone-100 relative group">
+                      {/* 商品圖片 */}
+                      <div 
+                        className="relative block w-24 h-24 rounded-xl shrink-0 overflow-hidden cursor-pointer hover:ring-2 hover:ring-amber-400 transition-all"
+                        onClick={() => openProductDetail(product)}
+                      >
                         <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-                        {isAdminMode && <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white backdrop-blur-[1px]"><ImageIcon size={20} className="mb-1" /><span className="text-[10px] font-bold">換圖片</span></div>}
-                        {isAdminMode && <input type="file" accept="image/*" className="hidden" onChange={(e) => onProductImageChange(product.id, e)} />}
-                      </label>
+                        <div className="absolute inset-0 bg-black/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <span className="bg-white/90 text-stone-800 text-[10px] font-bold px-2 py-1 rounded-full">{isAdminMode ? '編輯詳情' : '查看詳情'}</span>
+                        </div>
+                      </div>
+
+                      {/* 商品簡介 */}
                       <div className="flex-1 flex flex-col justify-between">
-                        <div>
-                          <h3 className="font-bold text-stone-800 leading-tight">{product.name}</h3>
+                        <div onClick={() => openProductDetail(product)} className="cursor-pointer">
+                          <h3 className="font-bold text-stone-800 leading-tight flex items-center justify-between">
+                            {product.name}
+                            <ChevronRight size={16} className="text-stone-300" />
+                          </h3>
                           {product.desc && <p className="text-xs text-stone-500 mt-1">{product.desc}</p>}
                           <span className="inline-block mt-1 px-2 py-0.5 bg-stone-100 text-stone-500 text-[10px] rounded-md">{product.weight}</span>
                         </div>
+                        
                         <div className="flex items-center justify-between mt-2">
-                          {isAdminMode ? (
-                            <div className="flex items-center text-lg font-bold text-amber-600">$<input type="number" value={product.price} onChange={(e) => onProductPriceChange(product.id, e.target.value)} className="w-16 ml-1 px-1 py-0.5 border border-amber-300 rounded outline-none focus:ring-1 focus:ring-amber-500 bg-amber-50 text-amber-700" /></div>
-                          ) : (
-                            <span className="text-lg font-bold text-amber-600">${product.price}</span>
-                          )}
+                          <span className="text-lg font-bold text-amber-600">${product.price}</span>
+                          
+                          {/* 購物車增減 */}
                           {!isAdminMode && (
                             <div className="flex items-center gap-3 bg-stone-50 rounded-full px-2 py-1 border border-stone-200">
                               <button onClick={() => updateCart(product.id, -1)} className="w-6 h-6 rounded-full flex items-center justify-center text-stone-500 hover:bg-stone-200 active:bg-stone-300"><Minus size={14} /></button>
@@ -341,9 +350,173 @@
             ))}
           </main>
 
+          {/* 🌟 商品詳情彈出視窗 (支援前台展示 & 後台編輯) */}
+          {editingProduct && (
+            <div className="fixed inset-0 z-50 flex justify-center items-end sm:items-center bg-black/60 backdrop-blur-sm">
+              <div className="bg-[#Fdfbf7] w-full max-w-md h-[90vh] sm:h-[85vh] rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl animate-in slide-in-from-bottom-full duration-300">
+                
+                {/* 頂部導航 */}
+                <div className="flex items-center justify-between p-4 bg-white/80 backdrop-blur-md absolute top-0 left-0 right-0 z-10 border-b border-stone-100">
+                  <h2 className="font-bold text-stone-800 flex-1 truncate pr-4">{isAdminMode ? '編輯商品詳情' : editingProduct.name}</h2>
+                  <button onClick={() => setEditingProduct(null)} className="w-8 h-8 flex items-center justify-center bg-stone-100 rounded-full text-stone-500"><X size={20} /></button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto pt-16 pb-24">
+                  {/* 大圖展示 */}
+                  <div className="w-full h-64 bg-stone-200 flex-shrink-0 relative">
+                    <img src={mainDisplayImg} className="w-full h-full object-cover" alt="Product" />
+                  </div>
+
+                  {/* 縮圖列 (照片相簿) */}
+                  <div className="flex gap-2 p-4 overflow-x-auto [&::-webkit-scrollbar]:hidden bg-white">
+                    {/* 主圖縮圖 */}
+                    <div className="relative shrink-0">
+                      <img 
+                        src={editingProduct.image} 
+                        onClick={() => setMainDisplayImg(editingProduct.image)}
+                        className={`w-16 h-16 object-cover rounded-lg cursor-pointer border-2 ${mainDisplayImg === editingProduct.image ? 'border-amber-500' : 'border-transparent'}`} 
+                      />
+                      {isAdminMode && (
+                        <label className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-lg cursor-pointer">
+                          <ImageIcon size={16} className="text-white" />
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], (img) => { setEditingProduct({...editingProduct, image: img}); setMainDisplayImg(img); })} />
+                        </label>
+                      )}
+                      <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-[8px] px-1.5 rounded-full whitespace-nowrap">封面</span>
+                    </div>
+
+                    {/* 額外照片縮圖 */}
+                    {(editingProduct.extraImages || []).map((img, idx) => (
+                      <div key={idx} className="relative shrink-0 group">
+                        <img 
+                          src={img} 
+                          onClick={() => setMainDisplayImg(img)}
+                          className={`w-16 h-16 object-cover rounded-lg cursor-pointer border-2 ${mainDisplayImg === img ? 'border-amber-500' : 'border-transparent'}`} 
+                        />
+                        {isAdminMode && (
+                          <button 
+                            onClick={() => {
+                              const newExtra = [...editingProduct.extraImages];
+                              newExtra.splice(idx, 1);
+                              setEditingProduct({...editingProduct, extraImages: newExtra});
+                              if(mainDisplayImg === img) setMainDisplayImg(editingProduct.image);
+                            }}
+                            className="absolute -top-1 -right-1 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center shadow-md"
+                          >
+                            <X size={12} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* 管理員新增照片按鈕 */}
+                    {isAdminMode && (editingProduct.extraImages || []).length < 4 && (
+                      <label className="w-16 h-16 shrink-0 border-2 border-dashed border-stone-300 rounded-lg flex flex-col items-center justify-center text-stone-400 cursor-pointer hover:bg-stone-50 hover:text-amber-500 hover:border-amber-500 transition-colors">
+                        <ImagePlus size={20} />
+                        <span className="text-[10px] mt-1 font-bold">加照片</span>
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], (img) => setEditingProduct({...editingProduct, extraImages: [...(editingProduct.extraImages||[]), img]}))} />
+                      </label>
+                    )}
+                  </div>
+
+                  {/* 詳細資訊區塊 */}
+                  <div className="p-5 space-y-5">
+                    {/* 價格與名稱 (僅管理員可改價格) */}
+                    <div>
+                      {isAdminMode ? (
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="font-bold text-stone-700">價格 $</span>
+                          <input type="number" value={editingProduct.price} onChange={e => setEditingProduct({...editingProduct, price: e.target.value})} className="bg-white border border-stone-300 rounded px-2 py-1 w-24 text-amber-600 font-bold outline-none focus:border-amber-500" />
+                        </div>
+                      ) : (
+                        <div className="text-2xl font-bold text-amber-600 mb-1">${editingProduct.price}</div>
+                      )}
+                      <h1 className="text-xl font-bold text-stone-800">{editingProduct.name}</h1>
+                      <p className="text-sm text-stone-500 mt-1">{editingProduct.desc}</p>
+                    </div>
+
+                    <hr className="border-stone-200" />
+
+                    {/* 產品介紹 */}
+                    {(isAdminMode || editingProduct.intro) && (
+                      <div className="space-y-1.5">
+                        <h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 bg-amber-500 rounded-full"></span> 產品介紹</h3>
+                        {isAdminMode ? (
+                          <textarea rows="3" value={editingProduct.intro} onChange={e => setEditingProduct({...editingProduct, intro: e.target.value})} placeholder="請輸入產品介紹..." className="w-full bg-white border border-stone-300 rounded-lg p-2 text-sm outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 resize-none"></textarea>
+                        ) : (
+                          <p className="text-sm text-stone-600 leading-relaxed whitespace-pre-wrap">{editingProduct.intro}</p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* 產品成分 */}
+                    {(isAdminMode || editingProduct.ingredients) && (
+                      <div className="space-y-1.5">
+                        <h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 bg-emerald-500 rounded-full"></span> 產品成分</h3>
+                        {isAdminMode ? (
+                          <textarea rows="2" value={editingProduct.ingredients} onChange={e => setEditingProduct({...editingProduct, ingredients: e.target.value})} placeholder="請輸入產品成分..." className="w-full bg-white border border-stone-300 rounded-lg p-2 text-sm outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 resize-none"></textarea>
+                        ) : (
+                          <p className="text-sm text-stone-600 leading-relaxed whitespace-pre-wrap">{editingProduct.ingredients}</p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* 產品重量 */}
+                    {(isAdminMode || editingProduct.weight) && (
+                      <div className="space-y-1.5">
+                        <h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 bg-blue-500 rounded-full"></span> 產品重量</h3>
+                        {isAdminMode ? (
+                          <input type="text" value={editingProduct.weight} onChange={e => setEditingProduct({...editingProduct, weight: e.target.value})} placeholder="如: 400克" className="w-full bg-white border border-stone-300 rounded-lg p-2 text-sm outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500" />
+                        ) : (
+                          <p className="text-sm text-stone-600">{editingProduct.weight}</p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* 注意事項 */}
+                    {(isAdminMode || editingProduct.notices) && (
+                      <div className="space-y-1.5">
+                        <h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 bg-rose-500 rounded-full"></span> 注意事項</h3>
+                        {isAdminMode ? (
+                          <textarea rows="2" value={editingProduct.notices} onChange={e => setEditingProduct({...editingProduct, notices: e.target.value})} placeholder="如: 過敏原資訊、保存期限..." className="w-full bg-white border border-stone-300 rounded-lg p-2 text-sm outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 resize-none"></textarea>
+                        ) : (
+                          <div className="bg-rose-50 text-rose-700 p-3 rounded-xl text-sm leading-relaxed whitespace-pre-wrap border border-rose-100">
+                            {editingProduct.notices}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 底部按鈕區 (固定在下方) */}
+                <div className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-stone-200">
+                  {isAdminMode ? (
+                    <button onClick={saveProductDetail} className="w-full bg-stone-800 text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform flex justify-center items-center gap-2">
+                      儲存修改
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-4">
+                      {/* 數量選擇 */}
+                      <div className="flex items-center gap-4 bg-stone-50 rounded-xl px-4 py-3 border border-stone-200 flex-1 justify-center">
+                        <button onClick={() => updateCart(editingProduct.id, -1)} className="p-1 text-stone-500"><Minus size={18} /></button>
+                        <span className="w-6 text-center text-lg font-bold">{cart[editingProduct.id] || 0}</span>
+                        <button onClick={() => updateCart(editingProduct.id, 1)} className="p-1 text-amber-600"><Plus size={18} /></button>
+                      </div>
+                      {/* 加入購物車按鈕 (點擊只關閉視窗，因為數量已經即時連動) */}
+                      <button onClick={() => setEditingProduct(null)} className="flex-[1.5] bg-amber-500 text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform">
+                        確認並返回
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* 購物車懸浮按鈕 */}
-          {cartData.totalQty > 0 && !isAdminMode && (
-            <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto p-4 bg-gradient-to-t from-white via-white to-transparent pointer-events-none">
+          {cartData.totalQty > 0 && !isAdminMode && !editingProduct && (
+            <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto p-4 bg-gradient-to-t from-white via-white to-transparent pointer-events-none z-10">
               <button onClick={() => setIsCartOpen(true)} className="w-full bg-stone-800 text-white rounded-2xl p-4 flex items-center justify-between shadow-xl pointer-events-auto active:scale-95 transition-transform">
                 <div className="flex items-center gap-3">
                   <div className="relative">
@@ -357,7 +530,7 @@
             </div>
           )}
 
-          {/* 購物車結帳彈窗 (與之前相同，省略重複修改以節省版面) */}
+          {/* 購物車結帳彈窗 */}
           {isCartOpen && (
             <div className="fixed inset-0 z-50 flex justify-center items-end bg-black/50 backdrop-blur-sm sm:items-center">
               <div className="w-full max-w-md bg-[#Fdfbf7] rounded-t-3xl sm:rounded-3xl h-[85vh] sm:h-auto sm:max-h-[85vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-full duration-300">
@@ -421,7 +594,7 @@
             </div>
           )}
 
-          {/* === 登入彈出視窗 (更新為信箱+密碼) === */}
+          {/* 登入彈出視窗 */}
           {showLoginModal && (
             <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4">
               <div className="bg-white p-6 rounded-3xl shadow-2xl w-full max-w-xs animate-in zoom-in-95 duration-200">
@@ -429,46 +602,15 @@
                   <Lock size={20} className="text-amber-600" /> 管理員登入
                 </h3>
                 <p className="text-xs text-stone-500 text-center mb-4">請輸入資料庫管理員帳號密碼</p>
-                
-                <input
-                  type="email"
-                  placeholder="請輸入 Email 帳號"
-                  value={emailInput}
-                  onChange={(e) => setEmailInput(e.target.value)}
-                  className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 mb-3 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 font-medium text-stone-700"
-                />
-                
-                <input
-                  type="password"
-                  placeholder="請輸入密碼"
-                  value={passwordInput}
-                  onChange={(e) => setPasswordInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleLoginSubmit()}
-                  className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 mb-5 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 font-medium text-stone-700"
-                />
-
+                <input type="email" placeholder="請輸入 Email 帳號" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 mb-3 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 font-medium text-stone-700"/>
+                <input type="password" placeholder="請輸入密碼" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleLoginSubmit()} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 mb-5 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 font-medium text-stone-700"/>
                 <div className="flex gap-3">
-                  <button
-                    onClick={() => {
-                      setShowLoginModal(false);
-                      setEmailInput('');
-                      setPasswordInput('');
-                    }}
-                    className="flex-1 bg-stone-100 text-stone-600 font-bold py-3 rounded-xl active:scale-95 transition-transform"
-                  >
-                    取消
-                  </button>
-                  <button
-                    onClick={handleLoginSubmit}
-                    className="flex-1 bg-amber-500 text-white font-bold py-3 rounded-xl shadow-md active:scale-95 transition-transform"
-                  >
-                    登入
-                  </button>
+                  <button onClick={() => { setShowLoginModal(false); setEmailInput(''); setPasswordInput(''); }} className="flex-1 bg-stone-100 text-stone-600 font-bold py-3 rounded-xl active:scale-95 transition-transform">取消</button>
+                  <button onClick={handleLoginSubmit} className="flex-1 bg-amber-500 text-white font-bold py-3 rounded-xl shadow-md active:scale-95 transition-transform">登入</button>
                 </div>
               </div>
             </div>
           )}
-
         </div>
       );
     }
