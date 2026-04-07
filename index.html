@@ -116,9 +116,7 @@
       const [emailInput, setEmailInput] = useState('');
       const [passwordInput, setPasswordInput] = useState('');
       const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '', address: '', email: '', lineId: '' });
-      const [saveAsMember, setSaveAsMember] = useState(false);
-      const [registerPassword, setRegisterPassword] = useState('');
-
+      
       // 新增：訂單相關輸入狀態
       const [bankCodeInputs, setBankCodeInputs] = useState({});
       const [trackingInputs, setTrackingInputs] = useState({});
@@ -271,24 +269,15 @@
       // --- 結帳送出訂單 ---
       const handleCheckout = async () => {
         if (cartData.totalQty === 0) return;
+        if (!currentUser) return alert("請先登入或註冊會員！");
         if (!customerInfo.name || !customerInfo.phone) return alert("請填寫訂購人姓名與電話！");
-        if (deliveryMethod === 'delivery' && !customerInfo.address) return alert("選擇宅配請務必填寫收件地址！");
-
-        let finalUserId = currentUser ? currentUser.uid : 'guest';
-        if (saveAsMember && !currentUser && registerPassword) {
-          if (!customerInfo.email) return alert("若要加入會員，請務必填寫 Email！");
-          try {
-            const cred = await auth.createUserWithEmailAndPassword(customerInfo.email, registerPassword);
-            await db.collection('users').doc(cred.user.uid).set({ ...customerInfo, role: 'customer' });
-            finalUserId = cred.user.uid;
-          } catch (e) { return alert("自動註冊失敗：" + e.message); }
-        }
+        if (!customerInfo.address) return alert("請務必填寫聯絡/收件地址！"); // ★ 現在所有方式都必填地址
 
         const orderId = `MZ${Date.now().toString().slice(-6)}`;
         
         if (db) {
           await db.collection('orders').doc(orderId).set({
-            orderId, userId: finalUserId, customerInfo, items: cartData.items,
+            orderId, userId: currentUser.uid, customerInfo, items: cartData.items,
             totals: { itemsBaseTotal: cartData.itemsBaseTotal, discountAmount: cartData.discountAmount, shippingFee: cartData.shippingFee, finalPrice: cartData.finalPrice },
             deliveryMethod, status: 'pending', bankAccountLast5: '', trackingNumber: '',
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -300,6 +289,7 @@
         orderText += `訂購人：${customerInfo.name}\n`;
         orderText += `聯絡電話：${customerInfo.phone}\n`;
         orderText += `取貨方式：${deliveryMethod === 'delivery' ? '宅配' : '自取'}\n`;
+        orderText += `地址：${customerInfo.address}\n`; // ★ 將原本條件判斷拿掉，固定顯示
         orderText += `----------------------\n`;
         cartData.items.forEach(item => orderText += `▪️ ${item.name} (${item.weight}) x ${item.qty}\n`);
         orderText += `----------------------\n`;
@@ -385,7 +375,7 @@
         const printWindow = window.open('', '', 'width=800,height=600');
         printWindow.document.write(html);
         printWindow.document.close();
-        setTimeout(() => { printWindow.print(); }, 500); // 延遲確保樣式載入
+        setTimeout(() => { printWindow.print(); }, 500);
       };
 
       // --- 管理員：商品邏輯 ---
@@ -669,50 +659,55 @@
                     </div>
                   </div>
 
-                  {/* 右側：聯絡資訊與自動註冊 */}
-                  <div className="md:w-1/2 md:border-l border-stone-200 md:pl-8 flex flex-col justify-between mt-6 md:mt-0">
-                    <div className="space-y-4">
-                      <h3 className="font-bold text-stone-800 border-b border-stone-200 pb-2 flex justify-between items-center">
-                        聯絡資訊
-                        {currentUser && <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-bold">會員已登入</span>}
-                      </h3>
-                      <div className="grid grid-cols-2 gap-3">
-                        <input type="text" placeholder="姓名" value={customerInfo.name} onChange={e => setCustomerInfo({...customerInfo, name: e.target.value})} className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500 text-sm"/>
-                        <input type="tel" placeholder="聯絡電話" value={customerInfo.phone} onChange={e => setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500 text-sm"/>
+                  {/* 🌟 右側：強制會員登入 或 聯絡資訊 */}
+                  <div className="md:w-1/2 md:border-l border-stone-200 md:pl-8 flex flex-col mt-6 md:mt-0">
+                    {!currentUser ? (
+                      <div className="flex-1 flex flex-col items-center justify-center bg-amber-50 border border-amber-200 p-6 rounded-2xl text-center h-full">
+                        <User size={48} className="text-amber-500 mb-4 opacity-50" />
+                        <h3 className="text-lg font-bold text-amber-800 mb-2">會員專屬服務</h3>
+                        <p className="text-sm text-amber-700 mb-6 leading-relaxed">為了給您更好的服務與後續訂單追蹤，木子家目前<span className="font-bold text-rose-600">僅開放會員訂購</span>喔！</p>
+                        <button onClick={() => { setIsCartOpen(false); setLoginMode('customer'); setShowLoginModal(true); }} className="w-full bg-amber-500 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform flex justify-center items-center gap-2">
+                          <Lock size={18} /> 前往登入 / 免費註冊
+                        </button>
                       </div>
-                      <input type="text" placeholder="Line ID (必填，方便聯繫)" value={customerInfo.lineId} onChange={e => setCustomerInfo({...customerInfo, lineId: e.target.value})} className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500 text-sm"/>
-                      {deliveryMethod === 'delivery' && (
-                        <input type="text" placeholder="宅配收件地址" value={customerInfo.address} onChange={e => setCustomerInfo({...customerInfo, address: e.target.value})} className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500 text-sm"/>
-                      )}
+                    ) : (
+                      <div className="flex flex-col justify-between h-full">
+                        <div className="space-y-4">
+                          <h3 className="font-bold text-stone-800 border-b border-stone-200 pb-2 flex justify-between items-center">
+                            聯絡資訊
+                            <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-bold">會員已登入</span>
+                          </h3>
+                          <div className="grid grid-cols-2 gap-3">
+                            <input type="text" placeholder="姓名" value={customerInfo.name} onChange={e => setCustomerInfo({...customerInfo, name: e.target.value})} className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500 text-sm"/>
+                            <input type="tel" placeholder="聯絡電話" value={customerInfo.phone} onChange={e => setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500 text-sm"/>
+                          </div>
+                          <input type="text" placeholder="Line ID (必填，方便聯繫)" value={customerInfo.lineId} onChange={e => setCustomerInfo({...customerInfo, lineId: e.target.value})} className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500 text-sm"/>
+                          {/* ★ 這裡不論自取或宅配，都強制顯示與必填地址 */}
+                          <input type="text" placeholder="收件/聯絡地址 (必填)" value={customerInfo.address} onChange={e => setCustomerInfo({...customerInfo, address: e.target.value})} className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500 text-sm"/>
 
-                      {!currentUser && (
-                        <div className="mt-4 bg-amber-50 border border-amber-200 p-4 rounded-xl">
-                          <label className="flex items-center gap-2 cursor-pointer font-bold text-amber-800 mb-3">
-                            <input type="checkbox" checked={saveAsMember} onChange={e => setSaveAsMember(e.target.checked)} className="accent-amber-600 w-4 h-4" />
-                            同步加入會員 (下次免填資料，並可查詢訂單狀態)
-                          </label>
-                          {saveAsMember && (
-                            <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
-                              <input type="email" placeholder="請設定您的 Email 帳號" value={customerInfo.email} onChange={e => setCustomerInfo({...customerInfo, email: e.target.value})} className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-500"/>
-                              <input type="password" placeholder="請設定登入密碼 (6碼以上)" value={registerPassword} onChange={e => setRegisterPassword(e.target.value)} className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-500"/>
-                            </div>
-                          )}
+                          <div className="bg-rose-50 border border-rose-200 p-4 rounded-xl mt-4">
+                            <p className="text-sm font-bold text-rose-700 flex items-center gap-1 mb-1">⚠️ 結帳必看提醒</p>
+                            <p className="text-xs text-rose-600 leading-relaxed">
+                              送出訂單後，請務必點擊加入我們的 LINE 並傳送「訂單編號」。匯款後也請至會員中心填寫後五碼喔！
+                            </p>
+                          </div>
                         </div>
-                      )}
-
-                      <div className="bg-rose-50 border border-rose-200 p-4 rounded-xl mt-4">
-                        <p className="text-sm font-bold text-rose-700 flex items-center gap-1 mb-1">⚠️ 結帳必看提醒</p>
-                        <p className="text-xs text-rose-600 leading-relaxed">
-                          送出訂單後，請務必點擊加入我們的 LINE 並傳送「訂單編號」。匯款後也請至會員中心填寫後五碼喔！
-                        </p>
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
                 
                 <div className="p-5 border-t border-stone-200 bg-white">
-                  <button onClick={handleCheckout} className="w-full bg-[#06C755] text-white font-bold rounded-2xl p-4 flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform"><MessageCircle size={20} />送出訂單並前往 LINE 確認</button>
-                  <p className="text-center text-[10px] text-stone-400 mt-3 font-medium">※ 為保持良好賞味，接單後7～15天出貨，敬請見諒</p>
+                  {currentUser ? (
+                    <>
+                      <button onClick={handleCheckout} className="w-full bg-[#06C755] text-white font-bold rounded-2xl p-4 flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform"><MessageCircle size={20} />送出訂單並前往 LINE 確認</button>
+                      <p className="text-center text-[10px] text-stone-400 mt-3 font-medium">※ 為保持良好賞味，接單後7～15天出貨，敬請見諒</p>
+                    </>
+                  ) : (
+                    <button onClick={() => { setIsCartOpen(false); setLoginMode('customer'); setShowLoginModal(true); }} className="w-full bg-stone-800 text-white font-bold rounded-2xl p-4 flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform">
+                      <User size={20} /> 點此登入會員結帳
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -895,9 +890,10 @@
                 
                 {isRegistering && loginMode === 'customer' && (
                   <div className="grid grid-cols-2 gap-3 mb-3">
-                    <input type="text" placeholder="真實姓名" value={customerInfo.name} onChange={e => setCustomerInfo({...customerInfo, name: e.target.value})} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 text-sm"/>
-                    <input type="tel" placeholder="手機號碼" value={customerInfo.phone} onChange={e => setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 text-sm"/>
+                    <input type="text" placeholder="真實姓名 (必填)" value={customerInfo.name} onChange={e => setCustomerInfo({...customerInfo, name: e.target.value})} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 text-sm"/>
+                    <input type="tel" placeholder="手機號碼 (必填)" value={customerInfo.phone} onChange={e => setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 text-sm"/>
                     <input type="text" placeholder="Line ID (選填)" value={customerInfo.lineId} onChange={e => setCustomerInfo({...customerInfo, lineId: e.target.value})} className="col-span-2 w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 text-sm"/>
+                    <input type="text" placeholder="聯絡地址 (必填)" value={customerInfo.address} onChange={e => setCustomerInfo({...customerInfo, address: e.target.value})} className="col-span-2 w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 text-sm"/>
                   </div>
                 )}
 
