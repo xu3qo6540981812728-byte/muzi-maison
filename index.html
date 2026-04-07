@@ -640,11 +640,13 @@
             canvas.width = width; canvas.height = height;
             const ctx = canvas.getContext('2d'); 
             
-            ctx.fillStyle = '#FFFFFF';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // 👇 修改點 1：清除畫布，確保背景是透明的 (刪除了原本填滿白色的程式碼)
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
             
             ctx.drawImage(img, 0, 0, width, height);
-            callback(canvas.toDataURL('image/jpeg', 0.8));
+            
+            // 👇 修改點 2：輸出格式必須改為 'image/png'，因為 jpeg 不支援透明背景！
+            callback(canvas.toDataURL('image/png'));
           };
           img.src = e.target.result;
         };
