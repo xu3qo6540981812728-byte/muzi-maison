@@ -121,9 +121,11 @@
       const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '', address: '', email: '', lineId: '' });
       const [saveAsMember, setSaveAsMember] = useState(false);
       const [registerPassword, setRegisterPassword] = useState('');
+      const [orderNote, setOrderNote] = useState(''); // 新增：結帳時的訂單備註
 
       const [bankCodeInputs, setBankCodeInputs] = useState({});
       const [trackingInputs, setTrackingInputs] = useState({});
+      const [adminNoteInputs, setAdminNoteInputs] = useState({}); // 新增：管理員編輯訂單備註
 
       // 管理員訂單過濾狀態
       const [orderSearchId, setOrderSearchId] = useState('');
@@ -212,7 +214,9 @@
           const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           setAllOrders(orders);
           const newTrackingInputs = {};
-          orders.forEach(o => { if(o.trackingNumber) newTrackingInputs[o.id] = o.trackingNumber; });
+          orders.forEach(o => { 
+            if(o.trackingNumber) newTrackingInputs[o.id] = o.trackingNumber; 
+          });
           setTrackingInputs(prev => ({...newTrackingInputs, ...prev}));
         });
 
@@ -349,16 +353,18 @@
           await db.collection('orders').doc(orderId).set({
             orderId, userId: finalUserId, customerInfo, items: cartData.items,
             totals: { itemsBaseTotal: cartData.itemsBaseTotal, discountAmount: cartData.discountAmount, shippingFee: cartData.shippingFee, finalPrice: cartData.finalPrice },
-            deliveryMethod, status: 'pending', bankAccountLast5: '', trackingNumber: '',
+            deliveryMethod, status: 'pending', bankAccountLast5: '', trackingNumber: '', orderNote,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
           });
         }
 
         let orderText = `*【木子家 MUZI MAISON 新訂單】*\n\n訂單編號：${orderId}\n訂購人：${customerInfo.name}\n聯絡電話：${customerInfo.phone}\n取貨方式：${deliveryMethod === 'delivery' ? '宅配' : '自取'}\n地址：${customerInfo.address}\n----------------------\n`;
         cartData.items.forEach(item => orderText += `▪️ ${item.name} (${item.weight}) x ${item.qty}\n`);
-        orderText += `----------------------\n*總計金額：$${cartData.finalPrice}*\n\n(⚠️ 已於網站送出訂單，請您確認喔！)\n`;
+        orderText += `----------------------\n*總計金額：$${cartData.finalPrice}*\n`;
+        if (orderNote) { orderText += `*備註事項*：${orderNote}\n`; }
+        orderText += `\n(⚠️ 已於網站送出訂單，請您確認喔！)\n`;
 
-        setCart({}); setIsCartOpen(false);
+        setCart({}); setIsCartOpen(false); setOrderNote('');
         window.open(`https://line.me/R/msg/text/?${encodeURIComponent(orderText)}`, '_blank');
       };
 
@@ -376,10 +382,17 @@
 
       // --- 管理員：訂單操作 ---
       const updateOrderStatus = async (orderId, newStatus) => { if (db) await db.collection('orders').doc(orderId).update({ status: newStatus }); };
+      
       const saveTrackingNumber = async (orderId) => {
         const trk = trackingInputs[orderId];
         if (db) { await db.collection('orders').doc(orderId).update({ trackingNumber: trk }); alert("出貨單號已儲存！"); }
       };
+      
+      const saveOrderNote = async (orderId) => {
+        const note = adminNoteInputs[orderId] !== undefined ? adminNoteInputs[orderId] : '';
+        if (db) { await db.collection('orders').doc(orderId).update({ orderNote: note }); alert("訂單備註已儲存！"); }
+      };
+
       const deleteOrder = async (orderId) => {
         if (!window.confirm("確定要徹底刪除此訂單嗎？（刪除後無法復原）")) return;
         if (db) await db.collection('orders').doc(orderId).delete();
@@ -408,6 +421,7 @@
           });
         });
         const newItems = Object.values(combinedItemsMap);
+        const combinedNotes = ordersToMerge.map(o => o.orderNote).filter(Boolean).join('\n---\n'); // 合併先前的備註
 
         // 以最新一筆訂單的取貨方式與資料為基準重新計算
         const baseOrder = ordersToMerge[0]; 
@@ -429,9 +443,10 @@
             status: 'pending',
             bankAccountLast5: '',
             trackingNumber: '',
+            orderNote: combinedNotes,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             isMerged: true,
-            mergeNote: `由訂單合併產生 (舊單號: ${mergeSelection.join(', ')})`
+            mergeNote: `系統備註：由舊單號 ${mergeSelection.join(', ')} 合併產生。`
           });
 
           // 刪除舊訂單
@@ -469,16 +484,17 @@
       const downloadOrdersCSV = () => {
         if (filteredAdminOrders.length === 0) return alert("目前沒有訂單可以下載");
         let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; 
-        csvContent += "訂單編號,建立時間,狀態,訂購人,電話,Line ID,取貨方式,地址,商品明細,運費,總金額,匯款後五碼,出貨單號,備註\n";
+        csvContent += "訂單編號,建立時間,狀態,訂購人,電話,Line ID,取貨方式,地址,商品明細,運費,總金額,匯款後五碼,出貨單號,買家備註,系統備註\n";
         filteredAdminOrders.forEach(o => {
           const date = o.createdAt ? o.createdAt.toDate().toLocaleString() : '';
           const status = STATUS_MAP[o.status]?.label || o.status;
-          const itemsStr = o.items.map(i => `${i.name} x ${i.qty}`).join(' ; ');
-          const note = o.mergeNote || '';
+          const itemsStr = o.items.map(i => `${i.name} ($${i.price}) x ${i.qty}`).join(' ; ');
+          const note = o.orderNote || '';
+          const sysNote = o.mergeNote || '';
           const row = [
             o.id, date, status, o.customerInfo.name, o.customerInfo.phone, o.customerInfo.lineId || '',
             o.deliveryMethod === 'delivery' ? '宅配' : '自取', o.customerInfo.address || '',
-            itemsStr, o.totals.shippingFee, o.totals.finalPrice, o.bankAccountLast5 || '', o.trackingNumber || '', note
+            itemsStr, o.totals.shippingFee, o.totals.finalPrice, o.bankAccountLast5 || '', o.trackingNumber || '', note, sysNote
           ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(',');
           csvContent += row + "\n";
         });
@@ -492,13 +508,48 @@
       const handlePrintConfirmedOrders = () => {
         const confirmedOrders = allOrders.filter(o => o.status === 'confirmed');
         if (confirmedOrders.length === 0) return alert("目前沒有「已匯款，確認訂單」狀態的訂單可以列印！");
-        let html = `<html><head><title>木子家 - 已匯款出貨明細</title><style>body { font-family: "Microsoft JhengHei", sans-serif; padding: 20px; line-height: 1.5; } h1 { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; } .order-card { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; border-radius: 8px; page-break-inside: avoid; } .order-header { display: flex; justify-content: space-between; font-weight: bold; font-size: 1.2em; border-bottom: 1px dashed #ccc; padding-bottom: 10px; margin-bottom: 10px; } .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; } table { width: 100%; border-collapse: collapse; margin-top: 10px; } th, td { border: 1px solid #eee; padding: 8px; text-align: left; } th { background: #f9f9f9; } .total { text-align: right; font-weight: bold; font-size: 1.2em; margin-top: 10px; color: #b45309; }</style></head><body><h1>木子家 - 已匯款(製作中) 出貨明細</h1><p style="text-align:right">列印時間：${new Date().toLocaleString()}</p>`;
+        
+        let html = `<html><head><title>木子家 - 出貨明細單</title>
+        <style>
+          body { font-family: "Microsoft JhengHei", sans-serif; line-height: 1.5; margin: 0; padding: 0; background: #fff; color: #000; }
+          .print-page { page-break-after: always; break-after: page; padding: 20px; box-sizing: border-box; width: 100%; max-width: 800px; margin: 0 auto; }
+          .print-page:last-child { page-break-after: auto; break-after: auto; }
+          h1 { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; font-size: 1.8em; }
+          .order-header { display: flex; justify-content: space-between; font-weight: bold; font-size: 1.2em; border-bottom: 1px dashed #ccc; padding-bottom: 10px; margin-bottom: 15px; }
+          .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; font-size: 1.1em; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 15px; }
+          th, td { border: 1px solid #333; padding: 10px; text-align: left; }
+          th { background: #f0f0f0; }
+          .total { text-align: right; font-weight: bold; font-size: 1.4em; margin-top: 20px; color: #000; }
+          .note-box { margin-top: 15px; padding: 10px; border: 1px solid #333; background: #fafafa; font-size: 1em; }
+        </style></head><body>`;
+        
         confirmedOrders.forEach(o => {
-          html += `<div class="order-card"><div class="order-header"><span>訂單編號：${o.id}</span><span>${o.deliveryMethod === 'delivery' ? '🚚 宅配' : '🏪 自取'}</span></div><div class="info-grid"><div><strong>收件人：</strong>${o.customerInfo.name}</div><div><strong>電話：</strong>${o.customerInfo.phone}</div><div style="grid-column: span 2;"><strong>地址：</strong>${o.customerInfo.address || '無'}</div><div style="grid-column: span 2;"><strong>Line ID：</strong>${o.customerInfo.lineId || '無'}</div></div><table><tr><th>商品名稱</th><th>重量</th><th>數量</th></tr>${o.items.map(i => `<tr><td>${i.name}</td><td>${i.weight}</td><td>${i.qty} 包</td></tr>`).join('')}</table><div class="total">總計金額：$${o.totals.finalPrice}</div></div>`;
+          html += `<div class="print-page">
+            <h1>木子家 - 出貨明細單</h1>
+            <p style="text-align:right; font-size: 0.9em; margin-top:-10px;">列印時間：${new Date().toLocaleString()}</p>
+            <div class="order-header"><span>訂單編號：${o.id}</span><span>${o.deliveryMethod === 'delivery' ? '🚚 宅配' : '🏪 自取'}</span></div>
+            <div class="info-grid">
+              <div><strong>收件人：</strong>${o.customerInfo.name}</div>
+              <div><strong>電話：</strong>${o.customerInfo.phone}</div>
+              <div style="grid-column: span 2;"><strong>地址：</strong>${o.customerInfo.address || '無'}</div>
+              <div style="grid-column: span 2;"><strong>Line ID：</strong>${o.customerInfo.lineId || '無'}</div>
+            </div>
+            <table>
+              <tr><th>商品名稱</th><th>單價</th><th>重量</th><th>數量</th><th>小計</th></tr>
+              ${o.items.map(i => `<tr><td>${i.name}</td><td>$${i.price}</td><td>${i.weight}</td><td>${i.qty}</td><td>$${i.price * i.qty}</td></tr>`).join('')}
+            </table>
+            ${o.orderNote ? `<div class="note-box"><strong>買家/訂單備註：</strong><br/>${o.orderNote.replace(/\n/g, '<br/>')}</div>` : ''}
+            ${o.mergeNote ? `<div class="note-box"><strong>系統備註：</strong><br/>${o.mergeNote}</div>` : ''}
+            <div class="total">總計金額：$${o.totals.finalPrice}</div>
+          </div>`;
         });
         html += '</body></html>';
+        
         const printWindow = window.open('', '', 'width=800,height=600');
-        printWindow.document.write(html); printWindow.document.close(); setTimeout(() => { printWindow.print(); }, 500);
+        printWindow.document.write(html); 
+        printWindow.document.close(); 
+        setTimeout(() => { printWindow.print(); }, 500);
       };
 
       // --- 管理員：商品上傳邏輯 ---
@@ -799,6 +850,7 @@
                           </div>
                           <input type="text" placeholder="Line ID (必填，方便聯繫)" value={customerInfo.lineId} onChange={e => setCustomerInfo({...customerInfo, lineId: e.target.value})} className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500 text-sm"/>
                           <input type="text" placeholder="收件/聯絡地址 (必填)" value={customerInfo.address} onChange={e => setCustomerInfo({...customerInfo, address: e.target.value})} className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500 text-sm"/>
+                          <textarea placeholder="訂單備註 (選填，例如：請避開假日送件)" value={orderNote} onChange={e => setOrderNote(e.target.value)} rows="2" className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500 text-sm mt-2"></textarea>
 
                           <div className="bg-rose-50 border border-rose-200 p-4 rounded-xl mt-4">
                             <p className="text-sm font-bold text-rose-700 flex items-center gap-1 mb-1">⚠️ 結帳必看提醒</p>
@@ -892,7 +944,13 @@
                               </div>
                               
                               <div className="text-stone-600 text-xs space-y-1.5 mb-4 bg-stone-50 p-3 rounded-lg">
-                                {order.items.map((item, i) => <div key={i} className="flex justify-between"><span>{item.name}</span><span className="font-bold">x{item.qty}</span></div>)}
+                                {order.items.map((item, i) => (
+                                  <div key={i} className="flex justify-between items-center">
+                                    <span>{item.name} <span className="text-stone-400 text-[10px]">(${item.price})</span></span>
+                                    <span className="font-bold">x{item.qty}</span>
+                                  </div>
+                                ))}
+                                {order.orderNote && <div className="mt-2 pt-2 border-t border-stone-200 text-amber-700"><strong>備註：</strong>{order.orderNote}</div>}
                               </div>
 
                               {order.status === 'pending' && (
@@ -1002,8 +1060,27 @@
 
                             <div className="flex-1 text-xs text-stone-600 space-y-1 mb-3">
                               <p className="font-bold text-stone-500 mb-1 border-b border-stone-200 pb-1">購買明細：</p>
-                              {order.items.map((item, i) => <div key={i} className="flex justify-between"><span>{item.name}</span><span className="font-bold">x{item.qty}</span></div>)}
+                              {order.items.map((item, i) => (
+                                <div key={i} className="flex justify-between items-center mb-1">
+                                  <span>{item.name} <span className="text-stone-400 text-[10px]">(${item.price})</span></span>
+                                  <span className="font-bold">x{item.qty}</span>
+                                </div>
+                              ))}
                               {order.mergeNote && <p className="text-[10px] text-stone-400 mt-2 border-t border-stone-200 pt-1">{order.mergeNote}</p>}
+                            </div>
+
+                            {/* 新增：訂單備註編輯區 */}
+                            <div className="mb-3 border-t border-stone-100 pt-3">
+                              <p className="font-bold text-stone-500 mb-1 text-xs flex justify-between">訂單備註： <span className="text-[9px] font-normal text-stone-400">可查看與編輯</span></p>
+                              <div className="flex gap-2">
+                                <textarea 
+                                  placeholder="買家未填寫或輸入您的備註" 
+                                  value={adminNoteInputs[order.id] !== undefined ? adminNoteInputs[order.id] : (order.orderNote || '')} 
+                                  onChange={e => setAdminNoteInputs({...adminNoteInputs, [order.id]: e.target.value})} 
+                                  className="flex-1 bg-amber-50/50 border border-amber-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-amber-400 min-h-[40px] text-amber-900"
+                                />
+                                <button onClick={() => saveOrderNote(order.id)} className="bg-amber-100 text-amber-700 text-xs font-bold px-3 rounded-lg hover:bg-amber-200 transition-colors shrink-0">儲存<br/>備註</button>
+                              </div>
                             </div>
                             
                             <div className="border-t border-stone-100 pt-3 flex justify-between items-center mt-auto">
@@ -1137,7 +1214,11 @@
                                       </div>
                                       <p className="text-xs text-stone-400 mt-1">{order.createdAt?.toDate().toLocaleString()}</p>
                                       <div className="text-stone-600 text-xs mt-2 space-y-1">
-                                        {order.items.map((item, i) => <span key={i} className="mr-3 bg-stone-50 px-2 py-1 rounded inline-block mb-1">{item.name} x{item.qty}</span>)}
+                                        {order.items.map((item, i) => (
+                                          <span key={i} className="mr-3 bg-stone-50 px-2 py-1 rounded inline-block mb-1">
+                                            {item.name} <span className="text-stone-400">(${item.price})</span> x{item.qty}
+                                          </span>
+                                        ))}
                                       </div>
                                     </div>
                                   </div>
