@@ -478,7 +478,7 @@
                       <div className="space-y-1.5">
                         <h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 bg-rose-500 rounded-full"></span> 注意事項</h3>
                         {isAdminMode ? (
-                          <textarea rows="2" value={editingProduct.notices} onChange={e => setEditingProduct({...editingProduct, notices: e.target.value})} placeholder="如: 過敏原資訊、保存期限..." className="w-full bg-white border border-stone-300 rounded-lg p-2 text-sm outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 resize-none"></textarea>
+                          <textarea rows="50" value={editingProduct.notices} onChange={e => setEditingProduct({...editingProduct, notices: e.target.value})} placeholder="如: 過敏原資訊、保存期限..." className="w-full bg-white border border-stone-300 rounded-lg p-2 text-sm outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 resize-none"></textarea>
                         ) : (
                           <div className="bg-rose-50 text-rose-700 p-3 rounded-xl text-sm leading-relaxed whitespace-pre-wrap border border-rose-100">
                             {editingProduct.notices}
