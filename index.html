@@ -354,6 +354,11 @@
 
       // --- 產生可複製的訂單明細文字 ---
       const handleCopyOrder = (order) => {
+        const currentBankCode = bankCodeInputs[order.id] || order.bankAccountLast5;
+  if (!currentBankCode || currentBankCode.length < 5) {
+    alert("⚠️ 請先在下方填寫完整的「匯款後五碼」才可複製明細喔！");
+    return; 
+  }
         let text = `*【木子家 MUZI MAISON 新訂單】*\n\n訂單編號：${order.id}\n訂購人：${order.customerInfo.name}\n聯絡電話：${order.customerInfo.phone}\n取貨方式：${order.deliveryMethod === 'delivery' ? '宅配' : '自取'}\n地址：${order.customerInfo.address}\n----------------------\n`;
         order.items.forEach(item => text += `▪️ ${item.name} (${item.weight}) x ${item.qty}\n`);
         text += `----------------------\n*總計金額：$${order.totals.finalPrice}*\n`;
