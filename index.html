@@ -58,6 +58,18 @@
     const Truck = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 17h4V5H2v12h3"/><path d="M20 17h2v-3.34a4 4 0 0 0-1.17-2.83L19 9h-5v8h2"/><path d="M14 9h5.51"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>;
     const User = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
     const ClipboardList = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>;
+    const Printer = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>;
+
+    // 訂單狀態對照表
+    const STATUS_MAP = {
+      'pending': { label: '未處理', color: 'bg-rose-100 text-rose-700' },
+      'confirming': { label: '訂單確認中', color: 'bg-amber-100 text-amber-700' },
+      'confirmed': { label: '已匯款，確認訂單', color: 'bg-blue-100 text-blue-700' },
+      'shipped': { label: '已出貨', color: 'bg-purple-100 text-purple-700' },
+      'completed': { label: '已完成', color: 'bg-emerald-100 text-emerald-700' },
+      'cancel_requested': { label: '買方申請取消', color: 'bg-orange-100 text-orange-700' },
+      'cancelled': { label: '已取消', color: 'bg-stone-200 text-stone-600' }
+    };
 
     // 預設商品資料
     const getBaseProduct = (id, name, desc, weight, price, category, image, isPromo = false) => ({
@@ -104,8 +116,12 @@
       const [emailInput, setEmailInput] = useState('');
       const [passwordInput, setPasswordInput] = useState('');
       const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '', address: '', email: '', lineId: '' });
-      const [saveAsMember, setSaveAsMember] = useState(false); // 結帳自動註冊
+      const [saveAsMember, setSaveAsMember] = useState(false);
       const [registerPassword, setRegisterPassword] = useState('');
+
+      // 新增：訂單相關輸入狀態
+      const [bankCodeInputs, setBankCodeInputs] = useState({});
+      const [trackingInputs, setTrackingInputs] = useState({});
 
       // --- 資料狀態 ---
       const [logo, setLogo] = useState(null);
@@ -117,7 +133,6 @@
       const [deliveryMethod, setDeliveryMethod] = useState('delivery');
       const [contactData, setContactData] = useState({ address: '', phone: '', lineLink: '', email: '' });
       
-      // 訂單狀態
       const [allOrders, setAllOrders] = useState([]);
 
       const [editingProduct, setEditingProduct] = useState(null); 
@@ -136,14 +151,12 @@
             if (userDoc.exists && userDoc.data().role === 'customer') {
               setIsAdminMode(false);
               setCustomerInfo({
-                name: userDoc.data().name || '',
-                phone: userDoc.data().phone || '',
-                address: userDoc.data().address || '',
-                email: userDoc.data().email || user.email || '',
+                name: userDoc.data().name || '', phone: userDoc.data().phone || '',
+                address: userDoc.data().address || '', email: userDoc.data().email || user.email || '',
                 lineId: userDoc.data().lineId || ''
               });
             } else {
-              setIsAdminMode(true); // 若不在 users 集合，預設為管理員 (透過 Firebase Console 建立的)
+              setIsAdminMode(true);
             }
             setCurrentUser(user);
           } else {
@@ -174,10 +187,14 @@
           }
         });
 
-        // 監聽訂單
         const unsubscribeOrders = db.collection('orders').orderBy('createdAt', 'desc').onSnapshot(snapshot => {
           const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           setAllOrders(orders);
+          
+          // 載入預設追蹤單號到輸入框
+          const newTrackingInputs = {};
+          orders.forEach(o => { if(o.trackingNumber) newTrackingInputs[o.id] = o.trackingNumber; });
+          setTrackingInputs(prev => ({...newTrackingInputs, ...prev}));
         });
 
         return () => {
@@ -186,7 +203,7 @@
         };
       }, []);
 
-      // --- 購物車計算邏輯 ---
+      // --- 購物車計算 ---
       const categories = ['全部', ...new Set(products.map(p => p.category))];
       const displayedCategories = activeCategory === '全部' ? categories.filter(c => c !== '全部') : [activeCategory];
 
@@ -231,7 +248,7 @@
         return { items, totalQty, currentTotal, finalPrice, shippingFee, discountAmount, itemsBaseTotal };
       }, [cart, products, storeConfig, deliveryMethod]);
 
-      // --- 登入與註冊邏輯 ---
+      // --- 登入與註冊 ---
       const handleAuthSubmit = async () => {
         if (!auth) return alert("請先設定 Firebase 金鑰！");
         try {
@@ -257,60 +274,121 @@
         if (!customerInfo.name || !customerInfo.phone) return alert("請填寫訂購人姓名與電話！");
         if (deliveryMethod === 'delivery' && !customerInfo.address) return alert("選擇宅配請務必填寫收件地址！");
 
-        // 自動註冊邏輯
         let finalUserId = currentUser ? currentUser.uid : 'guest';
         if (saveAsMember && !currentUser && registerPassword) {
           if (!customerInfo.email) return alert("若要加入會員，請務必填寫 Email！");
           try {
             const cred = await auth.createUserWithEmailAndPassword(customerInfo.email, registerPassword);
-            await db.collection('users').doc(cred.user.uid).set({
-              ...customerInfo, role: 'customer'
-            });
+            await db.collection('users').doc(cred.user.uid).set({ ...customerInfo, role: 'customer' });
             finalUserId = cred.user.uid;
           } catch (e) { return alert("自動註冊失敗：" + e.message); }
         }
 
         const orderId = `MZ${Date.now().toString().slice(-6)}`;
         
-        // 儲存至 Firestore
         if (db) {
           await db.collection('orders').doc(orderId).set({
-            orderId,
-            userId: finalUserId,
-            customerInfo,
-            items: cartData.items,
-            totals: {
-              itemsBaseTotal: cartData.itemsBaseTotal,
-              discountAmount: cartData.discountAmount,
-              shippingFee: cartData.shippingFee,
-              finalPrice: cartData.finalPrice
-            },
-            deliveryMethod,
-            status: 'pending', // pending, processing, completed
+            orderId, userId: finalUserId, customerInfo, items: cartData.items,
+            totals: { itemsBaseTotal: cartData.itemsBaseTotal, discountAmount: cartData.discountAmount, shippingFee: cartData.shippingFee, finalPrice: cartData.finalPrice },
+            deliveryMethod, status: 'pending', bankAccountLast5: '', trackingNumber: '',
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
           });
         }
 
-        // 產生 LINE 訊息
         let orderText = `*【木子家 MUZI MAISON 新訂單】*\n\n`;
         orderText += `訂單編號：${orderId}\n`;
         orderText += `訂購人：${customerInfo.name}\n`;
         orderText += `聯絡電話：${customerInfo.phone}\n`;
-        orderText += `Line ID：${customerInfo.lineId || '未提供'}\n`;
         orderText += `取貨方式：${deliveryMethod === 'delivery' ? '宅配' : '自取'}\n`;
-        if (deliveryMethod === 'delivery') orderText += `宅配地址：${customerInfo.address}\n`;
         orderText += `----------------------\n`;
         cartData.items.forEach(item => orderText += `▪️ ${item.name} (${item.weight}) x ${item.qty}\n`);
         orderText += `----------------------\n`;
         orderText += `*總計金額：$${cartData.finalPrice}*\n`;
-        orderText += `\n(⚠️ 已於網站送出訂單，請老闆確認喔！)\n`;
+        orderText += `\n(⚠️ 已於網站送出訂單，請您確認喔！)\n`;
 
-        setCart({}); // 清空購物車
-        setIsCartOpen(false);
+        setCart({}); setIsCartOpen(false);
         window.open(`https://line.me/R/msg/text/?${encodeURIComponent(orderText)}`, '_blank');
       };
 
-      // --- 管理員商品邏輯 ---
+      // --- 買家：訂單操作 ---
+      const submitBankCode = async (orderId) => {
+        const code = bankCodeInputs[orderId];
+        if (!code || code.length < 5) return alert("請輸入完整的後五碼！");
+        if (db) {
+          await db.collection('orders').doc(orderId).update({ bankAccountLast5: code, status: 'confirming' });
+          alert("已送出匯款後五碼，請稍候管理員確認！");
+        }
+      };
+
+      const requestCancelOrder = async (orderId) => {
+        if (!window.confirm("確定要申請取消此訂單嗎？（需等待管理員同意）")) return;
+        if (db) {
+          await db.collection('orders').doc(orderId).update({ status: 'cancel_requested' });
+          alert("已送出取消申請！");
+        }
+      };
+
+      // --- 管理員：訂單操作 ---
+      const updateOrderStatus = async (orderId, newStatus) => {
+        if (db) await db.collection('orders').doc(orderId).update({ status: newStatus });
+      };
+
+      const saveTrackingNumber = async (orderId) => {
+        const trk = trackingInputs[orderId];
+        if (db) {
+          await db.collection('orders').doc(orderId).update({ trackingNumber: trk });
+          alert("出貨單號已儲存！");
+        }
+      };
+
+      const handlePrintConfirmedOrders = () => {
+        const confirmedOrders = allOrders.filter(o => o.status === 'confirmed');
+        if (confirmedOrders.length === 0) return alert("目前沒有「已匯款，確認訂單」狀態的訂單可以列印！");
+        
+        let html = `
+          <html><head><title>木子家 - 已匯款(製作中) 出貨明細</title>
+          <style>
+            body { font-family: "Microsoft JhengHei", sans-serif; padding: 20px; line-height: 1.5; }
+            h1 { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; }
+            .order-card { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; border-radius: 8px; page-break-inside: avoid; }
+            .order-header { display: flex; justify-content: space-between; font-weight: bold; font-size: 1.2em; border-bottom: 1px dashed #ccc; padding-bottom: 10px; margin-bottom: 10px; }
+            .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+            table { w-full; width: 100%; border-collapse: collapse; margin-top: 10px; }
+            th, td { border: 1px solid #eee; padding: 8px; text-align: left; }
+            th { background: #f9f9f9; }
+            .total { text-align: right; font-weight: bold; font-size: 1.2em; margin-top: 10px; color: #b45309; }
+          </style></head><body>
+          <h1>木子家 - 已匯款(製作中) 出貨明細</h1>
+          <p style="text-align:right">列印時間：${new Date().toLocaleString()}</p>
+        `;
+
+        confirmedOrders.forEach(o => {
+          html += `
+            <div class="order-card">
+              <div class="order-header"><span>訂單編號：${o.id}</span><span>${o.deliveryMethod === 'delivery' ? '🚚 宅配' : '🏪 自取'}</span></div>
+              <div class="info-grid">
+                <div><strong>收件人：</strong>${o.customerInfo.name}</div>
+                <div><strong>電話：</strong>${o.customerInfo.phone}</div>
+                <div style="grid-column: span 2;"><strong>地址：</strong>${o.customerInfo.address || '無'}</div>
+                <div style="grid-column: span 2;"><strong>Line ID：</strong>${o.customerInfo.lineId || '無'}</div>
+              </div>
+              <table>
+                <tr><th>商品名稱</th><th>重量</th><th>數量</th></tr>
+                ${o.items.map(i => `<tr><td>${i.name}</td><td>${i.weight}</td><td>${i.qty} 包</td></tr>`).join('')}
+              </table>
+              <div class="total">總計金額：$${o.totals.finalPrice}</div>
+            </div>
+          `;
+        });
+        html += '</body></html>';
+
+        const printWindow = window.open('', '', 'width=800,height=600');
+        printWindow.document.write(html);
+        printWindow.document.close();
+        setTimeout(() => { printWindow.print(); }, 500); // 延遲確保樣式載入
+      };
+
+      // --- 管理員：商品邏輯 ---
       const handleImageUpload = (file, callback) => {
         if (!file) return;
         const reader = new FileReader();
@@ -329,10 +407,8 @@
         reader.readAsDataURL(file);
       };
       const onLogoChange = (e) => handleImageUpload(e.target.files[0], (img) => db ? db.collection('settings').doc('store').set({ logo: img }, { merge: true }) : setLogo(img));
-
       const openProductDetail = (product) => { setEditingProduct({ intro: '', ingredients: '', notices: '', extraImages: [], isPromo: false, isNew: false, ...product }); setMainDisplayImg(product.image || ''); };
       const handleAddProduct = () => { setEditingProduct({ id: '', name: '', desc: '', weight: '', price: 0, category: '精選商品', image: '', intro: '', ingredients: '', notices: '', extraImages: [], isPromo: false, isNew: true }); setMainDisplayImg(''); };
-      
       const saveProductDetail = async () => {
         if (editingProduct.isNew && !editingProduct.id.trim()) return alert("請輸入「商品品號」！");
         const prodData = { ...editingProduct, id: editingProduct.id.trim(), price: Number(editingProduct.price) || 0 };
@@ -345,8 +421,15 @@
         if (db) await db.collection('products').doc(editingProduct.id).delete();
         setEditingProduct(null);
       };
-      const updateOrderStatus = async (orderId, newStatus) => {
-        if (db) await db.collection('orders').doc(orderId).update({ status: newStatus });
+
+      const saveSystemConfig = async () => {
+        const configToSave = { shippingFee: Number(tempConfig.shippingFee)||0, freeShippingThreshold: Number(tempConfig.freeShippingThreshold)||0, promoQty: Number(tempConfig.promoQty)||1, promoPrice: Number(tempConfig.promoPrice)||0, wholesaleThreshold: Number(tempConfig.wholesaleThreshold)||0 };
+        if (db) await db.collection('settings').doc('config').set(configToSave, { merge: true });
+        setStoreConfig(configToSave); setShowConfigModal(false);
+      };
+      const saveContactInfo = async () => {
+        if (db) await db.collection('settings').doc('contact').set(contactData, { merge: true });
+        setShowContactModal(false);
       };
 
       const myOrders = currentUser ? allOrders.filter(o => o.userId === currentUser.uid) : [];
@@ -377,28 +460,23 @@
                 </div>
               </div>
               
-              {/* 帳號控制按鈕 */}
               <div className="flex items-center gap-2">
                 {isAdminMode && (
-                  <button onClick={() => setShowAdminOrders(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors">
+                  <button onClick={() => setShowAdminOrders(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors shadow-sm">
                     <ClipboardList size={14} /> 訂單管理
                   </button>
                 )}
                 {currentUser && !isAdminMode && (
-                  <button onClick={() => setShowMemberProfile(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-stone-800 text-white hover:bg-stone-700 transition-colors">
+                  <button onClick={() => setShowMemberProfile(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-stone-800 text-white hover:bg-stone-700 transition-colors shadow-sm">
                     <User size={14} /> 我的帳號
                   </button>
                 )}
                 <button 
                   onClick={() => {
-                    if (currentUser) {
-                      auth.signOut();
-                    } else {
-                      setLoginMode('customer');
-                      setShowLoginModal(true);
-                    }
+                    if (currentUser) { auth.signOut(); } 
+                    else { setLoginMode('customer'); setShowLoginModal(true); }
                   }} 
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${currentUser ? 'bg-stone-200 text-stone-600' : 'bg-stone-100 text-stone-500 hover:bg-stone-200'}`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-colors shadow-sm ${currentUser ? 'bg-stone-200 text-stone-600' : 'bg-stone-100 text-stone-500 hover:bg-stone-200'}`}
                 >
                   {currentUser ? <LogOut size={14} /> : <User size={14} />}
                   {currentUser ? '登出' : '會員登入'}
@@ -506,7 +584,7 @@
                         <h3 className="font-bold text-stone-800 border-b border-stone-200 pb-2 flex justify-between items-center">
                           基礎設定 <label className="flex items-center gap-1.5 text-xs bg-rose-100 text-rose-700 px-2 py-1 rounded-md cursor-pointer"><input type="checkbox" checked={editingProduct.isPromo} onChange={e => setEditingProduct({...editingProduct, isPromo: e.target.checked})} className="accent-rose-500 w-3 h-3" />參與優惠</label>
                         </h3>
-                        <div className="flex gap-3"><input type="text" value={editingProduct.id} onChange={e => setEditingProduct({...editingProduct, id: e.target.value.toUpperCase()})} disabled={!editingProduct.isNew} placeholder="品號 (如D01)" className="w-1/3 bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500" /><input type="text" value={editingProduct.name} onChange={e => setEditingProduct({...editingProduct, name: e.target.value})} placeholder="商品名稱" className="w-2/3 bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500" /></div>
+                        <div className="flex gap-3"><input type="text" value={editingProduct.id} onChange={e => setEditingProduct({...editingProduct, id: e.target.value.toUpperCase()})} disabled={!editingProduct.isNew} placeholder="品號 (如D01)" className="w-1/3 bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500 disabled:bg-stone-100" /><input type="text" value={editingProduct.name} onChange={e => setEditingProduct({...editingProduct, name: e.target.value})} placeholder="商品名稱" className="w-2/3 bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500" /></div>
                         <div className="flex gap-3"><input type="text" value={editingProduct.category} onChange={e => setEditingProduct({...editingProduct, category: e.target.value})} placeholder="分類" className="w-1/2 bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500" /><input type="number" value={editingProduct.price} onChange={e => setEditingProduct({...editingProduct, price: e.target.value})} placeholder="售價" className="w-1/2 bg-white border border-stone-300 rounded p-2 text-sm outline-none text-amber-600 font-bold focus:border-amber-500" /></div>
                         <input type="text" value={editingProduct.desc} onChange={e => setEditingProduct({...editingProduct, desc: e.target.value})} placeholder="簡介 (顯示於列表)" className="w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500" />
                       </div>
@@ -528,7 +606,7 @@
                 <div className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-stone-200">
                   {isAdminMode ? (
                     <div className="flex gap-3">
-                      {!editingProduct.isNew && <button onClick={handleDeleteProduct} className="bg-red-100 text-red-600 px-4 rounded-xl"><Trash2 size={20} /></button>}
+                      {!editingProduct.isNew && <button onClick={handleDeleteProduct} className="bg-red-100 text-red-600 px-4 rounded-xl hover:bg-red-200 transition-colors"><Trash2 size={20} /></button>}
                       <button onClick={saveProductDetail} className="flex-1 bg-stone-800 text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform">儲存商品</button>
                     </div>
                   ) : (
@@ -575,7 +653,6 @@
                       </div>
                     ))}
                     
-                    {/* 取貨方式 */}
                     <div className="mt-6 pt-4 border-t border-stone-100">
                       <h3 className="font-bold text-stone-800 mb-3">取貨方式</h3>
                       <div className="flex gap-4 mb-4">
@@ -597,7 +674,7 @@
                     <div className="space-y-4">
                       <h3 className="font-bold text-stone-800 border-b border-stone-200 pb-2 flex justify-between items-center">
                         聯絡資訊
-                        {currentUser && <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded">會員已登入</span>}
+                        {currentUser && <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-bold">會員已登入</span>}
                       </h3>
                       <div className="grid grid-cols-2 gap-3">
                         <input type="text" placeholder="姓名" value={customerInfo.name} onChange={e => setCustomerInfo({...customerInfo, name: e.target.value})} className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500 text-sm"/>
@@ -608,12 +685,11 @@
                         <input type="text" placeholder="宅配收件地址" value={customerInfo.address} onChange={e => setCustomerInfo({...customerInfo, address: e.target.value})} className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500 text-sm"/>
                       )}
 
-                      {/* 🌟 結帳自動註冊區塊 */}
                       {!currentUser && (
                         <div className="mt-4 bg-amber-50 border border-amber-200 p-4 rounded-xl">
                           <label className="flex items-center gap-2 cursor-pointer font-bold text-amber-800 mb-3">
                             <input type="checkbox" checked={saveAsMember} onChange={e => setSaveAsMember(e.target.checked)} className="accent-amber-600 w-4 h-4" />
-                            同步加入會員 (下次免填資料)
+                            同步加入會員 (下次免填資料，並可查詢訂單狀態)
                           </label>
                           {saveAsMember && (
                             <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
@@ -624,11 +700,10 @@
                         </div>
                       )}
 
-                      {/* 強制提醒區塊 */}
                       <div className="bg-rose-50 border border-rose-200 p-4 rounded-xl mt-4">
                         <p className="text-sm font-bold text-rose-700 flex items-center gap-1 mb-1">⚠️ 結帳必看提醒</p>
                         <p className="text-xs text-rose-600 leading-relaxed">
-                          訂單送出後，請務必點擊加入我們的 LINE，傳送您的「訂單編號」，以利確認款項及出貨細節喔！
+                          送出訂單後，請務必點擊加入我們的 LINE 並傳送「訂單編號」。匯款後也請至會員中心填寫後五碼喔！
                         </p>
                       </div>
                     </div>
@@ -643,49 +718,84 @@
             </div>
           )}
 
-          {/* 🌟 會員專區彈窗 (查看訂單) */}
+          {/* 🌟 會員專區彈窗 (查看訂單與回報後五碼) */}
           {showMemberProfile && currentUser && !isAdminMode && (
-            <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4">
-              <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-lg h-[80vh] flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
+            <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4 md:px-10 py-6">
+              <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-4xl h-full flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
                 <button onClick={() => setShowMemberProfile(false)} className="absolute top-4 right-4 text-stone-400"><X size={20} /></button>
-                <h2 className="text-xl font-bold text-stone-800 mb-4 flex items-center gap-2 border-b border-stone-200 pb-2"><User size={20} className="text-amber-600"/> 會員中心</h2>
+                <h2 className="text-xl md:text-2xl font-bold text-stone-800 mb-4 flex items-center gap-2 border-b border-stone-200 pb-2"><User size={24} className="text-amber-600"/> 會員中心</h2>
                 
-                <div className="flex-1 overflow-y-auto space-y-6">
-                  {/* 基本資料 */}
-                  <div className="bg-white p-4 rounded-xl border border-stone-200 shadow-sm">
-                    <h3 className="font-bold text-stone-700 mb-3 text-sm">個人資料</h3>
-                    <div className="text-sm text-stone-600 space-y-2">
-                      <p><span className="text-stone-400 mr-2">姓名</span> {customerInfo.name}</p>
-                      <p><span className="text-stone-400 mr-2">電話</span> {customerInfo.phone}</p>
-                      <p><span className="text-stone-400 mr-2">Line</span> {customerInfo.lineId || '未設定'}</p>
-                      <p><span className="text-stone-400 mr-2">地址</span> {customerInfo.address || '未設定'}</p>
+                <div className="flex-1 overflow-y-auto space-y-6 md:flex md:space-y-0 md:gap-6">
+                  {/* 基本資料 (左) */}
+                  <div className="md:w-1/3">
+                    <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm sticky top-0">
+                      <h3 className="font-bold text-stone-700 mb-4 border-b border-stone-100 pb-2">我的資料</h3>
+                      <div className="text-sm text-stone-600 space-y-3">
+                        <p className="flex justify-between"><span className="text-stone-400">姓名</span> <span className="font-bold">{customerInfo.name}</span></p>
+                        <p className="flex justify-between"><span className="text-stone-400">電話</span> <span>{customerInfo.phone}</span></p>
+                        <p className="flex justify-between"><span className="text-stone-400">Line</span> <span>{customerInfo.lineId || '-'}</span></p>
+                        <p><span className="text-stone-400 block mb-1">預設地址</span> <span className="block bg-stone-50 p-2 rounded">{customerInfo.address || '未設定'}</span></p>
+                      </div>
                     </div>
                   </div>
 
-                  {/* 歷史訂單 */}
-                  <div>
-                    <h3 className="font-bold text-stone-700 mb-3 text-sm">我的歷史訂單</h3>
+                  {/* 歷史訂單 (右) */}
+                  <div className="md:w-2/3">
+                    <h3 className="font-bold text-stone-700 mb-3 border-b border-stone-200 pb-2">我的訂單紀錄</h3>
                     {myOrders.length === 0 ? (
-                      <p className="text-center text-stone-400 text-sm py-4">尚無訂單紀錄</p>
+                      <p className="text-center text-stone-400 text-sm py-10 bg-white rounded-2xl border border-stone-200 border-dashed">尚無訂單紀錄</p>
                     ) : (
-                      <div className="space-y-3">
-                        {myOrders.map(order => (
-                          <div key={order.id} className="bg-white p-4 rounded-xl border border-stone-200 shadow-sm text-sm">
-                            <div className="flex justify-between items-start mb-2 border-b border-stone-100 pb-2">
-                              <div>
-                                <span className="font-bold text-amber-700 block">{order.id}</span>
-                                <span className="text-[10px] text-stone-400">{order.createdAt?.toDate().toLocaleString()}</span>
+                      <div className="space-y-4">
+                        {myOrders.map(order => {
+                          const statusInfo = STATUS_MAP[order.status] || STATUS_MAP['pending'];
+                          const isCancellable = ['pending', 'confirming', 'confirmed'].includes(order.status);
+                          return (
+                            <div key={order.id} className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm text-sm">
+                              <div className="flex justify-between items-start mb-3 border-b border-stone-100 pb-3">
+                                <div>
+                                  <span className="font-black text-stone-800 text-lg block tracking-wide">{order.id}</span>
+                                  <span className="text-[10px] text-stone-400">{order.createdAt?.toDate().toLocaleString()}</span>
+                                </div>
+                                <div className="text-right">
+                                  <span className={`px-2.5 py-1 rounded-md text-xs font-bold ${statusInfo.color}`}>{statusInfo.label}</span>
+                                  {order.status === 'shipped' && <div className="mt-2 text-xs font-bold text-stone-600 bg-stone-100 px-2 py-1 rounded">物流單號: {order.trackingNumber}</div>}
+                                </div>
                               </div>
-                              <span className={`px-2 py-1 rounded-md text-xs font-bold ${order.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                                {order.status === 'completed' ? '已完成' : '處理中'}
-                              </span>
+                              
+                              <div className="text-stone-600 text-xs space-y-1.5 mb-4 bg-stone-50 p-3 rounded-lg">
+                                {order.items.map((item, i) => <div key={i} className="flex justify-between"><span>{item.name}</span><span className="font-bold">x{item.qty}</span></div>)}
+                              </div>
+
+                              {/* 狀態互動區塊 */}
+                              {order.status === 'pending' && (
+                                <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl">
+                                  <p className="text-xs font-bold text-rose-700 mb-2">⚠️ 請匯款後加 LINE 通知，並輸入帳戶後五碼：</p>
+                                  <div className="flex gap-2">
+                                    <input type="text" maxLength="5" placeholder="輸入後五碼" value={bankCodeInputs[order.id] || ''} onChange={e => setBankCodeInputs({...bankCodeInputs, [order.id]: e.target.value})} className="flex-1 bg-white border border-rose-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-rose-400 font-bold tracking-widest text-center" />
+                                    <button onClick={() => submitBankCode(order.id)} className="bg-rose-500 text-white font-bold px-4 rounded-lg shadow-sm active:scale-95 transition-transform">送出</button>
+                                  </div>
+                                </div>
+                              )}
+                              {order.status === 'confirming' && (
+                                <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs font-bold text-amber-700 text-center">
+                                  已送出後五碼 ({order.bankAccountLast5})，等待確認中...
+                                </div>
+                              )}
+                              {order.status === 'confirmed' && (
+                                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs font-bold text-blue-700 text-center">
+                                  💡 為保持良好的賞味，皆 7～15 天出貨，感謝您的耐心等候！
+                                </div>
+                              )}
+
+                              <div className="flex justify-between items-center mt-2 pt-2 border-t border-stone-100">
+                                {isCancellable ? (
+                                  <button onClick={() => requestCancelOrder(order.id)} className="text-xs text-stone-400 hover:text-rose-500 font-bold transition-colors underline">申請取消訂單</button>
+                                ) : <div></div>}
+                                <div className="font-black text-amber-600 text-lg">總計：${order.totals.finalPrice}</div>
+                              </div>
                             </div>
-                            <div className="text-stone-600 text-xs space-y-1 mb-2">
-                              {order.items.map((item, i) => <div key={i}>• {item.name} x{item.qty}</div>)}
-                            </div>
-                            <div className="font-bold text-stone-800 text-right">總計：${order.totals.finalPrice}</div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -697,48 +807,76 @@
           {/* 🌟 訂單管理彈窗 (管理員後台) */}
           {showAdminOrders && isAdminMode && (
             <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4 md:px-10 py-6">
-              <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-4xl h-full flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
-                <button onClick={() => setShowAdminOrders(false)} className="absolute top-4 right-4 text-stone-400"><X size={24} /></button>
-                <h2 className="text-xl md:text-2xl font-bold text-stone-800 mb-6 flex items-center gap-2 border-b border-stone-200 pb-3"><ClipboardList size={24} className="text-amber-600"/> 訂單管理中心</h2>
+              <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-5xl h-full flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
+                <button onClick={() => setShowAdminOrders(false)} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full"><X size={24} /></button>
+                <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 border-b border-stone-200 pb-3 gap-4">
+                  <h2 className="text-xl md:text-2xl font-bold text-stone-800 flex items-center gap-2"><ClipboardList size={24} className="text-amber-600"/> 訂單管理中心</h2>
+                  <button onClick={handlePrintConfirmedOrders} className="flex items-center justify-center gap-2 bg-stone-800 text-white text-sm font-bold px-4 py-2.5 rounded-xl shadow-md hover:bg-stone-700 transition-colors active:scale-95">
+                    <Printer size={18} /> 列印已匯款(製作中)出貨單
+                  </button>
+                </div>
                 
                 <div className="flex-1 overflow-y-auto">
                   {allOrders.length === 0 ? <p className="text-center text-stone-400 mt-10">目前尚無訂單</p> : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {allOrders.map(order => (
-                        <div key={order.id} className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm flex flex-col">
-                          <div className="flex justify-between items-start mb-3 border-b border-stone-100 pb-3">
-                            <div>
-                              <span className="font-bold text-stone-800 text-lg block">{order.id}</span>
-                              <span className="text-[10px] text-stone-400">{order.createdAt?.toDate().toLocaleString()}</span>
+                      {allOrders.map(order => {
+                        const isCancelReq = order.status === 'cancel_requested';
+                        return (
+                          <div key={order.id} className={`bg-white p-5 rounded-2xl border shadow-sm flex flex-col transition-colors ${isCancelReq ? 'border-orange-400 ring-2 ring-orange-100' : 'border-stone-200'}`}>
+                            <div className="flex justify-between items-start mb-3 border-b border-stone-100 pb-3">
+                              <div>
+                                <span className="font-black text-stone-800 text-lg block tracking-wide">{order.id}</span>
+                                <span className="text-[10px] text-stone-400">{order.createdAt?.toDate().toLocaleString()}</span>
+                              </div>
+                              <select 
+                                value={order.status || 'pending'} 
+                                onChange={(e) => updateOrderStatus(order.id, e.target.value)}
+                                className={`text-xs font-bold outline-none rounded p-1.5 cursor-pointer shadow-sm border border-stone-200 ${STATUS_MAP[order.status]?.color || 'bg-stone-100 text-stone-700'}`}
+                              >
+                                {Object.entries(STATUS_MAP).map(([key, info]) => (
+                                  <option key={key} value={key}>{info.label}</option>
+                                ))}
+                              </select>
                             </div>
-                            <select 
-                              value={order.status || 'pending'} 
-                              onChange={(e) => updateOrderStatus(order.id, e.target.value)}
-                              className={`text-xs font-bold outline-none rounded p-1 cursor-pointer ${order.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}
-                            >
-                              <option value="pending">未處理</option>
-                              <option value="completed">已完成</option>
-                            </select>
-                          </div>
-                          
-                          <div className="text-sm text-stone-600 space-y-1 mb-3 bg-stone-50 p-3 rounded-lg">
-                            <p><span className="font-bold text-stone-500">姓名：</span>{order.customerInfo.name}</p>
-                            <p><span className="font-bold text-stone-500">電話：</span>{order.customerInfo.phone}</p>
-                            <p><span className="font-bold text-stone-500">Line：</span>{order.customerInfo.lineId || '-'}</p>
-                            <p className="truncate"><span className="font-bold text-stone-500">地址：</span>{order.customerInfo.address || '自取'}</p>
-                          </div>
+                            
+                            {order.status === 'confirming' && (
+                              <div className="mb-3 bg-amber-50 text-amber-700 text-xs font-bold p-2 rounded-lg text-center border border-amber-200">
+                                💰 客填後五碼：<span className="text-base tracking-widest">{order.bankAccountLast5}</span>
+                              </div>
+                            )}
 
-                          <div className="flex-1 text-xs text-stone-600 space-y-1 mb-3">
-                            <p className="font-bold text-stone-500 mb-1">購買明細：</p>
-                            {order.items.map((item, i) => <div key={i} className="flex justify-between"><span>{item.name}</span><span>x{item.qty}</span></div>)}
+                            {isCancelReq && (
+                              <div className="mb-3 bg-orange-50 text-orange-700 text-xs font-bold p-2 rounded-lg text-center border border-orange-200 animate-pulse">
+                                ⚠️ 買家已送出取消申請，請審核！
+                              </div>
+                            )}
+
+                            {order.status === 'shipped' && (
+                              <div className="mb-3 flex gap-2">
+                                <input type="text" placeholder="輸入出貨單號" value={trackingInputs[order.id] || ''} onChange={e => setTrackingInputs({...trackingInputs, [order.id]: e.target.value})} className="flex-1 bg-stone-50 border border-stone-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-purple-400 font-bold" />
+                                <button onClick={() => saveTrackingNumber(order.id)} className="bg-purple-100 text-purple-700 text-xs font-bold px-3 rounded-lg hover:bg-purple-200 transition-colors">儲存</button>
+                              </div>
+                            )}
+                            
+                            <div className="text-sm text-stone-600 space-y-1 mb-3 bg-stone-50 p-3 rounded-lg">
+                              <p><span className="font-bold text-stone-500">姓名：</span>{order.customerInfo.name}</p>
+                              <p><span className="font-bold text-stone-500">電話：</span>{order.customerInfo.phone}</p>
+                              <p><span className="font-bold text-stone-500">Line：</span>{order.customerInfo.lineId || '-'}</p>
+                              <p><span className="font-bold text-stone-500">地址：</span>{order.customerInfo.address || '自取'}</p>
+                            </div>
+
+                            <div className="flex-1 text-xs text-stone-600 space-y-1 mb-3">
+                              <p className="font-bold text-stone-500 mb-1 border-b border-stone-200 pb-1">購買明細：</p>
+                              {order.items.map((item, i) => <div key={i} className="flex justify-between"><span>{item.name}</span><span className="font-bold">x{item.qty}</span></div>)}
+                            </div>
+                            
+                            <div className="border-t border-stone-100 pt-3 flex justify-between items-center mt-auto">
+                              <span className="text-xs text-stone-400 font-bold">運費 ${order.totals.shippingFee}</span>
+                              <span className="font-black text-amber-600 text-xl">${order.totals.finalPrice}</span>
+                            </div>
                           </div>
-                          
-                          <div className="border-t border-stone-100 pt-3 flex justify-between items-center mt-auto">
-                            <span className="text-xs text-stone-400">運費 ${order.totals.shippingFee}</span>
-                            <span className="font-black text-amber-600 text-lg">${order.totals.finalPrice}</span>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -755,7 +893,6 @@
                   {loginMode === 'admin' ? '管理員登入' : (isRegistering ? '註冊新會員' : '會員登入')}
                 </h3>
                 
-                {/* 註冊特有欄位 */}
                 {isRegistering && loginMode === 'customer' && (
                   <div className="grid grid-cols-2 gap-3 mb-3">
                     <input type="text" placeholder="真實姓名" value={customerInfo.name} onChange={e => setCustomerInfo({...customerInfo, name: e.target.value})} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 text-sm"/>
@@ -772,7 +909,6 @@
                   <button onClick={() => { setShowLoginModal(false); setEmailInput(''); setPasswordInput(''); setIsRegistering(false); }} className="w-full bg-stone-100 text-stone-600 font-bold py-3 rounded-xl active:scale-95 transition-transform">取消</button>
                 </div>
 
-                {/* 切換模式 */}
                 <div className="mt-6 pt-4 border-t border-stone-100 flex justify-between items-center text-xs text-stone-500">
                   {loginMode === 'customer' ? (
                     <>
@@ -813,7 +949,7 @@
             </div>
           )}
 
-          {/* 聯絡我們彈出視窗 */}
+          {/* 聯絡我們彈窗 */}
           {showContactModal && (
             <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4">
               <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 relative border border-stone-100">
