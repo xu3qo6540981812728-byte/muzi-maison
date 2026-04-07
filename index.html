@@ -634,7 +634,7 @@
 
           {/* 購物車懸浮按鈕 */}
           {cartData.totalQty > 0 && !isAdminMode && !editingProduct && (
-            <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto p-4 bg-gradient-to-t from-white via-white to-transparent pointer-events-none z-10">
+            <div className="fixed bottom-0 left-0 right-0 max-w-md md:max-w-4xl lg:max-w-6xl mx-auto p-4 bg-gradient-to-t from-white via-white to-transparent pointer-events-none z-10">
               <button onClick={() => setIsCartOpen(true)} className="w-full bg-stone-800 text-white rounded-2xl p-4 flex items-center justify-between shadow-xl pointer-events-auto active:scale-95 transition-transform">
                 <div className="flex items-center gap-3">
                   <div className="relative">
@@ -651,78 +651,87 @@
           {/* 購物車結帳彈窗 */}
           {isCartOpen && (
             <div className="fixed inset-0 z-50 flex justify-center items-end bg-black/50 backdrop-blur-sm sm:items-center">
-              <div className="w-full max-w-md bg-[#Fdfbf7] rounded-t-3xl sm:rounded-3xl h-[85vh] sm:h-auto sm:max-h-[85vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-full duration-300">
+              <div className="w-full max-w-md md:max-w-4xl bg-[#Fdfbf7] rounded-t-3xl sm:rounded-3xl h-[85vh] sm:h-auto sm:max-h-[85vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-full duration-300">
                 <div className="flex items-center justify-between p-5 border-b border-stone-200">
                   <h2 className="text-xl font-bold text-stone-800 flex items-center gap-2"><ShoppingCart size={20} /> 訂單明細</h2>
                   <button onClick={() => setIsCartOpen(false)} className="w-8 h-8 flex items-center justify-center bg-stone-100 rounded-full text-stone-500"><X size={20} /></button>
                 </div>
-                <div className="flex-1 overflow-y-auto p-5">
-                  {cartData.items.map(item => (
-                    <div key={item.id} className="flex items-center justify-between py-3 border-b border-stone-100 last:border-0">
-                      <div className="flex-1">
-                        <h4 className="font-bold text-stone-800 flex items-center gap-1">
-                          {item.name}
-                          {item.isPromo && <span className="text-[9px] bg-rose-100 text-rose-600 px-1 py-0.5 rounded">活動</span>}
-                        </h4>
-                        <p className="text-xs text-stone-500">${item.price} /包</p>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-3 bg-white rounded-full px-2 py-1 border border-stone-200">
-                          <button onClick={() => updateCart(item.id, -1)} className="p-1 text-stone-500"><Minus size={14} /></button>
-                          <span className="w-4 text-center text-sm font-bold">{item.qty}</span>
-                          <button onClick={() => updateCart(item.id, 1)} className="p-1 text-stone-800"><Plus size={14} /></button>
+                
+                <div className="flex-1 overflow-y-auto p-5 md:flex md:gap-8">
+                  {/* 左側：訂單商品清單 */}
+                  <div className="md:w-3/5">
+                    <h3 className="hidden md:block font-bold text-stone-800 mb-4 border-b border-stone-200 pb-2">已選商品</h3>
+                    {cartData.items.map(item => (
+                      <div key={item.id} className="flex items-center justify-between py-3 border-b border-stone-100 last:border-0">
+                        <div className="flex-1">
+                          <h4 className="font-bold text-stone-800 flex items-center gap-1">
+                            {item.name}
+                            {item.isPromo && <span className="text-[9px] bg-rose-100 text-rose-600 px-1 py-0.5 rounded">活動</span>}
+                          </h4>
+                          <p className="text-xs text-stone-500">${item.price} /包</p>
                         </div>
-                        <div className="w-12 text-right font-bold text-stone-700">${item.price * item.qty}</div>
-                      </div>
-                    </div>
-                  ))}
-
-                  <div className="mt-6 space-y-4">
-                    <h3 className="font-bold text-stone-800">聯絡資訊</h3>
-                    <div><input type="text" placeholder="您的姓名" value={customerInfo.name} onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})} className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all"/></div>
-                    <div><input type="tel" placeholder="聯絡電話" value={customerInfo.phone} onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all"/></div>
-                    <div className="pt-4 border-t border-stone-100">
-                      <h3 className="font-bold text-stone-800 mb-3">取貨方式</h3>
-                      <div className="flex gap-4 mb-4">
-                        <label className={`flex-1 border rounded-xl p-3 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors ${deliveryMethod==='delivery' ? 'bg-amber-50 border-amber-500 text-amber-700' : 'bg-white border-stone-200 text-stone-500'}`}>
-                          <input type="radio" name="delivery" value="delivery" checked={deliveryMethod === 'delivery'} onChange={(e) => setDeliveryMethod(e.target.value)} className="hidden" />
-                          <Truck size={20} />
-                          <span className="text-sm font-bold">宅配</span>
-                          <span className="text-[10px]">{cartData.totalQty >= storeConfig.freeShippingThreshold ? '滿件免運' : `運費 $${storeConfig.shippingFee}`}</span>
-                        </label>
-                        <label className={`flex-1 border rounded-xl p-3 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors ${deliveryMethod==='pickup' ? 'bg-amber-50 border-amber-500 text-amber-700' : 'bg-white border-stone-200 text-stone-500'}`}>
-                          <input type="radio" name="delivery" value="pickup" checked={deliveryMethod === 'pickup'} onChange={(e) => setDeliveryMethod(e.target.value)} className="hidden" />
-                          <Store size={20} />
-                          <span className="text-sm font-bold">自取</span>
-                          <span className="text-[10px]">免運費</span>
-                        </label>
-                      </div>
-                      {deliveryMethod === 'delivery' && (
-                        <div className="mb-4">
-                          <input type="text" placeholder="請輸入宅配收件地址" value={customerInfo.address} onChange={(e) => setCustomerInfo({...customerInfo, address: e.target.value})} className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all"/>
-                          {cartData.totalQty < storeConfig.freeShippingThreshold && (
-                            <p className="text-xs text-rose-500 mt-2 ml-1">差 {storeConfig.freeShippingThreshold - cartData.totalQty} 件即可享免運優惠！</p>
-                          )}
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-3 bg-white rounded-full px-2 py-1 border border-stone-200">
+                            <button onClick={() => updateCart(item.id, -1)} className="p-1 text-stone-500"><Minus size={14} /></button>
+                            <span className="w-4 text-center text-sm font-bold">{item.qty}</span>
+                            <button onClick={() => updateCart(item.id, 1)} className="p-1 text-stone-800"><Plus size={14} /></button>
+                          </div>
+                          <div className="w-12 text-right font-bold text-stone-700">${item.price * item.qty}</div>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    ))}
                   </div>
 
-                  <div className="mt-6 bg-white p-4 rounded-2xl border border-stone-100 shadow-sm space-y-2">
-                    <div className="flex justify-between text-sm text-stone-600"><span>商品小計</span><span>${cartData.itemsBaseTotal}</span></div>
-                    {cartData.discountAmount > 0 && <div className="flex justify-between text-sm text-rose-500 font-bold"><span>活動折抵</span><span>-${cartData.discountAmount}</span></div>}
-                    
-                    <div className="flex justify-between text-sm text-stone-600">
-                      <span>運費</span>
-                      <span className={cartData.shippingFee === 0 && deliveryMethod === 'delivery' ? 'text-emerald-500 font-bold' : ''}>
-                        {cartData.shippingFee === 0 ? (deliveryMethod==='pickup' ? '$0' : '免運費') : `$${cartData.shippingFee}`}
-                      </span>
+                  {/* 右側：聯絡資訊與結帳 */}
+                  <div className="md:w-2/5 md:border-l border-stone-200 md:pl-8 flex flex-col justify-between">
+                    <div className="mt-6 md:mt-0 space-y-4">
+                      <h3 className="font-bold text-stone-800 border-b border-stone-200 pb-2">聯絡資訊</h3>
+                      <div><input type="text" placeholder="您的姓名" value={customerInfo.name} onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})} className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all"/></div>
+                      <div><input type="tel" placeholder="聯絡電話" value={customerInfo.phone} onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all"/></div>
+                      <div className="pt-4 border-t border-stone-100">
+                        <h3 className="font-bold text-stone-800 mb-3">取貨方式</h3>
+                        <div className="flex gap-4 mb-4">
+                          <label className={`flex-1 border rounded-xl p-3 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors ${deliveryMethod==='delivery' ? 'bg-amber-50 border-amber-500 text-amber-700' : 'bg-white border-stone-200 text-stone-500'}`}>
+                            <input type="radio" name="delivery" value="delivery" checked={deliveryMethod === 'delivery'} onChange={(e) => setDeliveryMethod(e.target.value)} className="hidden" />
+                            <Truck size={20} />
+                            <span className="text-sm font-bold">宅配</span>
+                            <span className="text-[10px]">{cartData.totalQty >= storeConfig.freeShippingThreshold ? '滿件免運' : `運費 $${storeConfig.shippingFee}`}</span>
+                          </label>
+                          <label className={`flex-1 border rounded-xl p-3 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors ${deliveryMethod==='pickup' ? 'bg-amber-50 border-amber-500 text-amber-700' : 'bg-white border-stone-200 text-stone-500'}`}>
+                            <input type="radio" name="delivery" value="pickup" checked={deliveryMethod === 'pickup'} onChange={(e) => setDeliveryMethod(e.target.value)} className="hidden" />
+                            <Store size={20} />
+                            <span className="text-sm font-bold">自取</span>
+                            <span className="text-[10px]">免運費</span>
+                          </label>
+                        </div>
+                        {deliveryMethod === 'delivery' && (
+                          <div className="mb-4">
+                            <input type="text" placeholder="請輸入宅配收件地址" value={customerInfo.address} onChange={(e) => setCustomerInfo({...customerInfo, address: e.target.value})} className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all"/>
+                            {cartData.totalQty < storeConfig.freeShippingThreshold && (
+                              <p className="text-xs text-rose-500 mt-2 ml-1">差 {storeConfig.freeShippingThreshold - cartData.totalQty} 件即可享免運優惠！</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
-                    {cartData.totalQty >= storeConfig.wholesaleThreshold && <div className="flex justify-between text-xs text-amber-600 bg-amber-50 p-2 rounded-lg mt-2 font-bold border border-amber-200"><span>⚠️ 已達{storeConfig.wholesaleThreshold}包批發門檻！訂單送出後由專人另行報價。</span></div>}
-                    <div className="pt-2 mt-2 border-t border-stone-100 flex justify-between items-center"><span className="font-bold text-stone-800">總計金額</span><span className="text-2xl font-black text-stone-800">${cartData.finalPrice}</span></div>
+                    <div className="mt-6 bg-white p-4 rounded-2xl border border-stone-100 shadow-sm space-y-2">
+                      <div className="flex justify-between text-sm text-stone-600"><span>商品小計</span><span>${cartData.itemsBaseTotal}</span></div>
+                      {cartData.discountAmount > 0 && <div className="flex justify-between text-sm text-rose-500 font-bold"><span>活動折抵</span><span>-${cartData.discountAmount}</span></div>}
+                      
+                      <div className="flex justify-between text-sm text-stone-600">
+                        <span>運費</span>
+                        <span className={cartData.shippingFee === 0 && deliveryMethod === 'delivery' ? 'text-emerald-500 font-bold' : ''}>
+                          {cartData.shippingFee === 0 ? (deliveryMethod==='pickup' ? '$0' : '免運費') : `$${cartData.shippingFee}`}
+                        </span>
+                      </div>
+
+                      {cartData.totalQty >= storeConfig.wholesaleThreshold && <div className="flex justify-between text-xs text-amber-600 bg-amber-50 p-2 rounded-lg mt-2 font-bold border border-amber-200"><span>⚠️ 已達{storeConfig.wholesaleThreshold}包批發門檻！訂單送出後由專人另行報價。</span></div>}
+                      <div className="pt-2 mt-2 border-t border-stone-100 flex justify-between items-center"><span className="font-bold text-stone-800">總計金額</span><span className="text-2xl font-black text-stone-800">${cartData.finalPrice}</span></div>
+                    </div>
                   </div>
                 </div>
+                
                 <div className="p-5 border-t border-stone-200 bg-white">
                   <button onClick={handleCheckout} className="w-full bg-[#06C755] text-white font-bold rounded-2xl p-4 flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform"><MessageCircle size={20} />發送訂單至 Line</button>
                   <p className="text-center text-[10px] text-stone-400 mt-3 font-medium">※ 為保持良好賞味，接單後7～15天出貨，敬請見諒</p>
