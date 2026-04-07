@@ -26,7 +26,7 @@
     const { useState, useMemo, useEffect } = React;
 
     // === 👇 步驟1：請將這裡替換為您在 Firebase 取得的專屬金鑰 ===
-     const firebaseConfig = {
+    const firebaseConfig = {
     apiKey: "AIzaSyCrZX5PnfzLEAyxLBoHpuM59VoW3kXVxBY",
     authDomain: "muzi-maison-db.firebaseapp.com",
     projectId: "muzi-maison-db",
@@ -240,7 +240,7 @@
         }
 
         const itemsBaseTotal = items.reduce((sum, item) => sum + item.price * item.qty, 0);
-        const currentTotal = nonPromoPrice + promoTotal + remainderTotal;
+        const currentTotal = nonPromoPrice + promoTotal + remainderTotal; // 這裡不含運費
         const discountAmount = itemsBaseTotal - currentTotal; // 省下多少錢
 
         // 運費計算邏輯
@@ -369,8 +369,9 @@
         setShowConfigModal(false);
       };
 
+      // 響應式外觀設計 (支援手機板與大螢幕版)
       return (
-        <div className="max-w-md mx-auto bg-[#Fdfbf7] min-h-screen relative font-sans text-stone-800 shadow-xl overflow-hidden flex flex-col">
+        <div className="max-w-md md:max-w-4xl lg:max-w-6xl mx-auto bg-[#Fdfbf7] min-h-screen relative font-sans text-stone-800 shadow-xl overflow-hidden flex flex-col transition-all">
           <div className="sticky top-0 z-20 bg-white shadow-sm">
             <header className="px-4 py-3 flex items-center justify-between">
               <div className="flex items-center gap-3 relative">
@@ -432,7 +433,7 @@
             {displayedCategories.map(category => (
               <div key={category} className="mt-6">
                 <h2 className="text-lg font-bold mb-3 text-stone-700 flex items-center gap-2 border-b border-stone-200 pb-1">{category}</h2>
-                <div className="flex flex-col gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                   {products.filter(p => p.category === category).map(product => (
                     <div key={product.id} className="bg-white rounded-2xl p-3 shadow-sm flex gap-4 border border-stone-100 relative group overflow-hidden">
                       {/* 商品圖片 */}
@@ -480,7 +481,7 @@
           {/* 🌟 商品詳情與編輯彈出視窗 */}
           {editingProduct && (
             <div className="fixed inset-0 z-50 flex justify-center items-end sm:items-center bg-black/60 backdrop-blur-sm">
-              <div className="bg-[#Fdfbf7] w-full max-w-md h-[90vh] sm:h-[85vh] rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl animate-in slide-in-from-bottom-full duration-300">
+              <div className="bg-[#Fdfbf7] w-full max-w-md md:max-w-4xl h-[90vh] sm:h-[85vh] rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl animate-in slide-in-from-bottom-full duration-300">
                 
                 <div className="flex items-center justify-between p-4 bg-white/80 backdrop-blur-md absolute top-0 left-0 right-0 z-10 border-b border-stone-100 shadow-sm">
                   <h2 className="font-bold text-stone-800 flex-1 truncate pr-4">
@@ -489,42 +490,45 @@
                   <button onClick={() => setEditingProduct(null)} className="w-8 h-8 flex items-center justify-center bg-stone-100 rounded-full text-stone-500"><X size={20} /></button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto pt-16 pb-24">
-                  {/* 照片區 */}
-                  <div className="w-full h-64 bg-stone-200 flex-shrink-0 relative">
-                    {mainDisplayImg ? <img src={mainDisplayImg} className="w-full h-full object-cover" alt="Product" /> : <div className="w-full h-full flex items-center justify-center text-stone-400 bg-stone-100"><ImageIcon size={48} opacity={0.5}/></div>}
-                  </div>
-                  <div className="flex gap-2 p-4 overflow-x-auto [&::-webkit-scrollbar]:hidden bg-white shadow-sm relative z-0">
-                    <div className="relative shrink-0">
-                      <img src={editingProduct.image || 'https://via.placeholder.com/150?text=Empty'} onClick={() => editingProduct.image && setMainDisplayImg(editingProduct.image)} className={`w-16 h-16 object-cover rounded-lg cursor-pointer border-2 ${mainDisplayImg === editingProduct.image ? 'border-amber-500' : 'border-stone-200'}`} />
-                      {isAdminMode && (
-                        <label className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-lg cursor-pointer hover:bg-black/50 transition-colors">
-                          <Camera size={16} className="text-white" />
-                          <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], (img) => { setEditingProduct({...editingProduct, image: img}); setMainDisplayImg(img); })} />
+                <div className="flex-1 overflow-y-auto pt-16 pb-24 md:flex md:flex-row">
+                  {/* 左側：照片區 (電腦版) */}
+                  <div className="md:w-1/2 md:border-r border-stone-200 flex flex-col">
+                    <div className="w-full h-64 md:h-80 bg-stone-200 flex-shrink-0 relative">
+                      {mainDisplayImg ? <img src={mainDisplayImg} className="w-full h-full object-cover" alt="Product" /> : <div className="w-full h-full flex items-center justify-center text-stone-400 bg-stone-100"><ImageIcon size={48} opacity={0.5}/></div>}
+                    </div>
+                    <div className="flex gap-2 p-4 overflow-x-auto [&::-webkit-scrollbar]:hidden bg-white shadow-sm relative z-0">
+                      <div className="relative shrink-0">
+                        <img src={editingProduct.image || 'https://via.placeholder.com/150?text=Empty'} onClick={() => editingProduct.image && setMainDisplayImg(editingProduct.image)} className={`w-16 h-16 object-cover rounded-lg cursor-pointer border-2 ${mainDisplayImg === editingProduct.image ? 'border-amber-500' : 'border-stone-200'}`} />
+                        {isAdminMode && (
+                          <label className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-lg cursor-pointer hover:bg-black/50 transition-colors">
+                            <Camera size={16} className="text-white" />
+                            <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], (img) => { setEditingProduct({...editingProduct, image: img}); setMainDisplayImg(img); })} />
+                          </label>
+                        )}
+                        <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-[8px] px-1.5 rounded-full whitespace-nowrap shadow-sm">封面圖</span>
+                      </div>
+
+                      {(editingProduct.extraImages || []).map((img, idx) => (
+                        <div key={idx} className="relative shrink-0 group">
+                          <img src={img} onClick={() => setMainDisplayImg(img)} className={`w-16 h-16 object-cover rounded-lg cursor-pointer border-2 ${mainDisplayImg === img ? 'border-amber-500' : 'border-stone-200'}`} />
+                          {isAdminMode && (
+                            <button onClick={() => { const newExtra = [...editingProduct.extraImages]; newExtra.splice(idx, 1); setEditingProduct({...editingProduct, extraImages: newExtra}); if(mainDisplayImg === img) setMainDisplayImg(editingProduct.image); }} className="absolute -top-1 -right-1 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center shadow-md"><X size={12} /></button>
+                          )}
+                        </div>
+                      ))}
+
+                      {isAdminMode && (editingProduct.extraImages || []).length < 4 && (
+                        <label className="w-16 h-16 shrink-0 border-2 border-dashed border-stone-300 rounded-lg flex flex-col items-center justify-center text-stone-400 cursor-pointer hover:bg-stone-50 hover:text-amber-500 hover:border-amber-500 transition-colors">
+                          <ImagePlus size={20} />
+                          <span className="text-[10px] mt-1 font-bold">加照片</span>
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], (img) => setEditingProduct({...editingProduct, extraImages: [...(editingProduct.extraImages||[]), img]}))} />
                         </label>
                       )}
-                      <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-[8px] px-1.5 rounded-full whitespace-nowrap shadow-sm">封面圖</span>
                     </div>
-
-                    {(editingProduct.extraImages || []).map((img, idx) => (
-                      <div key={idx} className="relative shrink-0 group">
-                        <img src={img} onClick={() => setMainDisplayImg(img)} className={`w-16 h-16 object-cover rounded-lg cursor-pointer border-2 ${mainDisplayImg === img ? 'border-amber-500' : 'border-stone-200'}`} />
-                        {isAdminMode && (
-                          <button onClick={() => { const newExtra = [...editingProduct.extraImages]; newExtra.splice(idx, 1); setEditingProduct({...editingProduct, extraImages: newExtra}); if(mainDisplayImg === img) setMainDisplayImg(editingProduct.image); }} className="absolute -top-1 -right-1 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center shadow-md"><X size={12} /></button>
-                        )}
-                      </div>
-                    ))}
-
-                    {isAdminMode && (editingProduct.extraImages || []).length < 4 && (
-                      <label className="w-16 h-16 shrink-0 border-2 border-dashed border-stone-300 rounded-lg flex flex-col items-center justify-center text-stone-400 cursor-pointer hover:bg-stone-50 hover:text-amber-500 hover:border-amber-500 transition-colors">
-                        <ImagePlus size={20} />
-                        <span className="text-[10px] mt-1 font-bold">加照片</span>
-                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], (img) => setEditingProduct({...editingProduct, extraImages: [...(editingProduct.extraImages||[]), img]}))} />
-                      </label>
-                    )}
                   </div>
 
-                  <div className="p-5 space-y-5">
+                  {/* 右側：詳細資訊區 (電腦版) */}
+                  <div className="md:w-1/2 p-5 space-y-5">
                     {/* 基礎資訊表單 (管理員) */}
                     {isAdminMode ? (
                       <div className="bg-stone-50 p-4 rounded-2xl border border-stone-200 space-y-3">
@@ -571,7 +575,6 @@
 
                     <hr className="border-stone-200" />
 
-                    {/* 詳細圖文區 */}
                     {(isAdminMode || editingProduct.intro) && (
                       <div className="space-y-1.5">
                         <h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 bg-amber-500 rounded-full"></span> 產品介紹</h3>
@@ -593,7 +596,7 @@
                       </div>
                     )}
 
-                    {/* 注意事項 (加大到 50 行) */}
+                    {/* 注意事項 (加大到 50 行，並允許縮放) */}
                     {(isAdminMode || editingProduct.notices) && (
                       <div className="space-y-1.5">
                         <h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 bg-rose-500 rounded-full"></span> 注意事項</h3>
@@ -632,7 +635,7 @@
             </div>
           )}
 
-          {/* 購物車懸浮按鈕 */}
+          {/* 購物車懸浮按鈕 (金額不含運費) */}
           {cartData.totalQty > 0 && !isAdminMode && !editingProduct && (
             <div className="fixed bottom-0 left-0 right-0 max-w-md md:max-w-4xl lg:max-w-6xl mx-auto p-4 bg-gradient-to-t from-white via-white to-transparent pointer-events-none z-10">
               <button onClick={() => setIsCartOpen(true)} className="w-full bg-stone-800 text-white rounded-2xl p-4 flex items-center justify-between shadow-xl pointer-events-auto active:scale-95 transition-transform">
@@ -643,12 +646,13 @@
                   </div>
                   <span className="font-medium">查看購物車</span>
                 </div>
+                {/* 顯示折扣後商品小計，不含運費 */}
                 <div className="text-lg font-bold">${cartData.currentTotal}</div>
               </button>
             </div>
           )}
 
-          {/* 購物車結帳彈窗 */}
+          {/* 購物車結帳彈窗 (包含運費與總計) */}
           {isCartOpen && (
             <div className="fixed inset-0 z-50 flex justify-center items-end bg-black/50 backdrop-blur-sm sm:items-center">
               <div className="w-full max-w-md md:max-w-4xl bg-[#Fdfbf7] rounded-t-3xl sm:rounded-3xl h-[85vh] sm:h-auto sm:max-h-[85vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-full duration-300">
@@ -658,7 +662,7 @@
                 </div>
                 
                 <div className="flex-1 overflow-y-auto p-5 md:flex md:gap-8">
-                  {/* 左側：訂單商品清單 */}
+                  {/* 左側：訂單商品清單 (電腦版) */}
                   <div className="md:w-3/5">
                     <h3 className="hidden md:block font-bold text-stone-800 mb-4 border-b border-stone-200 pb-2">已選商品</h3>
                     {cartData.items.map(item => (
@@ -682,7 +686,7 @@
                     ))}
                   </div>
 
-                  {/* 右側：聯絡資訊與結帳 */}
+                  {/* 右側：聯絡資訊與結帳 (電腦版) */}
                   <div className="md:w-2/5 md:border-l border-stone-200 md:pl-8 flex flex-col justify-between">
                     <div className="mt-6 md:mt-0 space-y-4">
                       <h3 className="font-bold text-stone-800 border-b border-stone-200 pb-2">聯絡資訊</h3>
@@ -727,6 +731,8 @@
                       </div>
 
                       {cartData.totalQty >= storeConfig.wholesaleThreshold && <div className="flex justify-between text-xs text-amber-600 bg-amber-50 p-2 rounded-lg mt-2 font-bold border border-amber-200"><span>⚠️ 已達{storeConfig.wholesaleThreshold}包批發門檻！訂單送出後由專人另行報價。</span></div>}
+                      
+                      {/* 最終結帳總計 */}
                       <div className="pt-2 mt-2 border-t border-stone-100 flex justify-between items-center"><span className="font-bold text-stone-800">總計金額</span><span className="text-2xl font-black text-stone-800">${cartData.finalPrice}</span></div>
                     </div>
                   </div>
@@ -808,7 +814,7 @@
             </div>
           )}
 
-          {/* 聯絡我們彈出視窗 (與之前相同) */}
+          {/* 聯絡我們彈出視窗 */}
           {showContactModal && (
             <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4">
               <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 relative border border-stone-100">
