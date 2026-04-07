@@ -588,7 +588,7 @@
           const img = new Image();
           img.onload = () => {
             const canvas = document.createElement('canvas');
-            const MAX_WIDTH = 500; let width = img.width; let height = img.height;
+            const MAX_WIDTH = 1024; let width = img.width; let height = img.height;
             if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
             canvas.width = width; canvas.height = height;
             const ctx = canvas.getContext('2d'); 
@@ -642,7 +642,7 @@
           <div className="sticky top-0 z-20 bg-white shadow-sm">
             <header className="px-4 py-3 flex items-center justify-between">
               <div className="flex items-center gap-3 relative">
-                <label className={`relative block h-12 min-w-[3rem] max-w-[150px] flex items-center justify-center ${isAdminMode ? 'cursor-pointer hover:ring-2 hover:ring-amber-400 p-1 rounded-lg border border-dashed border-stone-300' : ''}`}>
+                <label className={`relative block h-16 min-w-[3rem] max-w-[200px] flex items-center justify-center ${isAdminMode ? 'cursor-pointer hover:ring-2 hover:ring-amber-400 p-1 rounded-lg border border-dashed border-stone-300' : ''}`}>
                   {logo ? <img src={logo} alt="Logo" className="max-w-full max-h-full object-contain" /> : <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center"><Store size={20} className="text-amber-700" /></div>}
                   {isAdminMode && <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-lg"><Camera size={18} className="text-white" /></div>}
                   {isAdminMode && <input type="file" accept="image/*" className="hidden" onChange={onLogoChange} />}
