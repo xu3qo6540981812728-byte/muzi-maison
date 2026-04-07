@@ -5,19 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>木子家線上訂單系統</title>
   
-  <!-- 載入 React 核心 -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  <!-- 載入 Babel -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <!-- 載入 Tailwind CSS 樣式 -->
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- 🚀 載入 Firebase 核心套件 -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-
 </head>
 <body class="bg-stone-100">
   <div id="root"></div>
@@ -26,7 +21,7 @@
     const { useState, useMemo, useEffect } = React;
 
     // === 👇 步驟1：請將這裡替換為您在 Firebase 取得的專屬金鑰 ===
-    const firebaseConfig = {
+     const firebaseConfig = {
     apiKey: "AIzaSyCrZX5PnfzLEAyxLBoHpuM59VoW3kXVxBY",
     authDomain: "muzi-maison-db.firebaseapp.com",
     projectId: "muzi-maison-db",
@@ -35,13 +30,11 @@
     appId: "1:270446372915:web:905cd2e7153ab450e8db46"
   };
 
-    // 初始化 Firebase
     if (!firebase.apps.length && !firebaseConfig.apiKey.includes("請填入")) {
       firebase.initializeApp(firebaseConfig);
     }
     const db = firebase.apps.length ? firebase.firestore() : null;
     const auth = firebase.apps.length ? firebase.auth() : null;
-    // =========================================================
 
     // --- 圖示元件 ---
     const ShoppingCart = ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>;
@@ -63,8 +56,10 @@
     const Phone = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>;
     const Mail = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>;
     const Truck = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 17h4V5H2v12h3"/><path d="M20 17h2v-3.34a4 4 0 0 0-1.17-2.83L19 9h-5v8h2"/><path d="M14 9h5.51"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>;
+    const User = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
+    const ClipboardList = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>;
 
-    // 預設商品資料 (新增 isPromo 欄位判斷是否參與活動)
+    // 預設商品資料
     const getBaseProduct = (id, name, desc, weight, price, category, image, isPromo = false) => ({
       id, name, desc, weight, price, category, image,
       intro: '', ingredients: '', notices: '', extraImages: [], isPromo
@@ -88,49 +83,74 @@
       getBaseProduct('C03', '南瓜子酥', '參與任選優惠活動', '200克', 200, '酥糖系列(3包550)', 'https://images.unsplash.com/photo-1598155523122-3842334d6c1f?auto=format&fit=crop&w=300&q=80', true)
     ];
 
-    // 系統預設設定
     const defaultStoreConfig = {
-      shippingFee: 100,             // 運費
-      freeShippingThreshold: 12,    // 滿幾包免運
-      promoQty: 3,                  // 優惠組合件數
-      promoPrice: 550,              // 優惠組合價格
-      wholesaleThreshold: 12        // 批發優惠提示門檻
+      shippingFee: 100, freeShippingThreshold: 12, promoQty: 3, promoPrice: 550, wholesaleThreshold: 12
     };
 
     function App() {
-      // --- 狀態管理 ---
+      // --- 身份狀態 ---
+      const [currentUser, setCurrentUser] = useState(null);
       const [isAdminMode, setIsAdminMode] = useState(false);
+
+      // --- UI 彈窗狀態 ---
       const [showLoginModal, setShowLoginModal] = useState(false);
+      const [loginMode, setLoginMode] = useState('customer'); // 'customer' or 'admin'
+      const [isRegistering, setIsRegistering] = useState(false);
+      
+      const [showMemberProfile, setShowMemberProfile] = useState(false);
+      const [showAdminOrders, setShowAdminOrders] = useState(false);
+      
+      // --- 輸入狀態 ---
       const [emailInput, setEmailInput] = useState('');
       const [passwordInput, setPasswordInput] = useState('');
+      const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '', address: '', email: '', lineId: '' });
+      const [saveAsMember, setSaveAsMember] = useState(false); // 結帳自動註冊
+      const [registerPassword, setRegisterPassword] = useState('');
 
+      // --- 資料狀態 ---
       const [logo, setLogo] = useState(null);
       const [products, setProducts] = useState(defaultProducts);
       const [storeConfig, setStoreConfig] = useState(defaultStoreConfig);
-
       const [cart, setCart] = useState({});
       const [isCartOpen, setIsCartOpen] = useState(false);
-      const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '', address: '' });
       const [activeCategory, setActiveCategory] = useState('全部');
       const [deliveryMethod, setDeliveryMethod] = useState('delivery');
+      const [contactData, setContactData] = useState({ address: '', phone: '', lineLink: '', email: '' });
+      
+      // 訂單狀態
+      const [allOrders, setAllOrders] = useState([]);
 
-      // 詳情/編輯彈窗狀態
       const [editingProduct, setEditingProduct] = useState(null); 
       const [mainDisplayImg, setMainDisplayImg] = useState(''); 
-
-      // 聯絡我們狀態
       const [showContactModal, setShowContactModal] = useState(false);
-      const [contactData, setContactData] = useState({ address: '', phone: '', lineLink: '', email: '' });
-
-      // 系統設定彈窗狀態
       const [showConfigModal, setShowConfigModal] = useState(false);
       const [tempConfig, setTempConfig] = useState(defaultStoreConfig);
 
-      // --- 🚀 Firebase 資料庫與驗證邏輯 ---
+      // --- 🚀 Firebase 監聽 ---
       useEffect(() => {
         if (!db || !auth) return;
 
-        const unsubscribeAuth = auth.onAuthStateChanged(user => setIsAdminMode(!!user));
+        const unsubscribeAuth = auth.onAuthStateChanged(async user => {
+          if (user) {
+            const userDoc = await db.collection('users').doc(user.uid).get();
+            if (userDoc.exists && userDoc.data().role === 'customer') {
+              setIsAdminMode(false);
+              setCustomerInfo({
+                name: userDoc.data().name || '',
+                phone: userDoc.data().phone || '',
+                address: userDoc.data().address || '',
+                email: userDoc.data().email || user.email || '',
+                lineId: userDoc.data().lineId || ''
+              });
+            } else {
+              setIsAdminMode(true); // 若不在 users 集合，預設為管理員 (透過 Firebase Console 建立的)
+            }
+            setCurrentUser(user);
+          } else {
+            setCurrentUser(null);
+            setIsAdminMode(false);
+          }
+        });
 
         const unsubscribeLogo = db.collection('settings').doc('store').onSnapshot(doc => {
           if (doc.exists && doc.data().logo) setLogo(doc.data().logo);
@@ -140,7 +160,6 @@
           if (doc.exists) setContactData({ address: '', phone: '', lineLink: '', email: '', ...doc.data() });
         });
 
-        // 監聽系統規則設定
         const unsubscribeConfig = db.collection('settings').doc('config').onSnapshot(doc => {
           if (doc.exists) setStoreConfig({ ...defaultStoreConfig, ...doc.data() });
         });
@@ -155,45 +174,19 @@
           }
         });
 
+        // 監聽訂單
+        const unsubscribeOrders = db.collection('orders').orderBy('createdAt', 'desc').onSnapshot(snapshot => {
+          const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setAllOrders(orders);
+        });
+
         return () => {
-          unsubscribeAuth();
-          unsubscribeLogo();
-          unsubscribeContact();
-          unsubscribeConfig();
-          unsubscribeProducts();
+          unsubscribeAuth(); unsubscribeLogo(); unsubscribeContact(); 
+          unsubscribeConfig(); unsubscribeProducts(); unsubscribeOrders();
         };
       }, []);
 
-      // --- 圖片上傳邏輯 ---
-      const handleImageUpload = (file, callback) => {
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const img = new Image();
-          img.onload = () => {
-            const canvas = document.createElement('canvas');
-            const MAX_WIDTH = 500;
-            let width = img.width;
-            let height = img.height;
-            if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
-            canvas.width = width; canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-            callback(canvas.toDataURL('image/jpeg', 0.8));
-          };
-          img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-      };
-
-      const onLogoChange = (e) => {
-        handleImageUpload(e.target.files[0], (base64Str) => {
-          if (db) db.collection('settings').doc('store').set({ logo: base64Str }, { merge: true });
-          else setLogo(base64Str);
-        });
-      };
-
-      // --- 購物車與結帳邏輯 ---
+      // --- 購物車計算邏輯 ---
       const categories = ['全部', ...new Set(products.map(p => p.category))];
       const displayedCategories = activeCategory === '全部' ? categories.filter(c => c !== '全部') : [activeCategory];
 
@@ -206,172 +199,162 @@
         });
       };
 
-      // ✨ 進階智慧購物車結算邏輯
       const cartData = useMemo(() => {
-        let totalQty = 0;
-        let nonPromoPrice = 0;
-        let promoItemsExpanded = []; // 收集所有參與優惠的商品單價
+        let totalQty = 0; let nonPromoPrice = 0; let promoItemsExpanded = [];
 
         const items = Object.entries(cart).map(([id, qty]) => {
           const product = products.find(p => p.id === id);
           if(!product) return null;
-          
           totalQty += qty;
-          
           if (product.isPromo) {
-            // 將每個優惠商品獨立展開，以便後續排序與組合 (確保客人享有最大折扣)
-            for(let i = 0; i < qty; i++) { promoItemsExpanded.push(product.price); }
-          } else {
-            nonPromoPrice += product.price * qty;
-          }
+            for(let i = 0; i < qty; i++) promoItemsExpanded.push(product.price);
+          } else { nonPromoPrice += product.price * qty; }
           return { ...product, qty };
         }).filter(Boolean);
 
-        // 優惠商品從高價排到低價 (讓客人優先用高價品湊組合，最划算)
         promoItemsExpanded.sort((a,b) => b - a);
-        
         const promoSets = Math.floor(promoItemsExpanded.length / storeConfig.promoQty);
         const promoTotal = promoSets * storeConfig.promoPrice;
-        
-        // 湊不成組合的剩餘商品，以原價計算
         let remainderTotal = 0;
-        for(let i = promoSets * storeConfig.promoQty; i < promoItemsExpanded.length; i++) {
-          remainderTotal += promoItemsExpanded[i];
-        }
+        for(let i = promoSets * storeConfig.promoQty; i < promoItemsExpanded.length; i++) remainderTotal += promoItemsExpanded[i];
 
         const itemsBaseTotal = items.reduce((sum, item) => sum + item.price * item.qty, 0);
-        const currentTotal = nonPromoPrice + promoTotal + remainderTotal; // 這裡不含運費
-        const discountAmount = itemsBaseTotal - currentTotal; // 省下多少錢
+        const currentTotal = nonPromoPrice + promoTotal + remainderTotal; 
+        const discountAmount = itemsBaseTotal - currentTotal; 
 
-        // 運費計算邏輯
         let shippingFee = 0;
-        if (deliveryMethod === 'delivery') {
-          if (totalQty < storeConfig.freeShippingThreshold) {
-            shippingFee = storeConfig.shippingFee;
-          }
+        if (deliveryMethod === 'delivery' && totalQty < storeConfig.freeShippingThreshold) {
+          shippingFee = storeConfig.shippingFee;
         }
-        
         const finalPrice = currentTotal + shippingFee;
 
         return { items, totalQty, currentTotal, finalPrice, shippingFee, discountAmount, itemsBaseTotal };
       }, [cart, products, storeConfig, deliveryMethod]);
 
-      const handleCheckout = () => {
-        if (cartData.totalQty === 0) return;
-        if (!customerInfo.name || !customerInfo.phone) return alert("請填寫訂購人姓名與電話哦！");
-        if (deliveryMethod === 'delivery' && !customerInfo.address) return alert("選擇宅配請務必填寫收件地址哦！");
+      // --- 登入與註冊邏輯 ---
+      const handleAuthSubmit = async () => {
+        if (!auth) return alert("請先設定 Firebase 金鑰！");
+        try {
+          if (isRegistering) {
+            if (!customerInfo.name || !customerInfo.phone) return alert("請填寫姓名與電話！");
+            const cred = await auth.createUserWithEmailAndPassword(emailInput, passwordInput);
+            await db.collection('users').doc(cred.user.uid).set({
+              ...customerInfo, email: emailInput, role: 'customer'
+            });
+            alert("註冊成功！歡迎加入木子家！");
+          } else {
+            await auth.signInWithEmailAndPassword(emailInput, passwordInput);
+          }
+          setShowLoginModal(false); setEmailInput(''); setPasswordInput(''); setIsRegistering(false);
+        } catch (error) {
+          alert(isRegistering ? "註冊失敗：" + error.message : "登入失敗，請檢查帳號密碼！");
+        }
+      };
 
-        let orderText = `*【木子家 MUZI MAISON 訂單】*\n\n`;
+      // --- 結帳送出訂單 ---
+      const handleCheckout = async () => {
+        if (cartData.totalQty === 0) return;
+        if (!customerInfo.name || !customerInfo.phone) return alert("請填寫訂購人姓名與電話！");
+        if (deliveryMethod === 'delivery' && !customerInfo.address) return alert("選擇宅配請務必填寫收件地址！");
+
+        // 自動註冊邏輯
+        let finalUserId = currentUser ? currentUser.uid : 'guest';
+        if (saveAsMember && !currentUser && registerPassword) {
+          if (!customerInfo.email) return alert("若要加入會員，請務必填寫 Email！");
+          try {
+            const cred = await auth.createUserWithEmailAndPassword(customerInfo.email, registerPassword);
+            await db.collection('users').doc(cred.user.uid).set({
+              ...customerInfo, role: 'customer'
+            });
+            finalUserId = cred.user.uid;
+          } catch (e) { return alert("自動註冊失敗：" + e.message); }
+        }
+
+        const orderId = `MZ${Date.now().toString().slice(-6)}`;
+        
+        // 儲存至 Firestore
+        if (db) {
+          await db.collection('orders').doc(orderId).set({
+            orderId,
+            userId: finalUserId,
+            customerInfo,
+            items: cartData.items,
+            totals: {
+              itemsBaseTotal: cartData.itemsBaseTotal,
+              discountAmount: cartData.discountAmount,
+              shippingFee: cartData.shippingFee,
+              finalPrice: cartData.finalPrice
+            },
+            deliveryMethod,
+            status: 'pending', // pending, processing, completed
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        }
+
+        // 產生 LINE 訊息
+        let orderText = `*【木子家 MUZI MAISON 新訂單】*\n\n`;
+        orderText += `訂單編號：${orderId}\n`;
         orderText += `訂購人：${customerInfo.name}\n`;
         orderText += `聯絡電話：${customerInfo.phone}\n`;
+        orderText += `Line ID：${customerInfo.lineId || '未提供'}\n`;
         orderText += `取貨方式：${deliveryMethod === 'delivery' ? '宅配' : '自取'}\n`;
         if (deliveryMethod === 'delivery') orderText += `宅配地址：${customerInfo.address}\n`;
         orderText += `----------------------\n`;
-        cartData.items.forEach(item => orderText += `▪️ ${item.name} (${item.weight})\n   x ${item.qty} 包\n`);
+        cartData.items.forEach(item => orderText += `▪️ ${item.name} (${item.weight}) x ${item.qty}\n`);
         orderText += `----------------------\n`;
-        orderText += `商品小計：$${cartData.itemsBaseTotal}\n`;
-        if (cartData.discountAmount > 0) orderText += `已折抵優惠：-$${cartData.discountAmount}\n`;
-        
-        if (deliveryMethod === 'delivery') {
-          if (cartData.shippingFee === 0) orderText += `運費：$0 (滿件免運)\n`;
-          else orderText += `運費：$${cartData.shippingFee}\n`;
-        } else {
-          orderText += `運費：$0 (自取)\n`;
-        }
-        
         orderText += `*總計金額：$${cartData.finalPrice}*\n`;
-        
-        if (cartData.totalQty >= storeConfig.wholesaleThreshold) {
-          orderText += `(💡 已達${storeConfig.wholesaleThreshold}包以上，將由專人為您重新報價優惠！)\n`;
-        }
-        orderText += `\n(⚠️ 提醒您：為保持良好的賞味，皆7～15天出貨，煩請先匯款哦！)\n`;
+        orderText += `\n(⚠️ 已於網站送出訂單，請老闆確認喔！)\n`;
 
+        setCart({}); // 清空購物車
+        setIsCartOpen(false);
         window.open(`https://line.me/R/msg/text/?${encodeURIComponent(orderText)}`, '_blank');
       };
 
-      // --- 登入邏輯 ---
-      const handleLoginSubmit = () => {
-        if (!auth) return alert("請先完成 Firebase 金鑰設定哦！");
-        auth.signInWithEmailAndPassword(emailInput, passwordInput)
-          .then(() => { setShowLoginModal(false); setEmailInput(''); setPasswordInput(''); })
-          .catch((error) => { alert("登入失敗，請檢查帳號密碼是否正確！"); console.error(error); });
-      };
-
-      // --- 商品編輯與新增邏輯 ---
-      const openProductDetail = (product) => {
-        const fullProduct = { intro: '', ingredients: '', notices: '', extraImages: [], isPromo: false, isNew: false, ...product };
-        setEditingProduct(fullProduct);
-        setMainDisplayImg(fullProduct.image || '');
-      };
-
-      const handleAddProduct = () => {
-        setEditingProduct({
-          id: '', name: '', desc: '', weight: '', price: 0, category: '精選商品', 
-          image: '', intro: '', ingredients: '', notices: '', extraImages: [], isPromo: false, isNew: true
-        });
-        setMainDisplayImg('');
-      };
-
-      const saveProductDetail = async () => {
-        if (editingProduct.isNew && !editingProduct.id.trim()) {
-          return alert("請務必輸入「商品品號」！(例如: D01)");
-        }
-        const prodData = {
-          id: editingProduct.id.trim(),
-          name: editingProduct.name || '未命名商品',
-          desc: editingProduct.desc || '',
-          weight: editingProduct.weight || '',
-          price: Number(editingProduct.price) || 0,
-          category: editingProduct.category || '精選商品',
-          image: editingProduct.image || 'https://via.placeholder.com/300x300?text=No+Image',
-          intro: editingProduct.intro || '',
-          ingredients: editingProduct.ingredients || '',
-          notices: editingProduct.notices || '',
-          extraImages: editingProduct.extraImages || [],
-          isPromo: editingProduct.isPromo || false
+      // --- 管理員商品邏輯 ---
+      const handleImageUpload = (file, callback) => {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 500; let width = img.width; let height = img.height;
+            if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
+            canvas.width = width; canvas.height = height;
+            const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
+            callback(canvas.toDataURL('image/jpeg', 0.8));
+          };
+          img.src = e.target.result;
         };
+        reader.readAsDataURL(file);
+      };
+      const onLogoChange = (e) => handleImageUpload(e.target.files[0], (img) => db ? db.collection('settings').doc('store').set({ logo: img }, { merge: true }) : setLogo(img));
 
-        if (db) {
-          await db.collection('products').doc(prodData.id).set(prodData);
-        } else {
-          if (editingProduct.isNew) setProducts([...products, prodData]);
-          else setProducts(prev => prev.map(p => p.id === prodData.id ? prodData : p));
-        }
+      const openProductDetail = (product) => { setEditingProduct({ intro: '', ingredients: '', notices: '', extraImages: [], isPromo: false, isNew: false, ...product }); setMainDisplayImg(product.image || ''); };
+      const handleAddProduct = () => { setEditingProduct({ id: '', name: '', desc: '', weight: '', price: 0, category: '精選商品', image: '', intro: '', ingredients: '', notices: '', extraImages: [], isPromo: false, isNew: true }); setMainDisplayImg(''); };
+      
+      const saveProductDetail = async () => {
+        if (editingProduct.isNew && !editingProduct.id.trim()) return alert("請輸入「商品品號」！");
+        const prodData = { ...editingProduct, id: editingProduct.id.trim(), price: Number(editingProduct.price) || 0 };
+        delete prodData.isNew;
+        if (db) await db.collection('products').doc(prodData.id).set(prodData);
         setEditingProduct(null); 
       };
-
       const handleDeleteProduct = async () => {
-        if (!window.confirm(`確定要刪除「${editingProduct.name}」嗎？這個動作無法復原喔！`)) return;
-        if (db) {
-          await db.collection('products').doc(editingProduct.id).delete();
-        } else {
-          setProducts(prev => prev.filter(p => p.id !== editingProduct.id));
-        }
+        if (!window.confirm(`確定刪除「${editingProduct.name}」嗎？無法復原喔！`)) return;
+        if (db) await db.collection('products').doc(editingProduct.id).delete();
         setEditingProduct(null);
       };
-
-      // --- 設定檔儲存 ---
-      const saveContactInfo = async () => {
-        if (db) await db.collection('settings').doc('contact').set(contactData, { merge: true });
-        setShowContactModal(false);
+      const updateOrderStatus = async (orderId, newStatus) => {
+        if (db) await db.collection('orders').doc(orderId).update({ status: newStatus });
       };
 
-      const saveSystemConfig = async () => {
-        const configToSave = {
-          shippingFee: Number(tempConfig.shippingFee) || 0,
-          freeShippingThreshold: Number(tempConfig.freeShippingThreshold) || 0,
-          promoQty: Number(tempConfig.promoQty) || 1,
-          promoPrice: Number(tempConfig.promoPrice) || 0,
-          wholesaleThreshold: Number(tempConfig.wholesaleThreshold) || 0,
-        };
-        if (db) await db.collection('settings').doc('config').set(configToSave, { merge: true });
-        setStoreConfig(configToSave);
-        setShowConfigModal(false);
-      };
+      const myOrders = currentUser ? allOrders.filter(o => o.userId === currentUser.uid) : [];
 
-      // 響應式外觀設計 (支援手機板與大螢幕版)
       return (
         <div className="max-w-md md:max-w-4xl lg:max-w-6xl mx-auto bg-[#Fdfbf7] min-h-screen relative font-sans text-stone-800 shadow-xl overflow-hidden flex flex-col transition-all">
+          
+          {/* Header */}
           <div className="sticky top-0 z-20 bg-white shadow-sm">
             <header className="px-4 py-3 flex items-center justify-between">
               <div className="flex items-center gap-3 relative">
@@ -385,7 +368,6 @@
                   <div className="flex items-center gap-2">
                     <p className="text-[10px] text-stone-400 font-semibold tracking-widest uppercase">Muzi Maison</p>
                     <button onClick={() => setShowContactModal(true)} className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded shadow-sm hover:bg-amber-100 transition-colors">聯絡我們</button>
-                    {/* ⚙️ 系統設定按鈕 (僅管理員可見) */}
                     {isAdminMode && (
                       <button onClick={() => { setTempConfig(storeConfig); setShowConfigModal(true); }} className="text-[10px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded shadow-sm hover:bg-rose-100 transition-colors flex items-center gap-1">
                         <SettingsIcon size={12} /> 系統設定
@@ -395,11 +377,35 @@
                 </div>
               </div>
               
-              <button onClick={() => isAdminMode && auth ? auth.signOut() : setShowLoginModal(true)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${isAdminMode ? 'bg-stone-800 text-white shadow-md' : 'bg-stone-100 text-stone-500 hover:bg-stone-200'}`}>
-                {isAdminMode ? <LogOut size={14} /> : <Lock size={14} />}
-                {isAdminMode ? '登出' : '管理員'}
-              </button>
+              {/* 帳號控制按鈕 */}
+              <div className="flex items-center gap-2">
+                {isAdminMode && (
+                  <button onClick={() => setShowAdminOrders(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors">
+                    <ClipboardList size={14} /> 訂單管理
+                  </button>
+                )}
+                {currentUser && !isAdminMode && (
+                  <button onClick={() => setShowMemberProfile(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-stone-800 text-white hover:bg-stone-700 transition-colors">
+                    <User size={14} /> 我的帳號
+                  </button>
+                )}
+                <button 
+                  onClick={() => {
+                    if (currentUser) {
+                      auth.signOut();
+                    } else {
+                      setLoginMode('customer');
+                      setShowLoginModal(true);
+                    }
+                  }} 
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${currentUser ? 'bg-stone-200 text-stone-600' : 'bg-stone-100 text-stone-500 hover:bg-stone-200'}`}
+                >
+                  {currentUser ? <LogOut size={14} /> : <User size={14} />}
+                  {currentUser ? '登出' : '會員登入'}
+                </button>
+              </div>
             </header>
+
             <div className="px-4 pb-3 flex gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {categories.map(category => (
                 <button key={category} onClick={() => setActiveCategory(category)} className={`whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${activeCategory === category ? 'bg-stone-800 text-white shadow-sm' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'}`}>
@@ -409,24 +415,22 @@
             </div>
           </div>
 
-          {/* 動態優惠跑馬燈 */}
+          {/* 跑馬燈 */}
           {isAdminMode ? (
-            <div className="bg-rose-50 text-rose-700 text-xs py-2 px-4 text-center font-bold">🛠️ 管理模式：可新增商品、編輯內容，左上角可修改系統設定。</div>
+            <div className="bg-rose-50 text-rose-700 text-xs py-2 px-4 text-center font-bold">🛠️ 管理模式：可新增商品、管理訂單與系統設定。</div>
           ) : (
             <div className="bg-amber-50 text-amber-700 text-xs py-2 px-4 flex items-center gap-2 overflow-hidden relative">
               <Info size={14} className="shrink-0" />
               <div className="whitespace-nowrap animate-[marquee_15s_linear_infinite] w-full">
-                <span>活動商品任選 <strong>{storeConfig.promoQty}包優惠 {storeConfig.promoPrice}元</strong>！滿 <strong>{storeConfig.freeShippingThreshold}包</strong> 享免運。滿 {storeConfig.wholesaleThreshold}包另有優惠。</span>
+                <span>活動商品任選 <strong>{storeConfig.promoQty}包優惠 {storeConfig.promoPrice}元</strong>！滿 <strong>{storeConfig.freeShippingThreshold}包</strong> 享免運。</span>
               </div>
             </div>
           )}
 
           <main className="flex-1 overflow-y-auto pb-24 px-4">
-            {/* 新增商品按鈕 */}
             {isAdminMode && (
               <button onClick={handleAddProduct} className="w-full mt-4 bg-white border-2 border-dashed border-stone-300 rounded-2xl p-4 text-stone-500 font-bold flex flex-col items-center justify-center gap-2 hover:border-amber-500 hover:text-amber-600 transition-colors">
-                <div className="bg-stone-100 p-2 rounded-full"><Plus size={24} /></div>
-                新增商品
+                <div className="bg-stone-100 p-2 rounded-full"><Plus size={24} /></div> 新增商品
               </button>
             )}
 
@@ -436,30 +440,17 @@
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                   {products.filter(p => p.category === category).map(product => (
                     <div key={product.id} className="bg-white rounded-2xl p-3 shadow-sm flex gap-4 border border-stone-100 relative group overflow-hidden">
-                      {/* 商品圖片 */}
                       <div className="relative block w-24 h-24 rounded-xl shrink-0 overflow-hidden cursor-pointer hover:ring-2 hover:ring-amber-400 transition-all" onClick={() => openProductDetail(product)}>
                         <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <span className="bg-white/90 text-stone-800 text-[10px] font-bold px-2 py-1 rounded-full">{isAdminMode ? '編輯詳情' : '查看詳情'}</span>
-                        </div>
-                        {product.isPromo && (
-                          <div className="absolute top-0 left-0 bg-rose-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-br-lg z-10 shadow-sm">
-                            活動
-                          </div>
-                        )}
+                        <div className="absolute inset-0 bg-black/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><span className="bg-white/90 text-stone-800 text-[10px] font-bold px-2 py-1 rounded-full">{isAdminMode ? '編輯' : '詳情'}</span></div>
+                        {product.isPromo && <div className="absolute top-0 left-0 bg-rose-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-br-lg z-10 shadow-sm">活動</div>}
                       </div>
-
-                      {/* 商品簡介 */}
                       <div className="flex-1 flex flex-col justify-between py-0.5">
                         <div onClick={() => openProductDetail(product)} className="cursor-pointer">
-                          <h3 className="font-bold text-stone-800 leading-tight flex items-center justify-between">
-                            {product.name}
-                            <ChevronRight size={16} className="text-stone-300" />
-                          </h3>
+                          <h3 className="font-bold text-stone-800 leading-tight flex items-center justify-between">{product.name} <ChevronRight size={16} className="text-stone-300" /></h3>
                           {product.desc && <p className="text-xs text-stone-500 mt-1">{product.desc}</p>}
                           <span className="inline-block mt-1 px-2 py-0.5 bg-stone-100 text-stone-500 text-[10px] rounded-md">{product.weight}</span>
                         </div>
-                        
                         <div className="flex items-center justify-between mt-2">
                           <span className="text-lg font-bold text-amber-600">${product.price}</span>
                           {!isAdminMode && (
@@ -478,91 +469,46 @@
             ))}
           </main>
 
-          {/* 🌟 商品詳情與編輯彈出視窗 */}
+          {/* 🌟 商品詳情/編輯彈窗 */}
           {editingProduct && (
             <div className="fixed inset-0 z-50 flex justify-center items-end sm:items-center bg-black/60 backdrop-blur-sm">
               <div className="bg-[#Fdfbf7] w-full max-w-md md:max-w-4xl h-[90vh] sm:h-[85vh] rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl animate-in slide-in-from-bottom-full duration-300">
-                
                 <div className="flex items-center justify-between p-4 bg-white/80 backdrop-blur-md absolute top-0 left-0 right-0 z-10 border-b border-stone-100 shadow-sm">
-                  <h2 className="font-bold text-stone-800 flex-1 truncate pr-4">
-                    {isAdminMode ? (editingProduct.isNew ? '新增商品' : '編輯商品詳情') : editingProduct.name}
-                  </h2>
+                  <h2 className="font-bold text-stone-800 flex-1 truncate pr-4">{isAdminMode ? (editingProduct.isNew ? '新增商品' : '編輯商品') : editingProduct.name}</h2>
                   <button onClick={() => setEditingProduct(null)} className="w-8 h-8 flex items-center justify-center bg-stone-100 rounded-full text-stone-500"><X size={20} /></button>
                 </div>
-
                 <div className="flex-1 overflow-y-auto pt-16 pb-24 md:flex md:flex-row">
-                  {/* 左側：照片區 (電腦版) */}
+                  {/* 左側照片區 */}
                   <div className="md:w-1/2 md:border-r border-stone-200 flex flex-col">
                     <div className="w-full h-64 md:h-80 bg-stone-200 flex-shrink-0 relative">
-                      {mainDisplayImg ? <img src={mainDisplayImg} className="w-full h-full object-cover" alt="Product" /> : <div className="w-full h-full flex items-center justify-center text-stone-400 bg-stone-100"><ImageIcon size={48} opacity={0.5}/></div>}
+                      {mainDisplayImg ? <img src={mainDisplayImg} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-stone-400 bg-stone-100"><ImageIcon size={48} opacity={0.5}/></div>}
                     </div>
                     <div className="flex gap-2 p-4 overflow-x-auto [&::-webkit-scrollbar]:hidden bg-white shadow-sm relative z-0">
                       <div className="relative shrink-0">
                         <img src={editingProduct.image || 'https://via.placeholder.com/150?text=Empty'} onClick={() => editingProduct.image && setMainDisplayImg(editingProduct.image)} className={`w-16 h-16 object-cover rounded-lg cursor-pointer border-2 ${mainDisplayImg === editingProduct.image ? 'border-amber-500' : 'border-stone-200'}`} />
-                        {isAdminMode && (
-                          <label className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-lg cursor-pointer hover:bg-black/50 transition-colors">
-                            <Camera size={16} className="text-white" />
-                            <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], (img) => { setEditingProduct({...editingProduct, image: img}); setMainDisplayImg(img); })} />
-                          </label>
-                        )}
-                        <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-[8px] px-1.5 rounded-full whitespace-nowrap shadow-sm">封面圖</span>
+                        {isAdminMode && <label className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-lg cursor-pointer"><Camera size={16} className="text-white" /><input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], (img) => { setEditingProduct({...editingProduct, image: img}); setMainDisplayImg(img); })} /></label>}
                       </div>
-
                       {(editingProduct.extraImages || []).map((img, idx) => (
                         <div key={idx} className="relative shrink-0 group">
                           <img src={img} onClick={() => setMainDisplayImg(img)} className={`w-16 h-16 object-cover rounded-lg cursor-pointer border-2 ${mainDisplayImg === img ? 'border-amber-500' : 'border-stone-200'}`} />
-                          {isAdminMode && (
-                            <button onClick={() => { const newExtra = [...editingProduct.extraImages]; newExtra.splice(idx, 1); setEditingProduct({...editingProduct, extraImages: newExtra}); if(mainDisplayImg === img) setMainDisplayImg(editingProduct.image); }} className="absolute -top-1 -right-1 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center shadow-md"><X size={12} /></button>
-                          )}
+                          {isAdminMode && <button onClick={() => { const newExtra = [...editingProduct.extraImages]; newExtra.splice(idx, 1); setEditingProduct({...editingProduct, extraImages: newExtra}); if(mainDisplayImg === img) setMainDisplayImg(editingProduct.image); }} className="absolute -top-1 -right-1 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center shadow-md"><X size={12} /></button>}
                         </div>
                       ))}
-
                       {isAdminMode && (editingProduct.extraImages || []).length < 4 && (
-                        <label className="w-16 h-16 shrink-0 border-2 border-dashed border-stone-300 rounded-lg flex flex-col items-center justify-center text-stone-400 cursor-pointer hover:bg-stone-50 hover:text-amber-500 hover:border-amber-500 transition-colors">
-                          <ImagePlus size={20} />
-                          <span className="text-[10px] mt-1 font-bold">加照片</span>
-                          <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], (img) => setEditingProduct({...editingProduct, extraImages: [...(editingProduct.extraImages||[]), img]}))} />
-                        </label>
+                        <label className="w-16 h-16 shrink-0 border-2 border-dashed border-stone-300 rounded-lg flex flex-col items-center justify-center text-stone-400 cursor-pointer hover:border-amber-500"><ImagePlus size={20} /><input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], (img) => setEditingProduct({...editingProduct, extraImages: [...(editingProduct.extraImages||[]), img]}))} /></label>
                       )}
                     </div>
                   </div>
-
-                  {/* 右側：詳細資訊區 (電腦版) */}
+                  {/* 右側資訊區 */}
                   <div className="md:w-1/2 p-5 space-y-5">
-                    {/* 基礎資訊表單 (管理員) */}
                     {isAdminMode ? (
                       <div className="bg-stone-50 p-4 rounded-2xl border border-stone-200 space-y-3">
-                        <h3 className="font-bold text-stone-800 border-b border-stone-200 pb-2 mb-2 flex justify-between items-center">
-                          基礎設定
-                          <label className="flex items-center gap-1.5 text-xs bg-rose-100 text-rose-700 px-2 py-1 rounded-md cursor-pointer hover:bg-rose-200 transition-colors">
-                            <input type="checkbox" checked={editingProduct.isPromo} onChange={e => setEditingProduct({...editingProduct, isPromo: e.target.checked})} className="accent-rose-500 w-3 h-3" />
-                            參與任選優惠
-                          </label>
+                        <h3 className="font-bold text-stone-800 border-b border-stone-200 pb-2 flex justify-between items-center">
+                          基礎設定 <label className="flex items-center gap-1.5 text-xs bg-rose-100 text-rose-700 px-2 py-1 rounded-md cursor-pointer"><input type="checkbox" checked={editingProduct.isPromo} onChange={e => setEditingProduct({...editingProduct, isPromo: e.target.checked})} className="accent-rose-500 w-3 h-3" />參與優惠</label>
                         </h3>
-                        <div className="flex gap-3">
-                          <div className="flex-1">
-                            <label className="text-xs font-bold text-stone-500 mb-1 block">品號 (系統ID)</label>
-                            <input type="text" value={editingProduct.id} onChange={e => setEditingProduct({...editingProduct, id: e.target.value.toUpperCase()})} disabled={!editingProduct.isNew} placeholder="如: D01" className="w-full bg-white border border-stone-300 rounded-lg p-2 text-sm outline-none focus:border-amber-500 disabled:bg-stone-100 disabled:text-stone-400" />
-                          </div>
-                          <div className="flex-[1.5]">
-                            <label className="text-xs font-bold text-stone-500 mb-1 block">商品名稱</label>
-                            <input type="text" value={editingProduct.name} onChange={e => setEditingProduct({...editingProduct, name: e.target.value})} placeholder="請輸入名稱" className="w-full bg-white border border-stone-300 rounded-lg p-2 text-sm outline-none focus:border-amber-500" />
-                          </div>
-                        </div>
-                        <div className="flex gap-3">
-                          <div className="flex-1">
-                            <label className="text-xs font-bold text-stone-500 mb-1 block">分類</label>
-                            <input type="text" value={editingProduct.category} onChange={e => setEditingProduct({...editingProduct, category: e.target.value})} placeholder="如: 堅果系列" className="w-full bg-white border border-stone-300 rounded-lg p-2 text-sm outline-none focus:border-amber-500" />
-                          </div>
-                          <div className="flex-1">
-                            <label className="text-xs font-bold text-stone-500 mb-1 block">售價 ($)</label>
-                            <input type="number" value={editingProduct.price} onChange={e => setEditingProduct({...editingProduct, price: e.target.value})} className="w-full bg-white border border-stone-300 rounded-lg p-2 text-sm outline-none focus:border-amber-500 text-amber-600 font-bold" />
-                          </div>
-                        </div>
-                        <div>
-                          <label className="text-xs font-bold text-stone-500 mb-1 block">副標題/簡介</label>
-                          <input type="text" value={editingProduct.desc} onChange={e => setEditingProduct({...editingProduct, desc: e.target.value})} placeholder="列表顯示的一行簡介" className="w-full bg-white border border-stone-300 rounded-lg p-2 text-sm outline-none focus:border-amber-500" />
-                        </div>
+                        <div className="flex gap-3"><input type="text" value={editingProduct.id} onChange={e => setEditingProduct({...editingProduct, id: e.target.value.toUpperCase()})} disabled={!editingProduct.isNew} placeholder="品號 (如D01)" className="w-1/3 bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500" /><input type="text" value={editingProduct.name} onChange={e => setEditingProduct({...editingProduct, name: e.target.value})} placeholder="商品名稱" className="w-2/3 bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500" /></div>
+                        <div className="flex gap-3"><input type="text" value={editingProduct.category} onChange={e => setEditingProduct({...editingProduct, category: e.target.value})} placeholder="分類" className="w-1/2 bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500" /><input type="number" value={editingProduct.price} onChange={e => setEditingProduct({...editingProduct, price: e.target.value})} placeholder="售價" className="w-1/2 bg-white border border-stone-300 rounded p-2 text-sm outline-none text-amber-600 font-bold focus:border-amber-500" /></div>
+                        <input type="text" value={editingProduct.desc} onChange={e => setEditingProduct({...editingProduct, desc: e.target.value})} placeholder="簡介 (顯示於列表)" className="w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500" />
                       </div>
                     ) : (
                       <div>
@@ -572,61 +518,22 @@
                         <p className="text-sm text-stone-500 mt-1">{editingProduct.desc}</p>
                       </div>
                     )}
-
                     <hr className="border-stone-200" />
-
-                    {(isAdminMode || editingProduct.intro) && (
-                      <div className="space-y-1.5">
-                        <h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 bg-amber-500 rounded-full"></span> 產品介紹</h3>
-                        {isAdminMode ? <textarea rows="3" value={editingProduct.intro} onChange={e => setEditingProduct({...editingProduct, intro: e.target.value})} placeholder="詳細的產品說明..." className="w-full bg-white border border-stone-300 rounded-lg p-2 text-sm outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"></textarea> : <p className="text-sm text-stone-600 leading-relaxed whitespace-pre-wrap">{editingProduct.intro}</p>}
-                      </div>
-                    )}
-
-                    {(isAdminMode || editingProduct.ingredients) && (
-                      <div className="space-y-1.5">
-                        <h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 bg-emerald-500 rounded-full"></span> 產品成分</h3>
-                        {isAdminMode ? <textarea rows="2" value={editingProduct.ingredients} onChange={e => setEditingProduct({...editingProduct, ingredients: e.target.value})} placeholder="成分說明..." className="w-full bg-white border border-stone-300 rounded-lg p-2 text-sm outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"></textarea> : <p className="text-sm text-stone-600 leading-relaxed whitespace-pre-wrap">{editingProduct.ingredients}</p>}
-                      </div>
-                    )}
-
-                    {(isAdminMode || editingProduct.weight) && (
-                      <div className="space-y-1.5">
-                        <h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 bg-blue-500 rounded-full"></span> 產品重量</h3>
-                        {isAdminMode ? <input type="text" value={editingProduct.weight} onChange={e => setEditingProduct({...editingProduct, weight: e.target.value})} placeholder="如: 400克" className="w-full bg-white border border-stone-300 rounded-lg p-2 text-sm outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500" /> : <p className="text-sm text-stone-600">{editingProduct.weight}</p>}
-                      </div>
-                    )}
-
-                    {/* 注意事項 (加大到 50 行，並允許縮放) */}
-                    {(isAdminMode || editingProduct.notices) && (
-                      <div className="space-y-1.5">
-                        <h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 bg-rose-500 rounded-full"></span> 注意事項</h3>
-                        {isAdminMode ? (
-                          <textarea rows="50" value={editingProduct.notices} onChange={e => setEditingProduct({...editingProduct, notices: e.target.value})} placeholder="過敏原資訊、保存期限..." className="w-full bg-white border border-stone-300 rounded-lg p-2 text-sm outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"></textarea>
-                        ) : (
-                          <div className="bg-rose-50 text-rose-700 p-3 rounded-xl text-sm leading-relaxed whitespace-pre-wrap border border-rose-100">{editingProduct.notices}</div>
-                        )}
-                      </div>
-                    )}
+                    {(isAdminMode || editingProduct.intro) && <div className="space-y-1.5"><h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 bg-amber-500 rounded-full"></span>產品介紹</h3>{isAdminMode ? <textarea rows="3" value={editingProduct.intro} onChange={e => setEditingProduct({...editingProduct, intro: e.target.value})} className="w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500"></textarea> : <p className="text-sm text-stone-600 whitespace-pre-wrap">{editingProduct.intro}</p>}</div>}
+                    {(isAdminMode || editingProduct.ingredients) && <div className="space-y-1.5"><h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 bg-emerald-500 rounded-full"></span>產品成分</h3>{isAdminMode ? <textarea rows="2" value={editingProduct.ingredients} onChange={e => setEditingProduct({...editingProduct, ingredients: e.target.value})} className="w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500"></textarea> : <p className="text-sm text-stone-600 whitespace-pre-wrap">{editingProduct.ingredients}</p>}</div>}
+                    {(isAdminMode || editingProduct.weight) && <div className="space-y-1.5"><h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 bg-blue-500 rounded-full"></span>產品重量</h3>{isAdminMode ? <input type="text" value={editingProduct.weight} onChange={e => setEditingProduct({...editingProduct, weight: e.target.value})} className="w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500" /> : <p className="text-sm text-stone-600">{editingProduct.weight}</p>}</div>}
+                    {(isAdminMode || editingProduct.notices) && <div className="space-y-1.5"><h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 bg-rose-500 rounded-full"></span>注意事項</h3>{isAdminMode ? <textarea rows="50" value={editingProduct.notices} onChange={e => setEditingProduct({...editingProduct, notices: e.target.value})} className="w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500"></textarea> : <div className="bg-rose-50 text-rose-700 p-3 rounded-xl text-sm whitespace-pre-wrap">{editingProduct.notices}</div>}</div>}
                   </div>
                 </div>
-
                 <div className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-stone-200">
                   {isAdminMode ? (
                     <div className="flex gap-3">
-                      {!editingProduct.isNew && (
-                        <button onClick={handleDeleteProduct} className="bg-red-100 text-red-600 px-4 rounded-xl flex items-center justify-center hover:bg-red-200 transition-colors">
-                          <Trash2 size={20} />
-                        </button>
-                      )}
+                      {!editingProduct.isNew && <button onClick={handleDeleteProduct} className="bg-red-100 text-red-600 px-4 rounded-xl"><Trash2 size={20} /></button>}
                       <button onClick={saveProductDetail} className="flex-1 bg-stone-800 text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform">儲存商品</button>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-4 bg-stone-50 rounded-xl px-4 py-3 border border-stone-200 flex-1 justify-center">
-                        <button onClick={() => updateCart(editingProduct.id, -1)} className="p-1 text-stone-500"><Minus size={18} /></button>
-                        <span className="w-6 text-center text-lg font-bold">{cart[editingProduct.id] || 0}</span>
-                        <button onClick={() => updateCart(editingProduct.id, 1)} className="p-1 text-amber-600"><Plus size={18} /></button>
-                      </div>
+                    <div className="flex gap-4">
+                      <div className="flex items-center gap-4 bg-stone-50 rounded-xl px-4 py-3 border border-stone-200 flex-1 justify-center"><button onClick={() => updateCart(editingProduct.id, -1)} className="p-1 text-stone-500"><Minus size={18} /></button><span className="w-6 text-center text-lg font-bold">{cart[editingProduct.id] || 0}</span><button onClick={() => updateCart(editingProduct.id, 1)} className="p-1 text-amber-600"><Plus size={18} /></button></div>
                       <button onClick={() => setEditingProduct(null)} className="flex-[1.5] bg-amber-500 text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform">確認返回</button>
                     </div>
                   )}
@@ -635,181 +542,273 @@
             </div>
           )}
 
-          {/* 購物車懸浮按鈕 (金額不含運費) */}
+          {/* 購物車懸浮按鈕 */}
           {cartData.totalQty > 0 && !isAdminMode && !editingProduct && (
             <div className="fixed bottom-0 left-0 right-0 max-w-md md:max-w-4xl lg:max-w-6xl mx-auto p-4 bg-gradient-to-t from-white via-white to-transparent pointer-events-none z-10">
               <button onClick={() => setIsCartOpen(true)} className="w-full bg-stone-800 text-white rounded-2xl p-4 flex items-center justify-between shadow-xl pointer-events-auto active:scale-95 transition-transform">
-                <div className="flex items-center gap-3">
-                  <div className="relative">
-                    <ShoppingCart size={24} />
-                    <span className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-stone-800">{cartData.totalQty}</span>
-                  </div>
-                  <span className="font-medium">查看購物車</span>
-                </div>
-                {/* 顯示折扣後商品小計，不含運費 */}
+                <div className="flex items-center gap-3"><div className="relative"><ShoppingCart size={24} /><span className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">{cartData.totalQty}</span></div><span className="font-medium">查看購物車</span></div>
                 <div className="text-lg font-bold">${cartData.currentTotal}</div>
               </button>
             </div>
           )}
 
-          {/* 購物車結帳彈窗 (包含運費與總計) */}
+          {/* 🌟 購物車/結帳彈窗 */}
           {isCartOpen && (
             <div className="fixed inset-0 z-50 flex justify-center items-end bg-black/50 backdrop-blur-sm sm:items-center">
               <div className="w-full max-w-md md:max-w-4xl bg-[#Fdfbf7] rounded-t-3xl sm:rounded-3xl h-[85vh] sm:h-auto sm:max-h-[85vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-full duration-300">
                 <div className="flex items-center justify-between p-5 border-b border-stone-200">
-                  <h2 className="text-xl font-bold text-stone-800 flex items-center gap-2"><ShoppingCart size={20} /> 訂單明細</h2>
+                  <h2 className="text-xl font-bold text-stone-800 flex items-center gap-2"><ShoppingCart size={20} /> 訂單結帳</h2>
                   <button onClick={() => setIsCartOpen(false)} className="w-8 h-8 flex items-center justify-center bg-stone-100 rounded-full text-stone-500"><X size={20} /></button>
                 </div>
                 
                 <div className="flex-1 overflow-y-auto p-5 md:flex md:gap-8">
-                  {/* 左側：訂單商品清單 (電腦版) */}
-                  <div className="md:w-3/5">
+                  {/* 左側：訂單商品 */}
+                  <div className="md:w-1/2">
                     <h3 className="hidden md:block font-bold text-stone-800 mb-4 border-b border-stone-200 pb-2">已選商品</h3>
                     {cartData.items.map(item => (
                       <div key={item.id} className="flex items-center justify-between py-3 border-b border-stone-100 last:border-0">
-                        <div className="flex-1">
-                          <h4 className="font-bold text-stone-800 flex items-center gap-1">
-                            {item.name}
-                            {item.isPromo && <span className="text-[9px] bg-rose-100 text-rose-600 px-1 py-0.5 rounded">活動</span>}
-                          </h4>
-                          <p className="text-xs text-stone-500">${item.price} /包</p>
-                        </div>
+                        <div className="flex-1"><h4 className="font-bold text-stone-800 flex items-center gap-1">{item.name}{item.isPromo && <span className="text-[9px] bg-rose-100 text-rose-600 px-1 py-0.5 rounded">活動</span>}</h4><p className="text-xs text-stone-500">${item.price} /包</p></div>
                         <div className="flex items-center gap-4">
-                          <div className="flex items-center gap-3 bg-white rounded-full px-2 py-1 border border-stone-200">
-                            <button onClick={() => updateCart(item.id, -1)} className="p-1 text-stone-500"><Minus size={14} /></button>
-                            <span className="w-4 text-center text-sm font-bold">{item.qty}</span>
-                            <button onClick={() => updateCart(item.id, 1)} className="p-1 text-stone-800"><Plus size={14} /></button>
-                          </div>
+                          <div className="flex items-center gap-3 bg-white rounded-full px-2 py-1 border border-stone-200"><button onClick={() => updateCart(item.id, -1)} className="p-1 text-stone-500"><Minus size={14} /></button><span className="w-4 text-center text-sm font-bold">{item.qty}</span><button onClick={() => updateCart(item.id, 1)} className="p-1 text-stone-800"><Plus size={14} /></button></div>
                           <div className="w-12 text-right font-bold text-stone-700">${item.price * item.qty}</div>
                         </div>
                       </div>
                     ))}
-                  </div>
-
-                  {/* 右側：聯絡資訊與結帳 (電腦版) */}
-                  <div className="md:w-2/5 md:border-l border-stone-200 md:pl-8 flex flex-col justify-between">
-                    <div className="mt-6 md:mt-0 space-y-4">
-                      <h3 className="font-bold text-stone-800 border-b border-stone-200 pb-2">聯絡資訊</h3>
-                      <div><input type="text" placeholder="您的姓名" value={customerInfo.name} onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})} className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all"/></div>
-                      <div><input type="tel" placeholder="聯絡電話" value={customerInfo.phone} onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all"/></div>
-                      <div className="pt-4 border-t border-stone-100">
-                        <h3 className="font-bold text-stone-800 mb-3">取貨方式</h3>
-                        <div className="flex gap-4 mb-4">
-                          <label className={`flex-1 border rounded-xl p-3 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors ${deliveryMethod==='delivery' ? 'bg-amber-50 border-amber-500 text-amber-700' : 'bg-white border-stone-200 text-stone-500'}`}>
-                            <input type="radio" name="delivery" value="delivery" checked={deliveryMethod === 'delivery'} onChange={(e) => setDeliveryMethod(e.target.value)} className="hidden" />
-                            <Truck size={20} />
-                            <span className="text-sm font-bold">宅配</span>
-                            <span className="text-[10px]">{cartData.totalQty >= storeConfig.freeShippingThreshold ? '滿件免運' : `運費 $${storeConfig.shippingFee}`}</span>
-                          </label>
-                          <label className={`flex-1 border rounded-xl p-3 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors ${deliveryMethod==='pickup' ? 'bg-amber-50 border-amber-500 text-amber-700' : 'bg-white border-stone-200 text-stone-500'}`}>
-                            <input type="radio" name="delivery" value="pickup" checked={deliveryMethod === 'pickup'} onChange={(e) => setDeliveryMethod(e.target.value)} className="hidden" />
-                            <Store size={20} />
-                            <span className="text-sm font-bold">自取</span>
-                            <span className="text-[10px]">免運費</span>
-                          </label>
-                        </div>
-                        {deliveryMethod === 'delivery' && (
-                          <div className="mb-4">
-                            <input type="text" placeholder="請輸入宅配收件地址" value={customerInfo.address} onChange={(e) => setCustomerInfo({...customerInfo, address: e.target.value})} className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all"/>
-                            {cartData.totalQty < storeConfig.freeShippingThreshold && (
-                              <p className="text-xs text-rose-500 mt-2 ml-1">差 {storeConfig.freeShippingThreshold - cartData.totalQty} 件即可享免運優惠！</p>
-                            )}
-                          </div>
-                        )}
+                    
+                    {/* 取貨方式 */}
+                    <div className="mt-6 pt-4 border-t border-stone-100">
+                      <h3 className="font-bold text-stone-800 mb-3">取貨方式</h3>
+                      <div className="flex gap-4 mb-4">
+                        <label className={`flex-1 border rounded-xl p-3 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors ${deliveryMethod==='delivery' ? 'bg-amber-50 border-amber-500 text-amber-700' : 'bg-white border-stone-200 text-stone-500'}`}><input type="radio" name="delivery" value="delivery" checked={deliveryMethod === 'delivery'} onChange={(e) => setDeliveryMethod(e.target.value)} className="hidden" /><Truck size={20} /><span className="text-sm font-bold">宅配</span><span className="text-[10px]">{cartData.totalQty >= storeConfig.freeShippingThreshold ? '滿件免運' : `運費 $${storeConfig.shippingFee}`}</span></label>
+                        <label className={`flex-1 border rounded-xl p-3 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors ${deliveryMethod==='pickup' ? 'bg-amber-50 border-amber-500 text-amber-700' : 'bg-white border-stone-200 text-stone-500'}`}><input type="radio" name="delivery" value="pickup" checked={deliveryMethod === 'pickup'} onChange={(e) => setDeliveryMethod(e.target.value)} className="hidden" /><Store size={20} /><span className="text-sm font-bold">自取</span><span className="text-[10px]">免運費</span></label>
                       </div>
                     </div>
 
-                    <div className="mt-6 bg-white p-4 rounded-2xl border border-stone-100 shadow-sm space-y-2">
+                    <div className="mt-4 bg-stone-50 p-4 rounded-2xl space-y-2">
                       <div className="flex justify-between text-sm text-stone-600"><span>商品小計</span><span>${cartData.itemsBaseTotal}</span></div>
                       {cartData.discountAmount > 0 && <div className="flex justify-between text-sm text-rose-500 font-bold"><span>活動折抵</span><span>-${cartData.discountAmount}</span></div>}
-                      
-                      <div className="flex justify-between text-sm text-stone-600">
-                        <span>運費</span>
-                        <span className={cartData.shippingFee === 0 && deliveryMethod === 'delivery' ? 'text-emerald-500 font-bold' : ''}>
-                          {cartData.shippingFee === 0 ? (deliveryMethod==='pickup' ? '$0' : '免運費') : `$${cartData.shippingFee}`}
-                        </span>
-                      </div>
+                      <div className="flex justify-between text-sm text-stone-600"><span>運費</span><span className={cartData.shippingFee === 0 && deliveryMethod === 'delivery' ? 'text-emerald-500 font-bold' : ''}>{cartData.shippingFee === 0 ? (deliveryMethod==='pickup' ? '$0' : '免運費') : `$${cartData.shippingFee}`}</span></div>
+                      <div className="pt-2 mt-2 border-t border-stone-200 flex justify-between items-center"><span className="font-bold text-stone-800">總計金額</span><span className="text-2xl font-black text-stone-800">${cartData.finalPrice}</span></div>
+                    </div>
+                  </div>
 
-                      {cartData.totalQty >= storeConfig.wholesaleThreshold && <div className="flex justify-between text-xs text-amber-600 bg-amber-50 p-2 rounded-lg mt-2 font-bold border border-amber-200"><span>⚠️ 已達{storeConfig.wholesaleThreshold}包批發門檻！訂單送出後由專人另行報價。</span></div>}
-                      
-                      {/* 最終結帳總計 */}
-                      <div className="pt-2 mt-2 border-t border-stone-100 flex justify-between items-center"><span className="font-bold text-stone-800">總計金額</span><span className="text-2xl font-black text-stone-800">${cartData.finalPrice}</span></div>
+                  {/* 右側：聯絡資訊與自動註冊 */}
+                  <div className="md:w-1/2 md:border-l border-stone-200 md:pl-8 flex flex-col justify-between mt-6 md:mt-0">
+                    <div className="space-y-4">
+                      <h3 className="font-bold text-stone-800 border-b border-stone-200 pb-2 flex justify-between items-center">
+                        聯絡資訊
+                        {currentUser && <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded">會員已登入</span>}
+                      </h3>
+                      <div className="grid grid-cols-2 gap-3">
+                        <input type="text" placeholder="姓名" value={customerInfo.name} onChange={e => setCustomerInfo({...customerInfo, name: e.target.value})} className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500 text-sm"/>
+                        <input type="tel" placeholder="聯絡電話" value={customerInfo.phone} onChange={e => setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500 text-sm"/>
+                      </div>
+                      <input type="text" placeholder="Line ID (必填，方便聯繫)" value={customerInfo.lineId} onChange={e => setCustomerInfo({...customerInfo, lineId: e.target.value})} className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500 text-sm"/>
+                      {deliveryMethod === 'delivery' && (
+                        <input type="text" placeholder="宅配收件地址" value={customerInfo.address} onChange={e => setCustomerInfo({...customerInfo, address: e.target.value})} className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500 text-sm"/>
+                      )}
+
+                      {/* 🌟 結帳自動註冊區塊 */}
+                      {!currentUser && (
+                        <div className="mt-4 bg-amber-50 border border-amber-200 p-4 rounded-xl">
+                          <label className="flex items-center gap-2 cursor-pointer font-bold text-amber-800 mb-3">
+                            <input type="checkbox" checked={saveAsMember} onChange={e => setSaveAsMember(e.target.checked)} className="accent-amber-600 w-4 h-4" />
+                            同步加入會員 (下次免填資料)
+                          </label>
+                          {saveAsMember && (
+                            <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
+                              <input type="email" placeholder="請設定您的 Email 帳號" value={customerInfo.email} onChange={e => setCustomerInfo({...customerInfo, email: e.target.value})} className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-500"/>
+                              <input type="password" placeholder="請設定登入密碼 (6碼以上)" value={registerPassword} onChange={e => setRegisterPassword(e.target.value)} className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-500"/>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* 強制提醒區塊 */}
+                      <div className="bg-rose-50 border border-rose-200 p-4 rounded-xl mt-4">
+                        <p className="text-sm font-bold text-rose-700 flex items-center gap-1 mb-1">⚠️ 結帳必看提醒</p>
+                        <p className="text-xs text-rose-600 leading-relaxed">
+                          訂單送出後，請務必點擊加入我們的 LINE，傳送您的「訂單編號」，以利確認款項及出貨細節喔！
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
                 
                 <div className="p-5 border-t border-stone-200 bg-white">
-                  <button onClick={handleCheckout} className="w-full bg-[#06C755] text-white font-bold rounded-2xl p-4 flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform"><MessageCircle size={20} />發送訂單至 Line</button>
+                  <button onClick={handleCheckout} className="w-full bg-[#06C755] text-white font-bold rounded-2xl p-4 flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform"><MessageCircle size={20} />送出訂單並前往 LINE 確認</button>
                   <p className="text-center text-[10px] text-stone-400 mt-3 font-medium">※ 為保持良好賞味，接單後7～15天出貨，敬請見諒</p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* 🌟 系統設定彈出視窗 (僅管理員) */}
-          {showConfigModal && (
+          {/* 🌟 會員專區彈窗 (查看訂單) */}
+          {showMemberProfile && currentUser && !isAdminMode && (
             <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4">
-              <div className="bg-white p-6 rounded-3xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 relative border border-stone-100">
-                <button onClick={() => setShowConfigModal(false)} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full transition-colors"><X size={20} /></button>
+              <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-lg h-[80vh] flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
+                <button onClick={() => setShowMemberProfile(false)} className="absolute top-4 right-4 text-stone-400"><X size={20} /></button>
+                <h2 className="text-xl font-bold text-stone-800 mb-4 flex items-center gap-2 border-b border-stone-200 pb-2"><User size={20} className="text-amber-600"/> 會員中心</h2>
                 
-                <h2 className="text-lg font-bold text-stone-800 mb-5 flex items-center gap-2 border-b border-stone-100 pb-3">
-                  <SettingsIcon size={20} className="text-amber-600"/> 系統規則設定
-                </h2>
-
-                <div className="space-y-4">
-                  {/* 運費規則 */}
-                  <div className="bg-stone-50 p-3 rounded-xl border border-stone-200">
-                    <p className="text-sm font-bold text-stone-700 mb-2 flex items-center gap-1"><Truck size={16}/> 運費與免運</p>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs text-stone-500">基本運費 ($)</span>
-                      <input type="number" value={tempConfig.shippingFee} onChange={e => setTempConfig({...tempConfig, shippingFee: e.target.value})} className="w-20 bg-white border border-stone-300 rounded p-1 text-sm outline-none text-right font-bold focus:border-amber-500" />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-stone-500">免運門檻 (滿X件)</span>
-                      <input type="number" value={tempConfig.freeShippingThreshold} onChange={e => setTempConfig({...tempConfig, freeShippingThreshold: e.target.value})} className="w-20 bg-white border border-stone-300 rounded p-1 text-sm outline-none text-right font-bold focus:border-amber-500" />
+                <div className="flex-1 overflow-y-auto space-y-6">
+                  {/* 基本資料 */}
+                  <div className="bg-white p-4 rounded-xl border border-stone-200 shadow-sm">
+                    <h3 className="font-bold text-stone-700 mb-3 text-sm">個人資料</h3>
+                    <div className="text-sm text-stone-600 space-y-2">
+                      <p><span className="text-stone-400 mr-2">姓名</span> {customerInfo.name}</p>
+                      <p><span className="text-stone-400 mr-2">電話</span> {customerInfo.phone}</p>
+                      <p><span className="text-stone-400 mr-2">Line</span> {customerInfo.lineId || '未設定'}</p>
+                      <p><span className="text-stone-400 mr-2">地址</span> {customerInfo.address || '未設定'}</p>
                     </div>
                   </div>
 
-                  {/* 優惠活動規則 */}
-                  <div className="bg-rose-50 p-3 rounded-xl border border-rose-100">
-                    <p className="text-sm font-bold text-rose-700 mb-2 flex items-center gap-1"><Info size={16}/> 任選優惠活動</p>
-                    <p className="text-[10px] text-rose-500 mb-2 leading-tight">商品編輯內需勾選「參與任選優惠」才會被列入計算。</p>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-stone-600">任選</span>
-                      <input type="number" value={tempConfig.promoQty} onChange={e => setTempConfig({...tempConfig, promoQty: e.target.value})} className="w-16 bg-white border border-rose-200 rounded p-1 text-sm outline-none text-center font-bold text-rose-600 focus:border-rose-500" />
-                      <span className="text-xs text-stone-600">件，優惠總價 $</span>
-                      <input type="number" value={tempConfig.promoPrice} onChange={e => setTempConfig({...tempConfig, promoPrice: e.target.value})} className="w-20 bg-white border border-rose-200 rounded p-1 text-sm outline-none text-center font-bold text-rose-600 focus:border-rose-500" />
-                    </div>
-                  </div>
-
-                  {/* 批發門檻 */}
-                  <div className="bg-amber-50 p-3 rounded-xl border border-amber-200">
-                    <p className="text-sm font-bold text-amber-800 mb-2">大量批發報價門檻</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-stone-600">滿幾件跳出專人報價提示？</span>
-                      <input type="number" value={tempConfig.wholesaleThreshold} onChange={e => setTempConfig({...tempConfig, wholesaleThreshold: e.target.value})} className="w-20 bg-white border border-amber-300 rounded p-1 text-sm outline-none text-right font-bold text-amber-700 focus:border-amber-500" />
-                    </div>
+                  {/* 歷史訂單 */}
+                  <div>
+                    <h3 className="font-bold text-stone-700 mb-3 text-sm">我的歷史訂單</h3>
+                    {myOrders.length === 0 ? (
+                      <p className="text-center text-stone-400 text-sm py-4">尚無訂單紀錄</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {myOrders.map(order => (
+                          <div key={order.id} className="bg-white p-4 rounded-xl border border-stone-200 shadow-sm text-sm">
+                            <div className="flex justify-between items-start mb-2 border-b border-stone-100 pb-2">
+                              <div>
+                                <span className="font-bold text-amber-700 block">{order.id}</span>
+                                <span className="text-[10px] text-stone-400">{order.createdAt?.toDate().toLocaleString()}</span>
+                              </div>
+                              <span className={`px-2 py-1 rounded-md text-xs font-bold ${order.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                                {order.status === 'completed' ? '已完成' : '處理中'}
+                              </span>
+                            </div>
+                            <div className="text-stone-600 text-xs space-y-1 mb-2">
+                              {order.items.map((item, i) => <div key={i}>• {item.name} x{item.qty}</div>)}
+                            </div>
+                            <div className="font-bold text-stone-800 text-right">總計：${order.totals.finalPrice}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
-
-                <button onClick={saveSystemConfig} className="mt-5 w-full bg-stone-800 text-white font-bold py-3 rounded-xl shadow-md active:scale-95 transition-transform flex justify-center items-center gap-2">
-                  儲存設定
-                </button>
               </div>
             </div>
           )}
 
-          {/* 登入彈出視窗 */}
+          {/* 🌟 訂單管理彈窗 (管理員後台) */}
+          {showAdminOrders && isAdminMode && (
+            <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4 md:px-10 py-6">
+              <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-4xl h-full flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
+                <button onClick={() => setShowAdminOrders(false)} className="absolute top-4 right-4 text-stone-400"><X size={24} /></button>
+                <h2 className="text-xl md:text-2xl font-bold text-stone-800 mb-6 flex items-center gap-2 border-b border-stone-200 pb-3"><ClipboardList size={24} className="text-amber-600"/> 訂單管理中心</h2>
+                
+                <div className="flex-1 overflow-y-auto">
+                  {allOrders.length === 0 ? <p className="text-center text-stone-400 mt-10">目前尚無訂單</p> : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {allOrders.map(order => (
+                        <div key={order.id} className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm flex flex-col">
+                          <div className="flex justify-between items-start mb-3 border-b border-stone-100 pb-3">
+                            <div>
+                              <span className="font-bold text-stone-800 text-lg block">{order.id}</span>
+                              <span className="text-[10px] text-stone-400">{order.createdAt?.toDate().toLocaleString()}</span>
+                            </div>
+                            <select 
+                              value={order.status || 'pending'} 
+                              onChange={(e) => updateOrderStatus(order.id, e.target.value)}
+                              className={`text-xs font-bold outline-none rounded p-1 cursor-pointer ${order.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}
+                            >
+                              <option value="pending">未處理</option>
+                              <option value="completed">已完成</option>
+                            </select>
+                          </div>
+                          
+                          <div className="text-sm text-stone-600 space-y-1 mb-3 bg-stone-50 p-3 rounded-lg">
+                            <p><span className="font-bold text-stone-500">姓名：</span>{order.customerInfo.name}</p>
+                            <p><span className="font-bold text-stone-500">電話：</span>{order.customerInfo.phone}</p>
+                            <p><span className="font-bold text-stone-500">Line：</span>{order.customerInfo.lineId || '-'}</p>
+                            <p className="truncate"><span className="font-bold text-stone-500">地址：</span>{order.customerInfo.address || '自取'}</p>
+                          </div>
+
+                          <div className="flex-1 text-xs text-stone-600 space-y-1 mb-3">
+                            <p className="font-bold text-stone-500 mb-1">購買明細：</p>
+                            {order.items.map((item, i) => <div key={i} className="flex justify-between"><span>{item.name}</span><span>x{item.qty}</span></div>)}
+                          </div>
+                          
+                          <div className="border-t border-stone-100 pt-3 flex justify-between items-center mt-auto">
+                            <span className="text-xs text-stone-400">運費 ${order.totals.shippingFee}</span>
+                            <span className="font-black text-amber-600 text-lg">${order.totals.finalPrice}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 🌟 登入 / 註冊彈窗 */}
           {showLoginModal && (
             <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4">
-              <div className="bg-white p-6 rounded-3xl shadow-2xl w-full max-w-xs animate-in zoom-in-95 duration-200">
-                <h3 className="text-lg font-bold text-stone-800 mb-4 flex items-center gap-2 justify-center"><Lock size={20} className="text-amber-600" /> 管理員登入</h3>
-                <input type="email" placeholder="Email 帳號" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 mb-3 outline-none focus:border-amber-500 font-medium"/>
-                <input type="password" placeholder="密碼" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleLoginSubmit()} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 mb-5 outline-none focus:border-amber-500 font-medium"/>
-                <div className="flex gap-3">
-                  <button onClick={() => { setShowLoginModal(false); setEmailInput(''); setPasswordInput(''); }} className="flex-1 bg-stone-100 text-stone-600 font-bold py-3 rounded-xl active:scale-95 transition-transform">取消</button>
-                  <button onClick={handleLoginSubmit} className="flex-1 bg-amber-500 text-white font-bold py-3 rounded-xl shadow-md active:scale-95 transition-transform">登入</button>
+              <div className="bg-white p-6 md:p-8 rounded-3xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200">
+                <h3 className="text-xl font-bold text-stone-800 mb-6 flex items-center gap-2 justify-center">
+                  {loginMode === 'admin' ? <Lock size={24} className="text-rose-600" /> : <User size={24} className="text-amber-600" />}
+                  {loginMode === 'admin' ? '管理員登入' : (isRegistering ? '註冊新會員' : '會員登入')}
+                </h3>
+                
+                {/* 註冊特有欄位 */}
+                {isRegistering && loginMode === 'customer' && (
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <input type="text" placeholder="真實姓名" value={customerInfo.name} onChange={e => setCustomerInfo({...customerInfo, name: e.target.value})} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 text-sm"/>
+                    <input type="tel" placeholder="手機號碼" value={customerInfo.phone} onChange={e => setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 text-sm"/>
+                    <input type="text" placeholder="Line ID (選填)" value={customerInfo.lineId} onChange={e => setCustomerInfo({...customerInfo, lineId: e.target.value})} className="col-span-2 w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 text-sm"/>
+                  </div>
+                )}
+
+                <input type="email" placeholder="Email 信箱" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 mb-3 outline-none focus:border-amber-500 text-sm"/>
+                <input type="password" placeholder="密碼" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAuthSubmit()} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 mb-5 outline-none focus:border-amber-500 text-sm"/>
+                
+                <div className="flex flex-col gap-3">
+                  <button onClick={handleAuthSubmit} className="w-full bg-amber-500 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform">{isRegistering ? '立即註冊' : '登入'}</button>
+                  <button onClick={() => { setShowLoginModal(false); setEmailInput(''); setPasswordInput(''); setIsRegistering(false); }} className="w-full bg-stone-100 text-stone-600 font-bold py-3 rounded-xl active:scale-95 transition-transform">取消</button>
                 </div>
+
+                {/* 切換模式 */}
+                <div className="mt-6 pt-4 border-t border-stone-100 flex justify-between items-center text-xs text-stone-500">
+                  {loginMode === 'customer' ? (
+                    <>
+                      <button onClick={() => setIsRegistering(!isRegistering)} className="hover:text-amber-600 font-bold">{isRegistering ? '已有帳號？返回登入' : '還沒有帳號？立即註冊'}</button>
+                      <button onClick={() => setLoginMode('admin')} className="hover:text-rose-600">管理員通道</button>
+                    </>
+                  ) : (
+                    <button onClick={() => setLoginMode('customer')} className="hover:text-amber-600 w-full text-center">返回會員登入</button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 系統設定彈窗 */}
+          {showConfigModal && (
+            <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4">
+              <div className="bg-white p-6 rounded-3xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 relative border border-stone-100">
+                <button onClick={() => setShowConfigModal(false)} className="absolute top-4 right-4 text-stone-400"><X size={20} /></button>
+                <h2 className="text-lg font-bold text-stone-800 mb-5 flex items-center gap-2 border-b border-stone-100 pb-3"><SettingsIcon size={20} className="text-amber-600"/> 系統規則設定</h2>
+                <div className="space-y-4">
+                  <div className="bg-stone-50 p-3 rounded-xl border border-stone-200">
+                    <p className="text-sm font-bold text-stone-700 mb-2 flex items-center gap-1"><Truck size={16}/> 運費與免運</p>
+                    <div className="flex items-center justify-between mb-2"><span className="text-xs text-stone-500">基本運費 ($)</span><input type="number" value={tempConfig.shippingFee} onChange={e => setTempConfig({...tempConfig, shippingFee: e.target.value})} className="w-20 bg-white border border-stone-300 rounded p-1 text-sm outline-none text-right font-bold focus:border-amber-500" /></div>
+                    <div className="flex items-center justify-between"><span className="text-xs text-stone-500">免運門檻 (滿X件)</span><input type="number" value={tempConfig.freeShippingThreshold} onChange={e => setTempConfig({...tempConfig, freeShippingThreshold: e.target.value})} className="w-20 bg-white border border-stone-300 rounded p-1 text-sm outline-none text-right font-bold focus:border-amber-500" /></div>
+                  </div>
+                  <div className="bg-rose-50 p-3 rounded-xl border border-rose-100">
+                    <p className="text-sm font-bold text-rose-700 mb-2 flex items-center gap-1"><Info size={16}/> 任選優惠活動</p>
+                    <div className="flex items-center gap-2"><span className="text-xs text-stone-600">任選</span><input type="number" value={tempConfig.promoQty} onChange={e => setTempConfig({...tempConfig, promoQty: e.target.value})} className="w-16 bg-white border border-rose-200 rounded p-1 text-sm text-center font-bold text-rose-600" /><span className="text-xs text-stone-600">件，優惠總價 $</span><input type="number" value={tempConfig.promoPrice} onChange={e => setTempConfig({...tempConfig, promoPrice: e.target.value})} className="w-20 bg-white border border-rose-200 rounded p-1 text-sm text-center font-bold text-rose-600" /></div>
+                  </div>
+                  <div className="bg-amber-50 p-3 rounded-xl border border-amber-200">
+                    <p className="text-sm font-bold text-amber-800 mb-2">批發報價門檻</p>
+                    <div className="flex items-center justify-between"><span className="text-xs text-stone-600">滿幾件跳出專人提示？</span><input type="number" value={tempConfig.wholesaleThreshold} onChange={e => setTempConfig({...tempConfig, wholesaleThreshold: e.target.value})} className="w-20 bg-white border border-amber-300 rounded p-1 text-sm text-right font-bold text-amber-700" /></div>
+                  </div>
+                </div>
+                <button onClick={saveSystemConfig} className="mt-5 w-full bg-stone-800 text-white font-bold py-3 rounded-xl shadow-md active:scale-95 transition-transform">儲存設定</button>
               </div>
             </div>
           )}
@@ -833,6 +832,7 @@
               </div>
             </div>
           )}
+
         </div>
       );
     }
