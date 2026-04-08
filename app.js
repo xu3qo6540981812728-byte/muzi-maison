@@ -1,4 +1,4 @@
-<script type="text/babel">
+
     const { useState, useMemo, useEffect } = React;
 
   
@@ -1905,4 +1905,4 @@
 
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
-  </script>
+
