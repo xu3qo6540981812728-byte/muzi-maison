@@ -331,10 +331,17 @@
           });
 
           unsubscribeOrders = db.collection('orders')
-            .where('userId', '==', currentUser.uid) // <- 安全鎖：只抓自己的訂單
-            .orderBy('createdAt', 'desc')
+            .where('userId', '==', currentUser.uid) // <- 只留 where，拿掉 orderBy 避開 Firebase 限制
             .onSnapshot(snapshot => {
               const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+              
+              // 在網頁端用 JavaScript 手動把訂單「由新到舊」排序
+              orders.sort((a, b) => {
+                 const timeA = a.createdAt ? a.createdAt.toMillis() : 0;
+                 const timeB = b.createdAt ? b.createdAt.toMillis() : 0;
+                 return timeB - timeA;
+              });
+              
               setAllOrders(orders);
               const newTrackingInputs = {};
               const newDiscountInputs = {};
