@@ -162,8 +162,11 @@
       const [aboutData, setAboutData] = useState(defaultAboutData);
       const [tempAboutData, setTempAboutData] = useState(defaultAboutData);
 
-      const [announcement, setAnnouncement] = useState({ title: '', content: '', image: '', isActive: false, showOnLoad: false, isPermanent: true, expireDate: '' });
+      const [announcements, setAnnouncements] = useState([]);
+      const [viewingAnnounce, setViewingAnnounce] = useState(null);
+      const [isEditingAnnounce, setIsEditingAnnounce] = useState(false);
       const [tempAnnounce, setTempAnnounce] = useState({});
+      const [isNewCustomer, setIsNewCustomer] = useState(false);
 
       const [categoriesList, setCategoriesList] = useState(['精選商品', '糖果軟糕系列(300g)']);
       const [showCategoryManager, setShowCategoryManager] = useState(false);
@@ -216,17 +219,15 @@
           if (doc.exists) setAboutData({ ...defaultAboutData, ...doc.data() });
         });
 
-        const unsubscribeAnnounce = db.collection('settings').doc('announcement').onSnapshot(doc => {
-          if (doc.exists) {
-            const data = doc.data();
-            setAnnouncement(data);
-            if (data.isActive && data.showOnLoad && !sessionStorage.getItem('seenAnnounce')) {
-               let expired = false;
-               if (!data.isPermanent && data.expireDate && new Date() > new Date(data.expireDate)) expired = true;
-               if (!expired) {
-                  setShowAnnouncementModal(true);
-                  sessionStorage.setItem('seenAnnounce', 'true');
-               }
+        const unsubscribeAnnounce = db.collection('settings').doc('announcements').onSnapshot(doc => {
+          if (doc.exists && doc.data().list) {
+            const data = doc.data().list;
+            setAnnouncements(data);
+            const unread = data.filter(a => a.isActive && a.showOnLoad && !isAnnounceExpired(a) && !sessionStorage.getItem(`seenAnnounce_${a.id}`));
+            if (unread.length > 0) {
+               setViewingAnnounce(unread[0]);
+               setShowAnnouncementModal(true);
+               sessionStorage.setItem(`seenAnnounce_${unread[0].id}`, 'true');
             }
           }
         });
@@ -394,11 +395,38 @@
         if (!selectedCustomer.name || !selectedCustomer.phone) return alert("姓名與電話不能為空！");
         if (db) {
           try {
-            await db.collection('users').doc(selectedCustomer.id).update({
-              name: selectedCustomer.name, phone: selectedCustomer.phone, address: selectedCustomer.address, lineId: selectedCustomer.lineId, gender: selectedCustomer.gender, points: Number(adminEditPoints)
-            });
-            alert("客戶資料已更新！"); setIsEditingAdminCustomer(false);
-          } catch (e) { alert("更新失敗：" + e.message); }
+            if (isNewCustomer) {
+               const newId = `CUST${Date.now()}`;
+               await db.collection('users').doc(newId).set({
+                 name: selectedCustomer.name, phone: selectedCustomer.phone, address: selectedCustomer.address, lineId: selectedCustomer.lineId, gender: selectedCustomer.gender, points: Number(adminEditPoints), role: 'customer', email: '', createdAt: firebase.firestore.FieldValue.serverTimestamp()
+               });
+               alert("客戶新增成功！");
+            } else {
+               await db.collection('users').doc(selectedCustomer.id).update({
+                 name: selectedCustomer.name, phone: selectedCustomer.phone, address: selectedCustomer.address, lineId: selectedCustomer.lineId, gender: selectedCustomer.gender, points: Number(adminEditPoints)
+               });
+               alert("客戶資料已更新！");
+            }
+            setIsEditingAdminCustomer(false);
+            setIsNewCustomer(false);
+          } catch (e) { alert("儲存失敗：" + e.message); }
+        }
+      };
+
+      const handleAddCustomerBtn = () => {
+        setSelectedCustomer({ id: '', name: '', phone: '', lineId: '', address: '', gender: '女', points: 0 });
+        setAdminEditPoints(0);
+        setIsEditingAdminCustomer(true);
+        setIsNewCustomer(true);
+      };
+
+      const handleDeleteCustomer = async () => {
+        if(!window.confirm('確定徹底刪除此客戶資料嗎？(歷史訂單將保留但失去連結)')) return;
+        if (db) {
+          await db.collection('users').doc(selectedCustomer.id).delete();
+          alert("客戶已刪除！");
+          setSelectedCustomer(null);
+          setIsEditingAdminCustomer(false);
         }
       };
 
@@ -676,7 +704,19 @@
       };
 
       const saveAnnouncement = async () => {
-         if (db) { await db.collection('settings').doc('announcement').set(tempAnnounce); alert("公告已更新！"); setShowAnnounceConfig(false); }
+         let newList = [...announcements];
+         if (tempAnnounce.id) {
+            newList = newList.map(a => a.id === tempAnnounce.id ? tempAnnounce : a);
+         } else {
+            newList.push({ ...tempAnnounce, id: Date.now().toString() });
+         }
+         if (db) { await db.collection('settings').doc('announcements').set({ list: newList }); alert("公告已儲存！"); setIsEditingAnnounce(false); }
+      };
+
+      const deleteAnnouncement = async (id) => {
+         if(!window.confirm('確定刪除此公告？')) return;
+         const newList = announcements.filter(a => a.id !== id);
+         if (db) await db.collection('settings').doc('announcements').set({ list: newList });
       };
 
       const myOrders = currentUser ? allOrders.filter(o => o.userId === currentUser.uid) : [];
@@ -710,7 +750,7 @@
                            <li><button onClick={() => { setSidebarOpen(false); setShowAdminCustomers(true); }} className="w-full text-left px-6 py-3 hover:bg-blue-50 font-medium text-blue-700 flex items-center gap-3"><UsersIcon size={18}/>客戶管理</button></li>
                            <li><button onClick={() => { setSidebarOpen(false); setShowAdminOrders(true); }} className="w-full text-left px-6 py-3 hover:bg-amber-50 font-medium text-amber-700 flex items-center gap-3"><ClipboardList size={18}/>訂單管理</button></li>
                            <li><button onClick={() => { setSidebarOpen(false); setTempConfig(storeConfig); setShowConfigModal(true); }} className="w-full text-left px-6 py-3 hover:bg-rose-50 font-medium text-rose-700 flex items-center gap-3"><SettingsIcon size={18}/>系統設定</button></li>
-                           <li><button onClick={() => { setSidebarOpen(false); setTempAnnounce(announcement); setShowAnnounceConfig(true); }} className="w-full text-left px-6 py-3 hover:bg-purple-50 font-medium text-purple-700 flex items-center gap-3"><Megaphone size={18}/>公告設定</button></li>
+                           <li><button onClick={() => { setSidebarOpen(false); setTempAnnounce({}); setIsEditingAnnounce(false); setShowAnnounceConfig(true); }} className="w-full text-left px-6 py-3 hover:bg-purple-50 font-medium text-purple-700 flex items-center gap-3"><Megaphone size={18}/>公告設定</button></li>
                         </>
                      )}
                   </ul>
@@ -760,11 +800,11 @@
             </header>
 
             {/* 公告列 */}
-            {announcement.isActive && !isAnnounceExpired(announcement) && (
-               <div onClick={() => setShowAnnouncementModal(true)} className="mx-4 mt-2 mb-1 bg-blue-50 border border-blue-200 text-blue-700 px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-2 cursor-pointer shadow-sm animate-pulse-slow">
-                  <Megaphone size={18} className="shrink-0"/> <span className="truncate">{announcement.title}</span>
+            {announcements.filter(a => a.isActive && !isAnnounceExpired(a)).map(ann => (
+               <div key={ann.id} onClick={() => { setViewingAnnounce(ann); setShowAnnouncementModal(true); }} className="mx-4 mt-2 mb-1 bg-blue-50 border border-blue-200 text-blue-700 px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-2 cursor-pointer shadow-sm animate-pulse-slow">
+                  <Megaphone size={18} className="shrink-0"/> <span className="truncate">{ann.title}</span>
                </div>
-            )}
+            ))}
 
             <div className="px-4 py-3 flex gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {categories.map(category => (
@@ -1242,13 +1282,16 @@
           {showAdminCustomers && isAdminMode && (
             <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4 md:px-10 py-6">
               <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-6xl h-full flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
-                <button onClick={() => {setShowAdminCustomers(false); setSelectedCustomer(null); setIsEditingAdminCustomer(false); setIsMergeMode(false); setMergeSelection([]);}} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full"><X size={24} /></button>
+                <button onClick={() => {setShowAdminCustomers(false); setSelectedCustomer(null); setIsEditingAdminCustomer(false); setIsMergeMode(false); setMergeSelection([]); setIsNewCustomer(false);}} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full"><X size={24} /></button>
                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 border-b border-stone-200 pb-3 gap-4">
                   <h2 className="text-xl md:text-2xl font-bold text-stone-800 flex items-center gap-2"><UsersIcon size={24} className="text-blue-600"/> 客戶管理中心</h2>
                   {!selectedCustomer && (
-                    <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-stone-200 min-w-[250px]">
-                      <SearchIcon size={16} className="text-stone-400" />
-                      <input type="text" placeholder="搜尋客戶姓名或電話..." value={customerSearchName} onChange={e => setCustomerSearchName(e.target.value)} className="w-full text-sm outline-none font-bold" />
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-stone-200 flex-1 min-w-[250px]">
+                        <SearchIcon size={16} className="text-stone-400" />
+                        <input type="text" placeholder="搜尋客戶姓名或電話..." value={customerSearchName} onChange={e => setCustomerSearchName(e.target.value)} className="w-full text-sm outline-none font-bold" />
+                      </div>
+                      <button onClick={handleAddCustomerBtn} className="bg-blue-600 text-white text-sm font-bold px-4 py-2 rounded-lg shadow-sm hover:bg-blue-700 transition-colors flex items-center gap-1"><Plus size={16}/> 新增客戶</button>
                     </div>
                   )}
                 </div>
@@ -1293,11 +1336,14 @@
                               <input type="tel" placeholder="聯絡電話" value={selectedCustomer.phone} onChange={e=>setSelectedCustomer({...selectedCustomer, phone: e.target.value})} className="w-full bg-white border border-stone-200 rounded-md px-2 py-1.5 outline-none focus:border-blue-400" />
                               <input type="text" placeholder="Line ID" value={selectedCustomer.lineId} onChange={e=>setSelectedCustomer({...selectedCustomer, lineId: e.target.value})} className="w-full bg-white border border-stone-200 rounded-md px-2 py-1.5 outline-none focus:border-blue-400" />
                               <textarea placeholder="聯絡地址" value={selectedCustomer.address} onChange={e=>setSelectedCustomer({...selectedCustomer, address: e.target.value})} rows="2" className="w-full bg-white border border-stone-200 rounded-md px-2 py-1.5 outline-none focus:border-blue-400"></textarea>
-                              <div className="flex items-center gap-2 pt-2 border-t border-stone-200">
+                              <div className="flex items-center gap-2 pt-2 border-t border-stone-200 mb-3">
                                  <span className="font-bold text-stone-600">目前點數:</span>
                                  <input type="number" value={adminEditPoints} onChange={e=>setAdminEditPoints(e.target.value)} className="w-20 bg-white border border-stone-200 rounded-md px-2 py-1 outline-none focus:border-amber-400 font-bold text-amber-600" />
                               </div>
-                              <button onClick={handleUpdateCustomerByAdmin} className="w-full bg-blue-600 text-white font-bold py-2 rounded-md shadow-sm hover:bg-blue-700 transition-colors">儲存修改</button>
+                              <div className="flex gap-2">
+                                {!isNewCustomer && <button onClick={handleDeleteCustomer} className="bg-red-100 text-red-600 font-bold px-3 py-2 rounded-md hover:bg-red-200 transition-colors" title="刪除客戶"><Trash2 size={18}/></button>}
+                                <button onClick={handleUpdateCustomerByAdmin} className="flex-1 bg-blue-600 text-white font-bold py-2 rounded-md shadow-sm hover:bg-blue-700 transition-colors">儲存修改</button>
+                              </div>
                             </div>
                           ) : (
                             <div className="space-y-4 text-sm text-stone-600 bg-stone-50 p-4 rounded-xl mt-4">
@@ -1421,70 +1467,103 @@
           {/* 公告設定彈窗 (管理員) */}
           {showAnnounceConfig && isAdminMode && (
              <div className="fixed inset-0 z-[60] flex justify-center items-center bg-black/50 backdrop-blur-sm px-4">
-              <div className="bg-white p-6 rounded-3xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 relative border border-stone-100 max-h-[90vh] overflow-y-auto">
-                <button onClick={() => setShowAnnounceConfig(false)} className="absolute top-4 right-4 text-stone-400"><X size={20} /></button>
-                <h2 className="text-lg font-bold text-stone-800 mb-5 flex items-center gap-2 border-b border-stone-100 pb-3"><Megaphone size={20} className="text-purple-600"/> 系統公告設定</h2>
+              <div className="bg-white p-6 rounded-3xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 relative border border-stone-100 max-h-[90vh] overflow-y-auto flex flex-col">
+                <button onClick={() => {setShowAnnounceConfig(false); setIsEditingAnnounce(false);}} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full"><X size={20} /></button>
+                <h2 className="text-lg font-bold text-stone-800 mb-4 flex items-center justify-between border-b border-stone-100 pb-3">
+                  <span className="flex items-center gap-2"><Megaphone size={20} className="text-purple-600"/> 系統公告設定</span>
+                  {!isEditingAnnounce && <button onClick={() => {setTempAnnounce({ title: '', content: '', image: '', isActive: false, showOnLoad: false, isPermanent: true, expireDate: '' }); setIsEditingAnnounce(true);}} className="bg-purple-100 text-purple-700 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-purple-200 flex items-center gap-1"><Plus size={14}/>新增公告</button>}
+                </h2>
                 
-                <div className="space-y-4">
-                   <label className="flex items-center gap-2 bg-purple-50 p-3 rounded-xl border border-purple-200 cursor-pointer">
-                      <input type="checkbox" checked={tempAnnounce.isActive} onChange={e=>setTempAnnounce({...tempAnnounce, isActive: e.target.checked})} className="accent-purple-600 w-5 h-5"/>
-                      <span className="font-bold text-purple-800">啟用系統公告</span>
-                   </label>
+                <div className="flex-1 overflow-y-auto min-h-[50vh]">
+                  {!isEditingAnnounce ? (
+                    <div className="space-y-3">
+                      {announcements.length === 0 ? <p className="text-center text-stone-400 py-10">目前沒有任何公告</p> : (
+                        announcements.map(ann => (
+                          <div key={ann.id} className="bg-stone-50 border border-stone-200 rounded-xl p-4 flex flex-col gap-2 relative">
+                             <div className="flex justify-between items-start pr-12">
+                               <h3 className="font-bold text-stone-800">{ann.title}</h3>
+                               <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${ann.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-200 text-stone-500'}`}>{ann.isActive ? '啟用中' : '未啟用'}</span>
+                             </div>
+                             <p className="text-xs text-stone-500 truncate">{ann.content}</p>
+                             <div className="text-[10px] text-stone-400 mt-1">
+                               {ann.isPermanent ? '永久顯示' : (ann.expireDate ? `顯示至 ${ann.expireDate}` : '未設定期限')} | {ann.showOnLoad ? '進站主動彈出' : '僅顯示標題列'}
+                             </div>
+                             <div className="absolute top-3 right-3 flex gap-1">
+                               <button onClick={() => {setTempAnnounce(ann); setIsEditingAnnounce(true);}} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-md"><EditIcon size={16}/></button>
+                               <button onClick={() => deleteAnnouncement(ann.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-md"><Trash2 size={16}/></button>
+                             </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                       <label className="flex items-center gap-2 bg-purple-50 p-3 rounded-xl border border-purple-200 cursor-pointer">
+                          <input type="checkbox" checked={tempAnnounce.isActive} onChange={e=>setTempAnnounce({...tempAnnounce, isActive: e.target.checked})} className="accent-purple-600 w-5 h-5"/>
+                          <span className="font-bold text-purple-800">啟用此公告</span>
+                       </label>
 
-                   <div className="space-y-1">
-                      <label className="text-xs font-bold text-stone-500">公告標題</label>
-                      <input type="text" value={tempAnnounce.title||''} onChange={e=>setTempAnnounce({...tempAnnounce, title: e.target.value})} className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-500" placeholder="例如：春節連假出貨公告" />
-                   </div>
+                       <div className="space-y-1">
+                          <label className="text-xs font-bold text-stone-500">公告標題</label>
+                          <input type="text" value={tempAnnounce.title||''} onChange={e=>setTempAnnounce({...tempAnnounce, title: e.target.value})} className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-500" placeholder="例如：春節連假出貨公告" />
+                       </div>
 
-                   <div className="space-y-1">
-                      <label className="text-xs font-bold text-stone-500">公告內容</label>
-                      <textarea value={tempAnnounce.content||''} onChange={e=>setTempAnnounce({...tempAnnounce, content: e.target.value})} rows="4" className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-500"></textarea>
-                   </div>
+                       <div className="space-y-1">
+                          <label className="text-xs font-bold text-stone-500">公告內容</label>
+                          <textarea value={tempAnnounce.content||''} onChange={e=>setTempAnnounce({...tempAnnounce, content: e.target.value})} rows="4" className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-500"></textarea>
+                       </div>
 
-                   <div className="space-y-1">
-                      <label className="text-xs font-bold text-stone-500">公告圖片 (選填)</label>
-                      <div className="h-32 bg-stone-100 rounded-xl border-2 border-dashed border-stone-300 flex items-center justify-center relative overflow-hidden group">
-                         {tempAnnounce.image ? <img src={tempAnnounce.image} className="w-full h-full object-contain" /> : <div className="text-stone-400 flex flex-col items-center"><ImagePlus size={24}/></div>}
-                         <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity"><Camera size={24} className="text-white"/><input type="file" accept="image/*" className="hidden" onChange={(e)=>handleImageUpload(e.target.files[0], img=>setTempAnnounce({...tempAnnounce, image:img}))} /></label>
-                      </div>
-                   </div>
+                       <div className="space-y-1">
+                          <label className="text-xs font-bold text-stone-500">公告圖片 (選填)</label>
+                          <div className="h-32 bg-stone-100 rounded-xl border-2 border-dashed border-stone-300 flex items-center justify-center relative overflow-hidden group">
+                             {tempAnnounce.image ? <img src={tempAnnounce.image} className="w-full h-full object-contain" /> : <div className="text-stone-400 flex flex-col items-center"><ImagePlus size={24}/></div>}
+                             <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity"><Camera size={24} className="text-white"/><input type="file" accept="image/*" className="hidden" onChange={(e)=>handleImageUpload(e.target.files[0], img=>setTempAnnounce({...tempAnnounce, image:img}))} /></label>
+                          </div>
+                       </div>
 
-                   <div className="bg-stone-50 p-3 rounded-xl border border-stone-200 space-y-3">
-                      <label className="flex items-center gap-2 text-sm font-bold text-stone-700 cursor-pointer">
-                         <input type="checkbox" checked={tempAnnounce.showOnLoad} onChange={e=>setTempAnnounce({...tempAnnounce, showOnLoad: e.target.checked})} className="accent-purple-600 w-4 h-4"/> 首頁載入時主動跳出大視窗 (每個用戶只跳一次)
-                      </label>
-                      <div className="border-t border-stone-200 pt-3">
-                         <label className="flex items-center gap-2 text-sm font-bold text-stone-700 cursor-pointer mb-2">
-                            <input type="checkbox" checked={tempAnnounce.isPermanent} onChange={e=>setTempAnnounce({...tempAnnounce, isPermanent: e.target.checked})} className="accent-purple-600 w-4 h-4"/> 永久顯示 (不設定期限)
-                         </label>
-                         {!tempAnnounce.isPermanent && (
-                            <div className="flex items-center gap-2 text-sm">
-                               <span className="text-stone-500 font-bold">下架日期：</span>
-                               <input type="date" value={tempAnnounce.expireDate||''} onChange={e=>setTempAnnounce({...tempAnnounce, expireDate: e.target.value})} className="bg-white border border-stone-300 rounded px-2 py-1 outline-none" />
-                            </div>
-                         )}
-                      </div>
-                   </div>
+                       <div className="bg-stone-50 p-3 rounded-xl border border-stone-200 space-y-3">
+                          <label className="flex items-center gap-2 text-sm font-bold text-stone-700 cursor-pointer">
+                             <input type="checkbox" checked={tempAnnounce.showOnLoad} onChange={e=>setTempAnnounce({...tempAnnounce, showOnLoad: e.target.checked})} className="accent-purple-600 w-4 h-4"/> 首頁載入時主動跳出大視窗 (每個用戶只跳一次)
+                          </label>
+                          <div className="border-t border-stone-200 pt-3">
+                             <label className="flex items-center gap-2 text-sm font-bold text-stone-700 cursor-pointer mb-2">
+                                <input type="checkbox" checked={tempAnnounce.isPermanent} onChange={e=>setTempAnnounce({...tempAnnounce, isPermanent: e.target.checked})} className="accent-purple-600 w-4 h-4"/> 永久顯示 (不設定期限)
+                             </label>
+                             {!tempAnnounce.isPermanent && (
+                                <div className="flex items-center gap-2 text-sm">
+                                   <span className="text-stone-500 font-bold">下架日期：</span>
+                                   <input type="date" value={tempAnnounce.expireDate||''} onChange={e=>setTempAnnounce({...tempAnnounce, expireDate: e.target.value})} className="bg-white border border-stone-300 rounded px-2 py-1 outline-none focus:border-purple-400" />
+                                </div>
+                             )}
+                          </div>
+                       </div>
+                    </div>
+                  )}
                 </div>
 
-                <button onClick={saveAnnouncement} className="mt-5 w-full bg-purple-600 text-white font-bold py-3 rounded-xl shadow-md active:scale-95 transition-transform">儲存公告設定</button>
+                {isEditingAnnounce && (
+                  <div className="mt-4 pt-4 border-t border-stone-100 flex gap-2">
+                    <button onClick={() => setIsEditingAnnounce(false)} className="flex-1 bg-stone-100 text-stone-600 font-bold py-2.5 rounded-xl hover:bg-stone-200 transition-colors">取消</button>
+                    <button onClick={saveAnnouncement} className="flex-[2] bg-purple-600 text-white font-bold py-2.5 rounded-xl shadow-md active:scale-95 transition-transform">儲存公告</button>
+                  </div>
+                )}
               </div>
             </div>
           )}
 
           {/* 前台大公告視窗 */}
-          {showAnnouncementModal && (
+          {showAnnouncementModal && viewingAnnounce && (
              <div className="fixed inset-0 z-[60] flex justify-center items-center bg-black/60 backdrop-blur-sm px-4">
               <div className="bg-white p-1 rounded-3xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 relative border border-stone-100 overflow-hidden flex flex-col max-h-[85vh]">
                 <button onClick={() => setShowAnnouncementModal(false)} className="absolute top-3 right-3 text-stone-400 hover:bg-stone-100 p-1.5 rounded-full z-10 bg-white/80 backdrop-blur"><X size={20} /></button>
                 <div className="flex-1 overflow-y-auto p-5">
-                   <h2 className="text-xl font-black text-stone-800 mb-4 flex items-center gap-2 border-b border-stone-100 pb-3"><Megaphone size={24} className="text-amber-500"/> {announcement.title}</h2>
-                   {announcement.image && (
+                   <h2 className="text-xl font-black text-stone-800 mb-4 flex items-center gap-2 border-b border-stone-100 pb-3"><Megaphone size={24} className="text-amber-500"/> {viewingAnnounce.title}</h2>
+                   {viewingAnnounce.image && (
                       <div className="w-full bg-stone-50 rounded-xl overflow-hidden mb-4 border border-stone-100">
-                         <img src={announcement.image} className="w-full object-contain" />
+                         <img src={viewingAnnounce.image} className="w-full object-contain" />
                       </div>
                    )}
-                   <div className="text-sm text-stone-600 leading-relaxed whitespace-pre-wrap">{announcement.content}</div>
+                   <div className="text-sm text-stone-600 leading-relaxed whitespace-pre-wrap">{viewingAnnounce.content}</div>
                 </div>
                 <div className="p-4 bg-stone-50 border-t border-stone-100">
                    <button onClick={() => setShowAnnouncementModal(false)} className="w-full bg-stone-800 text-white font-bold py-3 rounded-xl shadow-md active:scale-95 transition-transform">我知道了</button>
