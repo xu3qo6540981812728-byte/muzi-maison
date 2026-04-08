@@ -239,33 +239,72 @@
           setIsAppLoading(false);
         });
 
-        const unsubscribeOrders = db.collection('orders').orderBy('createdAt', 'desc').onSnapshot(snapshot => {
-          const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          setAllOrders(orders);
-          const newTrackingInputs = {};
-          const newDiscountInputs = {};
-          orders.forEach(o => { 
-            if(o.trackingNumber) newTrackingInputs[o.id] = o.trackingNumber; 
-            newDiscountInputs[o.id] = o.adminDiscount || 0;
-          });
-          setTrackingInputs(prev => ({...newTrackingInputs, ...prev}));
-          setAdminDiscountInputs(prev => ({...newDiscountInputs, ...prev}));
+        // ... existing code ...
+        const unsubscribeProducts = db.collection('products').onSnapshot(snapshot => {
+          if (!snapshot.empty) {
+            const items = snapshot.docs.map(doc => doc.data());
+            items.sort((a, b) => a.id.localeCompare(b.id));
+            setProducts(items);
+          }
+          setIsAppLoading(false);
         });
 
-        const unsubscribeUsers = db.collection('users').where('role', 'in', ['customer', 'deleted']).onSnapshot(snapshot => {
-          const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          setAllUsers(users);
-        });
-
+        // 把原本放在這裡的 unsubscribeOrders 和 unsubscribeUsers 刪除！
         return () => {
           unsubscribeAuth(); unsubscribeLogo(); unsubscribeContact(); 
           unsubscribeConfig(); unsubscribeAbout(); unsubscribeProducts(); 
-          unsubscribeOrders(); unsubscribeUsers(); unsubscribeAnnounce(); unsubscribeCats();
+          unsubscribeAnnounce(); unsubscribeCats();
         };
       }, []);
 
+      // 🌟 新增這一段：『依照身分』來抓取訂單與會員資料 🌟
+      useEffect(() => {
+        if (!db) return;
+        let unsubscribeOrders = () => {};
+        let unsubscribeUsers = () => {};
+
+        if (isAdminMode) {
+          // 如果是管理員：抓取『所有』訂單與『所有』會員
+          unsubscribeOrders = db.collection('orders').orderBy('createdAt', 'desc').onSnapshot(snapshot => {
+            const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setAllOrders(orders);
+            const newTrackingInputs = {};
+            const newDiscountInputs = {};
+            orders.forEach(o => { 
+              if(o.trackingNumber) newTrackingInputs[o.id] = o.trackingNumber; 
+              newDiscountInputs[o.id] = o.adminDiscount || 0;
+            });
+            setTrackingInputs(prev => ({...newTrackingInputs, ...prev}));
+            setAdminDiscountInputs(prev => ({...newDiscountInputs, ...prev}));
+          });
+
+          unsubscribeUsers = db.collection('users').where('role', 'in', ['customer', 'deleted']).onSnapshot(snapshot => {
+            const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setAllUsers(users);
+          });
+        } else if (currentUser) {
+          // 如果是一般會員：『只抓取自己』的訂單，不需要抓其他會員資料
+          unsubscribeOrders = db.collection('orders').where('userId', '==', currentUser.uid).onSnapshot(snapshot => {
+            const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            orders.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+            setAllOrders(orders);
+          });
+          setAllUsers([]);
+        } else {
+          // 未登入：清空
+          setAllOrders([]);
+          setAllUsers([]);
+        }
+
+        return () => {
+          unsubscribeOrders();
+          unsubscribeUsers();
+        };
+      }, [currentUser, isAdminMode]);
+
       useEffect(() => {
         if (currentUser && !isAdminMode) {
+       
            const unsub = db.collection('users').doc(currentUser.uid).onSnapshot(doc => {
               if (doc.exists) {
                  const data = doc.data();
