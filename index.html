@@ -220,8 +220,7 @@
         });
 
         const unsubscribeAnnounce = db.collection('settings').doc('announcements').onSnapshot(doc => {
-          if (doc.exists && doc.data().list) {
-            const data = doc.data().list;
+          const handleAnnouncementsUpdate = (data) => {
             setAnnouncements(data);
             const unread = data.filter(a => a.isActive && a.showOnLoad && !isAnnounceExpired(a) && !sessionStorage.getItem(`seenAnnounce_${a.id}`));
             if (unread.length > 0) {
@@ -229,6 +228,20 @@
                setShowAnnouncementModal(true);
                sessionStorage.setItem(`seenAnnounce_${unread[0].id}`, 'true');
             }
+          };
+
+          if (doc.exists && Array.isArray(doc.data().list)) {
+            // 讀取新的多筆公告結構
+            handleAnnouncementsUpdate(doc.data().list);
+          } else {
+            // 向下相容：如果新的清單還不存在，自動去抓取舊版的單一公告資料
+            db.collection('settings').doc('announcement').get().then(oldDoc => {
+              if (oldDoc.exists && oldDoc.data().title) {
+                handleAnnouncementsUpdate([{ ...oldDoc.data(), id: 'legacy-1' }]);
+              } else {
+                setAnnouncements([]);
+              }
+            }).catch(() => setAnnouncements([]));
           }
         });
 
