@@ -1,14 +1,7 @@
-<script type="text/babel">
+
     const { useState, useMemo, useEffect } = React;
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCrZX5PnfzLEAyxLBoHpuM59VoW3kXVxBY",
-      authDomain: "muzi-maison-db.firebaseapp.com",
-      projectId: "muzi-maison-db",
-      storageBucket: "muzi-maison-db.firebasestorage.app",
-      messagingSenderId: "270446372915",
-      appId: "1:270446372915:web:905cd2e7153ab450e8db46"
-    };
+    
 
     if (!firebase.apps.length && !firebaseConfig.apiKey.includes("請填入")) {
       firebase.initializeApp(firebaseConfig);
@@ -1913,4 +1906,4 @@
 
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
-  </script>
+
