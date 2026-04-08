@@ -1,1867 +1,1878 @@
-const { useState, useMemo, useEffect } = React;
+<script type="text/babel">
+    const { useState, useMemo, useEffect } = React;
 
-// 💡 Firebase 已經在 config.js 中初始化過了，所以這裡我們不需要再寫一次金鑰
-// 直接跟 Firebase 要資料庫跟會員授權的功能就好！
-const db = firebase.firestore();
-const auth = firebase.auth();
+    const firebaseConfig = {
+      apiKey: "AIzaSyCrZX5PnfzLEAyxLBoHpuM59VoW3kXVxBY",
+      authDomain: "muzi-maison-db.firebaseapp.com",
+      projectId: "muzi-maison-db",
+      storageBucket: "muzi-maison-db.firebasestorage.app",
+      messagingSenderId: "270446372915",
+      appId: "1:270446372915:web:905cd2e7153ab450e8db46"
+    };
 
-// --- 圖示元件 ---
-const ShoppingCart = ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>;
-const Plus = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>;
-const Minus = ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/></svg>;
-const X = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>;
-const Info = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>;
-const Store = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m2 7 4.41-2.205a2 2 0 0 1 1.79 0L12 7l3.8-1.9a2 2 0 0 1 1.8 0L22 7v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7Z"/><path d="M16 14v-2"/><path d="M8 14v-2"/><path d="M12 14v-2"/></svg>;
-const MessageCircle = ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>;
-const SettingsIcon = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>;
-const Camera = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>;
-const ImageIcon = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>;
-const Lock = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>;
-const LogOut = ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>;
-const ImagePlus = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/><line x1="16" y1="5" x2="22" y2="5"/><line x1="19" y1="2" x2="19" y2="8"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>;
-const Trash2 = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>;
-const ChevronRight = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>;
-const MapPin = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>;
-const Phone = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>;
-const Mail = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>;
-const Truck = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 17h4V5H2v12h3"/><path d="M20 17h2v-3.34a4 4 0 0 0-1.17-2.83L19 9h-5v8h2"/><path d="M14 9h5.51"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>;
-const UserIcon = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
-const ClipboardList = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>;
-const Printer = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>;
-const SearchIcon = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>;
-const DownloadIcon = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
-const UsersIcon = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
-const EditIcon = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>;
-const LinkIcon = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>;
-const CreditCard = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>;
-const Copy = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>;
-const CheckCircle = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
-const Share2 = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>;
-const Menu = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>;
-const Megaphone = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>;
-const Gift = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"/></svg>;
-const Clock = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
-const ArrowUp = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>;
-const ArrowDown = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>;
-const Eye = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>;
-const EyeOff = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>;
+    if (!firebase.apps.length && !firebaseConfig.apiKey.includes("請填入")) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.apps.length ? firebase.firestore() : null;
+    const auth = firebase.apps.length ? firebase.auth() : null;
+
+    // --- 圖示元件 ---
+    const ShoppingCart = ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>;
+    const Plus = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>;
+    const Minus = ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/></svg>;
+    const X = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>;
+    const Info = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>;
+    const Store = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m2 7 4.41-2.205a2 2 0 0 1 1.79 0L12 7l3.8-1.9a2 2 0 0 1 1.8 0L22 7v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7Z"/><path d="M16 14v-2"/><path d="M8 14v-2"/><path d="M12 14v-2"/></svg>;
+    const MessageCircle = ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>;
+    const SettingsIcon = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>;
+    const Camera = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>;
+    const ImageIcon = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>;
+    const Lock = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>;
+    const LogOut = ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>;
+    const ImagePlus = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/><line x1="16" y1="5" x2="22" y2="5"/><line x1="19" y1="2" x2="19" y2="8"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>;
+    const Trash2 = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>;
+    const ChevronRight = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>;
+    const MapPin = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>;
+    const Phone = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>;
+    const Mail = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>;
+    const Truck = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 17h4V5H2v12h3"/><path d="M20 17h2v-3.34a4 4 0 0 0-1.17-2.83L19 9h-5v8h2"/><path d="M14 9h5.51"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>;
+    const UserIcon = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
+    const ClipboardList = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>;
+    const Printer = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>;
+    const SearchIcon = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>;
+    const DownloadIcon = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
+    const UsersIcon = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
+    const EditIcon = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>;
+    const LinkIcon = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>;
+    const CreditCard = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>;
+    const Copy = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>;
+    const CheckCircle = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
+    const Share2 = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>;
+    const Menu = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>;
+    const Megaphone = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>;
+    const Gift = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"/></svg>;
+    const Clock = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
+    const ArrowUp = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>;
+    const ArrowDown = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>;
+    const Eye = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>;
+    const EyeOff = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>;
 
 
-const STATUS_MAP = {
-  'pending': { label: '未處理', color: 'bg-rose-100 text-rose-700' },
-  'confirming': { label: '訂單確認中', color: 'bg-amber-100 text-amber-700' },
-  'confirmed': { label: '已匯款，確認訂單', color: 'bg-blue-100 text-blue-700' },
-  'shipped': { label: '已出貨', color: 'bg-purple-100 text-purple-700' },
-  'completed': { label: '已完成', color: 'bg-emerald-100 text-emerald-700' },
-  'cancel_requested': { label: '買方申請取消', color: 'bg-orange-100 text-orange-700' },
-  'cancelled': { label: '已取消', color: 'bg-stone-200 text-stone-600' }
-};
+    const STATUS_MAP = {
+      'pending': { label: '未處理', color: 'bg-rose-100 text-rose-700' },
+      'confirming': { label: '訂單確認中', color: 'bg-amber-100 text-amber-700' },
+      'confirmed': { label: '已匯款，確認訂單', color: 'bg-blue-100 text-blue-700' },
+      'shipped': { label: '已出貨', color: 'bg-purple-100 text-purple-700' },
+      'completed': { label: '已完成', color: 'bg-emerald-100 text-emerald-700' },
+      'cancel_requested': { label: '買方申請取消', color: 'bg-orange-100 text-orange-700' },
+      'cancelled': { label: '已取消', color: 'bg-stone-200 text-stone-600' }
+    };
 
-const defaultProducts = [];
-const defaultStoreConfig = { shippingFee: 100, freeShippingThreshold: 12, promoQty: 3, promoPrice: 550, wholesaleThreshold: 12 };
+    const defaultProducts = [];
+    const defaultStoreConfig = { shippingFee: 100, freeShippingThreshold: 12, promoQty: 3, promoPrice: 550, wholesaleThreshold: 12 };
 
-function App() {
-  // 🌟 全局載入狀態，防止畫面閃現
-  const [isAppLoading, setIsAppLoading] = useState(true);
-  const [adminOrderingFor, setAdminOrderingFor] = useState(null);
+    function App() {
+      // 🌟 全局載入狀態，防止畫面閃現
+      const [isAppLoading, setIsAppLoading] = useState(true);
+      const [adminOrderingFor, setAdminOrderingFor] = useState(null);
 
-  const [currentUser, setCurrentUser] = useState(null);
-  const [userProfile, setUserProfile] = useState(null);
-  const [isAdminMode, setIsAdminMode] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+      const [currentUser, setCurrentUser] = useState(null);
+      const [userProfile, setUserProfile] = useState(null);
+      const [isAdminMode, setIsAdminMode] = useState(false);
+      const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [loginMode, setLoginMode] = useState('customer');
-  const [isRegistering, setIsRegistering] = useState(false);
-  
-  const [showMemberProfile, setShowMemberProfile] = useState(false);
-  const [showAdminOrders, setShowAdminOrders] = useState(false);
-  const [showAdminCustomers, setShowAdminCustomers] = useState(false);
-  const [showDeletedCustomers, setShowDeletedCustomers] = useState(false); 
-  const [showAboutModal, setShowAboutModal] = useState(false);
-  const [isEditingAbout, setIsEditingAbout] = useState(false);
-  const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
-  const [showAnnounceConfig, setShowAnnounceConfig] = useState(false);
+      const [showLoginModal, setShowLoginModal] = useState(false);
+      const [loginMode, setLoginMode] = useState('customer');
+      const [isRegistering, setIsRegistering] = useState(false);
+      
+      const [showMemberProfile, setShowMemberProfile] = useState(false);
+      const [showAdminOrders, setShowAdminOrders] = useState(false);
+      const [showAdminCustomers, setShowAdminCustomers] = useState(false);
+      const [showDeletedCustomers, setShowDeletedCustomers] = useState(false); 
+      const [showAboutModal, setShowAboutModal] = useState(false);
+      const [isEditingAbout, setIsEditingAbout] = useState(false);
+      const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
+      const [showAnnounceConfig, setShowAnnounceConfig] = useState(false);
 
-  const [emailInput, setEmailInput] = useState('');
-  const [passwordInput, setPasswordInput] = useState('');
-  const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '', address: '', email: '', lineId: '', gender: '女' });
-  
-  const [orderNote, setOrderNote] = useState('');
-  const [checkoutBankCode, setCheckoutBankCode] = useState('');
-  const [usedRewardPoints, setUsedRewardPoints] = useState(false);
-  const [selectedRewardId, setSelectedRewardId] = useState('');
+      const [emailInput, setEmailInput] = useState('');
+      const [passwordInput, setPasswordInput] = useState('');
+      const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '', address: '', email: '', lineId: '', gender: '女' });
+      
+      const [orderNote, setOrderNote] = useState('');
+      const [checkoutBankCode, setCheckoutBankCode] = useState('');
+      const [usedRewardPoints, setUsedRewardPoints] = useState(false);
+      const [selectedRewardId, setSelectedRewardId] = useState('');
 
-  const [bankCodeInputs, setBankCodeInputs] = useState({});
-  const [trackingInputs, setTrackingInputs] = useState({});
-  const [adminNoteInputs, setAdminNoteInputs] = useState({});
-  const [adminDiscountInputs, setAdminDiscountInputs] = useState({});
+      const [bankCodeInputs, setBankCodeInputs] = useState({});
+      const [trackingInputs, setTrackingInputs] = useState({});
+      const [adminNoteInputs, setAdminNoteInputs] = useState({});
+      const [adminDiscountInputs, setAdminDiscountInputs] = useState({});
 
-  const [orderSearchId, setOrderSearchId] = useState('');
-  const [orderStatusFilter, setOrderStatusFilter] = useState('all');
-  const [orderStartDate, setOrderStartDate] = useState('');
-  const [orderEndDate, setOrderEndDate] = useState('');
+      const [orderSearchId, setOrderSearchId] = useState('');
+      const [orderStatusFilter, setOrderStatusFilter] = useState('all');
+      const [orderStartDate, setOrderStartDate] = useState('');
+      const [orderEndDate, setOrderEndDate] = useState('');
 
-  const [customerSearchName, setCustomerSearchName] = useState('');
-  const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [isEditingAdminCustomer, setIsEditingAdminCustomer] = useState(false);
-  const [adminEditPoints, setAdminEditPoints] = useState('');
-  
-  const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [copiedOrderId, setCopiedOrderId] = useState(null);
+      const [customerSearchName, setCustomerSearchName] = useState('');
+      const [selectedCustomer, setSelectedCustomer] = useState(null);
+      const [isEditingAdminCustomer, setIsEditingAdminCustomer] = useState(false);
+      const [adminEditPoints, setAdminEditPoints] = useState('');
+      
+      const [isEditingProfile, setIsEditingProfile] = useState(false);
+      const [copiedOrderId, setCopiedOrderId] = useState(null);
 
-  const [isMergeMode, setIsMergeMode] = useState(false);
-  const [mergeSelection, setMergeSelection] = useState([]);
+      const [isMergeMode, setIsMergeMode] = useState(false);
+      const [mergeSelection, setMergeSelection] = useState([]);
 
-  const [logo, setLogo] = useState('./logo.png');
-  const [storeSlogan, setStoreSlogan] = useState('堅果、牛軋糖、核桃糕嚴選烘焙');
-  const [products, setProducts] = useState(defaultProducts);
-  const [storeConfig, setStoreConfig] = useState(defaultStoreConfig);
-  const [cart, setCart] = useState({});
-  const [isCartOpen, setIsCartOpen] = useState(false);
-  const [activeCategory, setActiveCategory] = useState('全部');
-  const [deliveryMethod, setDeliveryMethod] = useState('delivery');
-  const [contactData, setContactData] = useState({ address: '', phone: '', lineLink: '', email: '', bankAccount: '', businessHours: '' });
+      const [logo, setLogo] = useState('./logo.png');
+      const [storeSlogan, setStoreSlogan] = useState('堅果、牛軋糖、核桃糕嚴選烘焙');
+      const [products, setProducts] = useState(defaultProducts);
+      const [storeConfig, setStoreConfig] = useState(defaultStoreConfig);
+      const [cart, setCart] = useState({});
+      const [isCartOpen, setIsCartOpen] = useState(false);
+      const [activeCategory, setActiveCategory] = useState('全部');
+      const [deliveryMethod, setDeliveryMethod] = useState('delivery');
+      const [contactData, setContactData] = useState({ address: '', phone: '', lineLink: '', email: '', bankAccount: '', businessHours: '' });
 
-  const defaultAboutData = { title: '關於木子家 MUZI MAISON', content: '嚴選優質商品，提供最便利的線上訂購體驗。\n\n歡迎選購！', image: '' };
-  const [aboutData, setAboutData] = useState(defaultAboutData);
-  const [tempAboutData, setTempAboutData] = useState(defaultAboutData);
+      const defaultAboutData = { title: '關於木子家 MUZI MAISON', content: '嚴選優質商品，提供最便利的線上訂購體驗。\n\n歡迎選購！', image: '' };
+      const [aboutData, setAboutData] = useState(defaultAboutData);
+      const [tempAboutData, setTempAboutData] = useState(defaultAboutData);
 
-  const [announcements, setAnnouncements] = useState([]);
-  const [viewingAnnounce, setViewingAnnounce] = useState(null);
-  const [isEditingAnnounce, setIsEditingAnnounce] = useState(false);
-  const [tempAnnounce, setTempAnnounce] = useState({});
-  const [isNewCustomer, setIsNewCustomer] = useState(false);
+      const [announcements, setAnnouncements] = useState([]);
+      const [viewingAnnounce, setViewingAnnounce] = useState(null);
+      const [isEditingAnnounce, setIsEditingAnnounce] = useState(false);
+      const [tempAnnounce, setTempAnnounce] = useState({});
+      const [isNewCustomer, setIsNewCustomer] = useState(false);
 
-  // 分類列表改為物件陣列，支援隱藏與排序
-  const [categoriesList, setCategoriesList] = useState([{ name: '精選商品', isHidden: false }, { name: '糖果軟糕系列(300g)', isHidden: false }]);
-  const [showCategoryManager, setShowCategoryManager] = useState(false);
-  const [newCatName, setNewCatName] = useState('');
+      // 分類列表改為物件陣列，支援隱藏與排序
+      const [categoriesList, setCategoriesList] = useState([{ name: '精選商品', isHidden: false }, { name: '糖果軟糕系列(300g)', isHidden: false }]);
+      const [showCategoryManager, setShowCategoryManager] = useState(false);
+      const [newCatName, setNewCatName] = useState('');
 
-  const [allOrders, setAllOrders] = useState([]);
-  const [allUsers, setAllUsers] = useState([]); 
+      const [allOrders, setAllOrders] = useState([]);
+      const [allUsers, setAllUsers] = useState([]); 
 
-  const [editingProduct, setEditingProduct] = useState(null); 
-  const [mainDisplayImg, setMainDisplayImg] = useState(''); 
-  const [showContactModal, setShowContactModal] = useState(false);
-  const [showConfigModal, setShowConfigModal] = useState(false);
-  const [tempConfig, setTempConfig] = useState(defaultStoreConfig);
+      const [editingProduct, setEditingProduct] = useState(null); 
+      const [mainDisplayImg, setMainDisplayImg] = useState(''); 
+      const [showContactModal, setShowContactModal] = useState(false);
+      const [showConfigModal, setShowConfigModal] = useState(false);
+      const [tempConfig, setTempConfig] = useState(defaultStoreConfig);
 
-  useEffect(() => {
-    if (!db || !auth) return;
+      useEffect(() => {
+        if (!db || !auth) return;
 
-    const unsubscribeAuth = auth.onAuthStateChanged(async user => {
-      if (user) {
-        const userDoc = await db.collection('users').doc(user.uid).get();
-        if (userDoc.exists) {
-          const userData = userDoc.data();
-          if (userData.role === 'deleted') {
-            alert("此帳號已被管理員停用或刪除！");
-            auth.signOut();
-            return;
-          }
-          if (userData.role === 'customer') {
+        const unsubscribeAuth = auth.onAuthStateChanged(async user => {
+          if (user) {
+            const userDoc = await db.collection('users').doc(user.uid).get();
+            if (userDoc.exists) {
+              const userData = userDoc.data();
+              if (userData.role === 'deleted') {
+                alert("此帳號已被管理員停用或刪除！");
+                auth.signOut();
+                return;
+              }
+              if (userData.role === 'customer') {
+                setIsAdminMode(false);
+              } else {
+                setIsAdminMode(true);
+              }
+            } else {
+              setIsAdminMode(true);
+            }
+            setCurrentUser(user);
+          } else {
+            setCurrentUser(null);
+            setUserProfile(null);
             setIsAdminMode(false);
-          } else {
-            setIsAdminMode(true);
+            setAdminOrderingFor(null);
           }
-        } else {
-          setIsAdminMode(true);
-        }
-        setCurrentUser(user);
-      } else {
-        setCurrentUser(null);
-        setUserProfile(null);
-        setIsAdminMode(false);
-        setAdminOrderingFor(null);
-      }
-    });
+        });
 
-    const unsubscribeLogo = db.collection('settings').doc('store').onSnapshot(doc => {
-      if (doc.exists) {
-        if (doc.data().logo) setLogo(doc.data().logo);
-        if (doc.data().slogan !== undefined) setStoreSlogan(doc.data().slogan);
-      }
-    });
-
-    const unsubscribeContact = db.collection('settings').doc('contact').onSnapshot(doc => {
-      if (doc.exists) setContactData({ address: '', phone: '', lineLink: '', email: '', bankAccount: '', businessHours: '', ...doc.data() });
-    });
-
-    const unsubscribeConfig = db.collection('settings').doc('config').onSnapshot(doc => {
-      if (doc.exists) setStoreConfig({ ...defaultStoreConfig, ...doc.data() });
-    });
-
-    const unsubscribeAbout = db.collection('settings').doc('about').onSnapshot(doc => {
-      if (doc.exists) setAboutData({ ...defaultAboutData, ...doc.data() });
-    });
-
-    const unsubscribeAnnounce = db.collection('settings').doc('announcements').onSnapshot(doc => {
-      const handleAnnouncementsUpdate = (data) => {
-        setAnnouncements(data);
-        const unread = data.filter(a => a.isActive && a.showOnLoad && !isAnnounceExpired(a) && !sessionStorage.getItem(`seenAnnounce_${a.id}`));
-        if (unread.length > 0) {
-           setViewingAnnounce(unread[0]);
-           setShowAnnouncementModal(true);
-           sessionStorage.setItem(`seenAnnounce_${unread[0].id}`, 'true');
-        }
-      };
-
-      if (doc.exists && Array.isArray(doc.data().list)) {
-        handleAnnouncementsUpdate(doc.data().list);
-      } else {
-        db.collection('settings').doc('announcement').get().then(oldDoc => {
-          if (oldDoc.exists && oldDoc.data().title) {
-            handleAnnouncementsUpdate([{ ...oldDoc.data(), id: 'legacy-1' }]);
-          } else {
-            setAnnouncements([]);
-          }
-        }).catch(() => setAnnouncements([]));
-      }
-    });
-
-    const unsubscribeCats = db.collection('settings').doc('categories').onSnapshot(doc => {
-       if(doc.exists && doc.data().list) {
-         const list = doc.data().list.map(c => typeof c === 'string' ? { name: c, isHidden: false } : c);
-         setCategoriesList(list);
-       }
-    });
-
-    const unsubscribeProducts = db.collection('products').onSnapshot(snapshot => {
-      if (!snapshot.empty) {
-        const items = snapshot.docs.map(doc => doc.data());
-        items.sort((a, b) => a.id.localeCompare(b.id));
-        setProducts(items);
-      }
-      setIsAppLoading(false);
-    });
-
-    const unsubscribeOrders = db.collection('orders').orderBy('createdAt', 'desc').onSnapshot(snapshot => {
-      const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setAllOrders(orders);
-      const newTrackingInputs = {};
-      const newDiscountInputs = {};
-      orders.forEach(o => { 
-        if(o.trackingNumber) newTrackingInputs[o.id] = o.trackingNumber; 
-        newDiscountInputs[o.id] = o.adminDiscount || 0;
-      });
-      setTrackingInputs(prev => ({...newTrackingInputs, ...prev}));
-      setAdminDiscountInputs(prev => ({...newDiscountInputs, ...prev}));
-    });
-
-    const unsubscribeUsers = db.collection('users').where('role', 'in', ['customer', 'deleted']).onSnapshot(snapshot => {
-      const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setAllUsers(users);
-    });
-
-    return () => {
-      unsubscribeAuth(); unsubscribeLogo(); unsubscribeContact(); 
-      unsubscribeConfig(); unsubscribeAbout(); unsubscribeProducts(); 
-      unsubscribeOrders(); unsubscribeUsers(); unsubscribeAnnounce(); unsubscribeCats();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (currentUser && !isAdminMode) {
-       const unsub = db.collection('users').doc(currentUser.uid).onSnapshot(doc => {
+        const unsubscribeLogo = db.collection('settings').doc('store').onSnapshot(doc => {
           if (doc.exists) {
-             const data = doc.data();
-             setUserProfile(data);
-             setCustomerInfo({
-                name: data.name || '', phone: data.phone || '',
-                address: data.address || '', email: data.email || currentUser.email || '',
-                lineId: data.lineId || '', gender: data.gender || '女'
-             });
+            if (doc.data().logo) setLogo(doc.data().logo);
+            if (doc.data().slogan !== undefined) setStoreSlogan(doc.data().slogan);
           }
-       });
-       return () => unsub();
-    }
-  }, [currentUser, isAdminMode]);
+        });
 
-  useEffect(() => {
-    if (selectedCustomer) {
-      const updatedUser = allUsers.find(u => u.id === selectedCustomer.id);
-      if (updatedUser && !isEditingAdminCustomer) {
-        setSelectedCustomer(updatedUser);
-        setAdminEditPoints(updatedUser.points || 0);
-      }
-    }
-  }, [allUsers, isEditingAdminCustomer]);
+        const unsubscribeContact = db.collection('settings').doc('contact').onSnapshot(doc => {
+          if (doc.exists) setContactData({ address: '', phone: '', lineLink: '', email: '', bankAccount: '', businessHours: '', ...doc.data() });
+        });
 
-  // 🌟 計算並合併顯示分類 (保留自訂排序)
-  const mergedCategories = useMemo(() => {
-    const map = new Map();
-    categoriesList.forEach(c => map.set(c.name, c));
-    products.forEach(p => {
-      if (!map.has(p.category)) map.set(p.category, { name: p.category, isHidden: false });
-    });
-    return Array.from(map.values());
-  }, [categoriesList, products]);
+        const unsubscribeConfig = db.collection('settings').doc('config').onSnapshot(doc => {
+          if (doc.exists) setStoreConfig({ ...defaultStoreConfig, ...doc.data() });
+        });
 
-  const visibleCategoryNames = mergedCategories.filter(c => !c.isHidden).map(c => c.name);
-  const adminCategoryNames = mergedCategories.map(c => c.name);
+        const unsubscribeAbout = db.collection('settings').doc('about').onSnapshot(doc => {
+          if (doc.exists) setAboutData({ ...defaultAboutData, ...doc.data() });
+        });
 
-  const displayedTabs = ['全部', ...(isAdminMode && !adminOrderingFor ? adminCategoryNames : visibleCategoryNames)];
-  
-  const visibleCatNameSet = new Set(visibleCategoryNames);
-  const displayedProducts = products.filter(p => {
-    const isCatVisible = visibleCatNameSet.has(p.category);
-    if (!isAdminMode || adminOrderingFor) {
-       if (!isCatVisible) return false;
-    }
-    if (activeCategory === '全部') return true;
-    return p.category === activeCategory;
-  });
+        const unsubscribeAnnounce = db.collection('settings').doc('announcements').onSnapshot(doc => {
+          const handleAnnouncementsUpdate = (data) => {
+            setAnnouncements(data);
+            const unread = data.filter(a => a.isActive && a.showOnLoad && !isAnnounceExpired(a) && !sessionStorage.getItem(`seenAnnounce_${a.id}`));
+            if (unread.length > 0) {
+               setViewingAnnounce(unread[0]);
+               setShowAnnouncementModal(true);
+               sessionStorage.setItem(`seenAnnounce_${unread[0].id}`, 'true');
+            }
+          };
 
-  const displayedCategories = activeCategory === '全部' ? (isAdminMode && !adminOrderingFor ? adminCategoryNames : visibleCategoryNames) : [activeCategory];
+          if (doc.exists && Array.isArray(doc.data().list)) {
+            handleAnnouncementsUpdate(doc.data().list);
+          } else {
+            db.collection('settings').doc('announcement').get().then(oldDoc => {
+              if (oldDoc.exists && oldDoc.data().title) {
+                handleAnnouncementsUpdate([{ ...oldDoc.data(), id: 'legacy-1' }]);
+              } else {
+                setAnnouncements([]);
+              }
+            }).catch(() => setAnnouncements([]));
+          }
+        });
 
-  const candyProducts = products.filter(p => p.category.includes('糖果') || p.category.includes('軟糕'));
-  const addonProducts = displayedProducts.filter(p => p.isAddon);
+        const unsubscribeCats = db.collection('settings').doc('categories').onSnapshot(doc => {
+           if(doc.exists && doc.data().list) {
+             const list = doc.data().list.map(c => typeof c === 'string' ? { name: c, isHidden: false } : c);
+             setCategoriesList(list);
+           }
+        });
 
-  const updateCart = (id, delta) => {
-    setCart(prev => {
-      const currentQty = prev[id] || 0;
-      const newQty = currentQty + delta;
-      if (newQty <= 0) { const newCart = { ...prev }; delete newCart[id]; return newCart; }
-      return { ...prev, [id]: newQty };
-    });
-  };
+        const unsubscribeProducts = db.collection('products').onSnapshot(snapshot => {
+          if (!snapshot.empty) {
+            const items = snapshot.docs.map(doc => doc.data());
+            items.sort((a, b) => a.id.localeCompare(b.id));
+            setProducts(items);
+          }
+          setIsAppLoading(false);
+        });
 
-  const calculateTotals = (itemsList, deliveryWay) => {
-    let totalQty = 0; let nonPromoPrice = 0; let promoItemsExpanded = [];
-    let totalCost = 0;
-    let freeShippingQty = 0;
-    let rewardEligibleBaseTotal = 0;
+        const unsubscribeOrders = db.collection('orders').orderBy('createdAt', 'desc').onSnapshot(snapshot => {
+          const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setAllOrders(orders);
+          const newTrackingInputs = {};
+          const newDiscountInputs = {};
+          orders.forEach(o => { 
+            if(o.trackingNumber) newTrackingInputs[o.id] = o.trackingNumber; 
+            newDiscountInputs[o.id] = o.adminDiscount || 0;
+          });
+          setTrackingInputs(prev => ({...newTrackingInputs, ...prev}));
+          setAdminDiscountInputs(prev => ({...newDiscountInputs, ...prev}));
+        });
 
-    itemsList.forEach(item => {
-      totalQty += item.qty;
-      totalCost += (Number(item.cost) || 0) * item.qty;
-      
-      if (!item.isReward && item.isFreeShipping !== false) {
-         freeShippingQty += item.qty;
-      }
-      
-      if(item.isReward) return; 
+        const unsubscribeUsers = db.collection('users').where('role', 'in', ['customer', 'deleted']).onSnapshot(snapshot => {
+          const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setAllUsers(users);
+        });
 
-      const itemBasePrice = item.price * item.qty;
-      if (item.isRewardEligible !== false) {
-         rewardEligibleBaseTotal += itemBasePrice;
-      }
+        return () => {
+          unsubscribeAuth(); unsubscribeLogo(); unsubscribeContact(); 
+          unsubscribeConfig(); unsubscribeAbout(); unsubscribeProducts(); 
+          unsubscribeOrders(); unsubscribeUsers(); unsubscribeAnnounce(); unsubscribeCats();
+        };
+      }, []);
 
-      if (item.isPromo) { for(let i = 0; i < item.qty; i++) promoItemsExpanded.push(item.price); } 
-      else { nonPromoPrice += item.price * item.qty; }
-    });
-
-    promoItemsExpanded.sort((a,b) => b - a);
-    const promoSets = Math.floor(promoItemsExpanded.length / storeConfig.promoQty);
-    const promoTotal = promoSets * storeConfig.promoPrice;
-    let remainderTotal = 0;
-    for(let i = promoSets * storeConfig.promoQty; i < promoItemsExpanded.length; i++) remainderTotal += promoItemsExpanded[i];
-
-    const itemsBaseTotal = itemsList.reduce((sum, item) => sum + (item.isReward?0:item.price) * item.qty, 0);
-    const currentTotal = nonPromoPrice + promoTotal + remainderTotal; 
-    const discountAmount = itemsBaseTotal - currentTotal; 
-    
-    let shippingFee = 0;
-    if (deliveryWay === 'delivery' && freeShippingQty < storeConfig.freeShippingThreshold) shippingFee = storeConfig.shippingFee;
-    const finalPrice = currentTotal + shippingFee;
-
-    let rewardEligibleAmount = 0;
-    if (itemsBaseTotal > 0) {
-       rewardEligibleAmount = Math.floor((rewardEligibleBaseTotal / itemsBaseTotal) * currentTotal);
-    }
-
-    return { totalQty, freeShippingQty, currentTotal, finalPrice, shippingFee, discountAmount, itemsBaseTotal, totalCost, rewardEligibleAmount };
-  };
-
-  const cartData = useMemo(() => {
-    let items = Object.entries(cart).map(([id, qty]) => {
-      const product = products.find(p => p.id === id);
-      return product ? { ...product, qty } : null;
-    }).filter(Boolean);
-    
-    if (usedRewardPoints && selectedRewardId) {
-       const rewardProd = products.find(p => p.id === selectedRewardId);
-       if (rewardProd) items.push({...rewardProd, qty: 1, price: 0, isReward: true, name: `[點數兌換] ${rewardProd.name}`});
-    }
-    
-    const totals = calculateTotals(items, deliveryMethod);
-    return { items, ...totals };
-  }, [cart, products, storeConfig, deliveryMethod, usedRewardPoints, selectedRewardId]);
-
-  const handleLogout = async () => {
-    if (auth) {
-      await auth.signOut();
-      alert("已成功登出！");
-      setSidebarOpen(false);
-    }
-  };
-
-  const handleAuthSubmit = async () => {
-    if (!auth) return alert("請先設定 Firebase 金鑰！");
-    try {
-      if (isRegistering) {
-        if (!customerInfo.name || !customerInfo.phone) return alert("請填寫姓名與電話！");
-        const cred = await auth.createUserWithEmailAndPassword(emailInput, passwordInput);
-        await db.collection('users').doc(cred.user.uid).set({ ...customerInfo, email: emailInput, role: 'customer', points: 0 });
-        alert("註冊成功！歡迎加入木子家MUZI MAISON！");
-      } else {
-        await auth.signInWithEmailAndPassword(emailInput, passwordInput);
-        alert("登入成功！");
-      }
-      setShowLoginModal(false); setEmailInput(''); setPasswordInput(''); setIsRegistering(false);
-    } catch (error) {
-      alert(isRegistering ? "註冊失敗：" + error.message : "登入失敗，請檢查帳號密碼！");
-    }
-  };
-
-  const handleShareWebsite = async () => {
-    const shareData = { title: '木子家MUZI MAISON｜職人手作，純粹養生', text: '推薦給您！嚴選優質堅果、牛軋糖、核桃糕...手作，提供最便利的線上訂購體驗。快來逛逛吧！', url:'https://muzi-maison.netlify.app/?=' };
-    if (navigator.share) { try { await navigator.share(shareData); } catch (err) {} } else {
-      const fallbackCopy = () => {
-        const ta = document.createElement("textarea"); ta.value = shareData.url; ta.style.position = "fixed"; ta.style.left = "-999999px";
-        document.body.appendChild(ta); ta.select();
-        try { document.execCommand("copy"); alert("已複製網站連結！"); } catch(e) { alert("請手動複製瀏覽器上方的網址！"); } ta.remove();
-      };
-      if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(shareData.url).then(() => alert("已複製網站連結！")).catch(() => fallbackCopy()); } else { fallbackCopy(); }
-    }
-  };
-
-  const handleUpdateMyProfile = async () => {
-    if (!customerInfo.name || !customerInfo.phone) return alert("姓名與電話不能為空！");
-    if (db && currentUser) {
-      try {
-        await db.collection('users').doc(currentUser.uid).update(customerInfo);
-        alert("個人資料更新成功！"); setIsEditingProfile(false);
-      } catch (e) { alert("更新失敗：" + e.message); }
-    }
-  };
-
-  const handleUpdateCustomerByAdmin = async () => {
-    if (!selectedCustomer.name || !selectedCustomer.phone) return alert("姓名與電話不能為空！");
-    if (db) {
-      try {
-        if (isNewCustomer) {
-           const newId = `CUST${Date.now()}`;
-           await db.collection('users').doc(newId).set({
-             name: selectedCustomer.name, phone: selectedCustomer.phone, address: selectedCustomer.address, lineId: selectedCustomer.lineId, gender: selectedCustomer.gender, points: Number(adminEditPoints), role: 'customer', email: '', createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      useEffect(() => {
+        if (currentUser && !isAdminMode) {
+           const unsub = db.collection('users').doc(currentUser.uid).onSnapshot(doc => {
+              if (doc.exists) {
+                 const data = doc.data();
+                 setUserProfile(data);
+                 setCustomerInfo({
+                    name: data.name || '', phone: data.phone || '',
+                    address: data.address || '', email: data.email || currentUser.email || '',
+                    lineId: data.lineId || '', gender: data.gender || '女'
+                 });
+              }
            });
-           alert("客戶新增成功！");
-        } else {
-           await db.collection('users').doc(selectedCustomer.id).update({
-             name: selectedCustomer.name, phone: selectedCustomer.phone, address: selectedCustomer.address, lineId: selectedCustomer.lineId, gender: selectedCustomer.gender, points: Number(adminEditPoints)
-           });
-           alert("客戶資料已更新！");
+           return () => unsub();
         }
-        setIsEditingAdminCustomer(false);
-        setIsNewCustomer(false);
-      } catch (e) { alert("儲存失敗：" + e.message); }
-    }
-  };
+      }, [currentUser, isAdminMode]);
 
-  const handleAddCustomerBtn = () => {
-    setSelectedCustomer({ id: '', name: '', phone: '', lineId: '', address: '', gender: '女', points: 0 });
-    setAdminEditPoints(0);
-    setIsEditingAdminCustomer(true);
-    setIsNewCustomer(true);
-  };
+      useEffect(() => {
+        if (selectedCustomer) {
+          const updatedUser = allUsers.find(u => u.id === selectedCustomer.id);
+          if (updatedUser && !isEditingAdminCustomer) {
+            setSelectedCustomer(updatedUser);
+            setAdminEditPoints(updatedUser.points || 0);
+          }
+        }
+      }, [allUsers, isEditingAdminCustomer]);
 
-  const handleDeleteCustomer = async () => {
-    if(!window.confirm('確定徹底刪除此客戶資料嗎？(該帳號將被停用且無法再次登入)')) return;
-    if (db) {
-      await db.collection('users').doc(selectedCustomer.id).update({ role: 'deleted' });
-      alert("客戶帳號已刪除並停用！");
-      setSelectedCustomer(null);
-      setIsEditingAdminCustomer(false);
-    }
-  };
+      // 🌟 計算並合併顯示分類 (保留自訂排序)
+      const mergedCategories = useMemo(() => {
+        const map = new Map();
+        categoriesList.forEach(c => map.set(c.name, c));
+        products.forEach(p => {
+          if (!map.has(p.category)) map.set(p.category, { name: p.category, isHidden: false });
+        });
+        return Array.from(map.values());
+      }, [categoriesList, products]);
 
-  const handleRestoreCustomer = async () => {
-    if(!window.confirm('確定要恢復此客戶的登入與購物權限嗎？')) return;
-    if (db) {
-      await db.collection('users').doc(selectedCustomer.id).update({ role: 'customer' });
-      alert("帳號已恢復成功！客戶可以正常登入了。");
-      setSelectedCustomer(null);
-    }
-  };
+      const visibleCategoryNames = mergedCategories.filter(c => !c.isHidden).map(c => c.name);
+      const adminCategoryNames = mergedCategories.map(c => c.name);
 
-  const startAdminOrder = (customer) => {
-     setAdminOrderingFor(customer);
-     setCustomerInfo({
-        name: customer.name || '', phone: customer.phone || '', address: customer.address || '',
-        email: customer.email || '', lineId: customer.lineId || '', gender: customer.gender || '女'
-     });
-     setCart({});
-     setShowAdminCustomers(false);
-     setSidebarOpen(false);
-     alert(`已進入「代客建單」模式！\n目前正在幫客戶 [${customer.name}] 選購商品。\n選購完畢後請至購物車結帳送出。`);
-  };
-
-  const handleCheckout = async () => {
-    if (cartData.totalQty === 0 && !usedRewardPoints) return;
-    if (!currentUser && !adminOrderingFor) return alert("請先登入或註冊會員！");
-    if (!customerInfo.name || !customerInfo.phone) return alert("請填寫訂購人姓名與電話！");
-    if (!customerInfo.address) return alert("請務必填寫聯絡/收件地址！");
-    if (checkoutBankCode && checkoutBankCode.length > 0 && checkoutBankCode.length < 5) return alert("若要直接回報匯款，請輸入完整的後五碼！");
-    if (usedRewardPoints && !selectedRewardId) return alert("請選擇要兌換的糖果！");
-
-    let finalUserId = adminOrderingFor ? adminOrderingFor.id : (currentUser ? currentUser.uid : 'guest');
-    const orderId = `MZ${Date.now().toString().slice(-6)}`;
-    const initialStatus = (checkoutBankCode && checkoutBankCode.length === 5) ? 'confirming' : 'pending';
-
-    if (db) {
-      const batch = db.batch();
-      const orderRef = db.collection('orders').doc(orderId);
-      batch.set(orderRef, {
-        orderId, userId: finalUserId, customerInfo, items: cartData.items,
-        totals: { itemsBaseTotal: cartData.itemsBaseTotal, discountAmount: cartData.discountAmount, shippingFee: cartData.shippingFee, finalPrice: cartData.finalPrice, totalCost: cartData.totalCost, usedPoints: usedRewardPoints ? 20 : 0, rewardEligibleAmount: cartData.rewardEligibleAmount },
-        deliveryMethod, status: initialStatus, bankAccountLast5: checkoutBankCode || '', trackingNumber: '', orderNote, adminDiscount: 0, pointsAwarded: false,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        createdByAdmin: !!adminOrderingFor 
-      });
-
-      if (usedRewardPoints && finalUserId !== 'guest') {
-         const userRef = db.collection('users').doc(finalUserId);
-         batch.update(userRef, { points: firebase.firestore.FieldValue.increment(-20) });
-      }
-
-      await batch.commit();
-    }
-
-    setCart({}); setIsCartOpen(false); setOrderNote(''); setCheckoutBankCode(''); setUsedRewardPoints(false); setSelectedRewardId('');
-
-    if (adminOrderingFor) {
-       alert(`成功為客戶 ${adminOrderingFor.name} 建立訂單！`);
-       setAdminOrderingFor(null);
-       setShowAdminOrders(true);
-    } else {
-       alert("訂單已成功送出！請於您的訂單列表複製明細並加 LINE 通知我們喔！");
-       setShowMemberProfile(true);
-    }
-  };
-
-  const handleCopyOrder = (order) => {
-    const currentBankCode = bankCodeInputs[order.id] || order.bankAccountLast5;
-    if (!currentBankCode || currentBankCode.length < 5) { alert("⚠️ 請先在下方填寫完整的「匯款後五碼」才可複製明細喔！"); return; }
-    let text = `*【木子家 MUZI MAISON 新訂單】*\n\n訂單編號：${order.id}\n訂購人：${order.customerInfo.name}\n聯絡電話：${order.customerInfo.phone}\n取貨方式：${order.deliveryMethod === 'delivery' ? '宅配' : '自取'}\n地址：${order.customerInfo.address}\n----------------------\n`;
-    order.items.forEach(item => text += `▪️ ${item.name} ${item.weight ? `(${item.weight})` : ''} x ${item.qty} ${item.unit || ''}\n`);
-    text += `----------------------\n`;
-    if (order.adminDiscount > 0) text += `*手動折扣*：-$${order.adminDiscount}\n`;
-    if (order.totals.usedPoints) text += `*使用點數*：${order.totals.usedPoints} 點兌換\n`;
-    text += `*總計金額：$${order.totals.finalPrice}*\n`;
-    if (order.bankAccountLast5) { text += `*匯款後五碼*：${order.bankAccountLast5}\n`; }
-    if (order.orderNote) { text += `*備註事項*：${order.orderNote}\n`; }
-    text += `\n(⚠️ 已於網站送出訂單，請您確認喔！)\n`;
-
-    const copyFallback = (t) => {
-      const ta = document.createElement("textarea"); ta.value = t; ta.style.position = "fixed"; ta.style.left = "-999999px";
-      document.body.appendChild(ta); ta.select();
-      try { document.execCommand("copy"); setCopiedOrderId(order.id); setTimeout(() => setCopiedOrderId(null), 2000); } catch(e) {} ta.remove();
-    };
-    if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(text).then(() => { setCopiedOrderId(order.id); setTimeout(() => setCopiedOrderId(null), 2000); }).catch(() => copyFallback(text)); } else { copyFallback(text); }
-  };
-
-  const submitBankCode = async (orderId) => {
-    const code = bankCodeInputs[orderId];
-    if (!code || code.length < 5) return alert("請輸入完整的後五碼！");
-    if (db) { await db.collection('orders').doc(orderId).update({ bankAccountLast5: code, status: 'confirming' }); alert("已送出匯款後五碼，請稍候管理員確認！"); }
-  };
-
-  const requestCancelOrder = async (orderId) => {
-    if (!window.confirm("確定要申請取消此訂單嗎？（需等待管理員同意）")) return;
-    if (db) { await db.collection('orders').doc(orderId).update({ status: 'cancel_requested' }); alert("已送出取消申請！"); }
-  };
-
-  const updateOrderStatus = async (order, newStatus) => { 
-     if (!db) return;
-     const batch = db.batch();
-     const orderRef = db.collection('orders').doc(order.id);
-
-     if (newStatus === 'confirmed' && order.status !== 'confirmed' && !order.pointsAwarded && order.userId !== 'guest') {
-         const baseAmountForPoints = order.totals.rewardEligibleAmount !== undefined ? order.totals.rewardEligibleAmount : order.totals.finalPrice;
-         const addedPoints = Math.floor(baseAmountForPoints / 1000);
-         if (addedPoints > 0) {
-             const userRef = db.collection('users').doc(order.userId);
-             batch.update(userRef, { points: firebase.firestore.FieldValue.increment(addedPoints) });
-         }
-         batch.update(orderRef, { status: newStatus, pointsAwarded: true, earnedPoints: addedPoints || 0 });
-     } else {
-         batch.update(orderRef, { status: newStatus });
-     }
-     await batch.commit();
-  };
-  
-  const saveTrackingNumber = async (orderId) => {
-    if (db) { await db.collection('orders').doc(orderId).update({ trackingNumber: trackingInputs[orderId] }); alert("出貨單號已儲存！"); }
-  };
-  
-  const saveOrderNote = async (orderId) => {
-    if (db) { await db.collection('orders').doc(orderId).update({ orderNote: adminNoteInputs[orderId] !== undefined ? adminNoteInputs[orderId] : '' }); alert("訂單備註已儲存！"); }
-  };
-
-  const saveAdminDiscount = async (order) => {
-     const discount = Number(adminDiscountInputs[order.id]) || 0;
-     const diff = discount - (order.adminDiscount || 0);
-     const newFinalPrice = order.totals.finalPrice - diff;
-     if (db) { 
-        await db.collection('orders').doc(order.id).update({ adminDiscount: discount, 'totals.finalPrice': newFinalPrice }); 
-        alert("訂單金額已修改！"); 
-     }
-  };
-
-  const deleteOrder = async (orderId) => {
-    if (!window.confirm("確定要徹底刪除此訂單嗎？（刪除後無法復原）")) return;
-    if (db) await db.collection('orders').doc(orderId).delete();
-  };
-
-  const handleToggleMergeOrder = (orderId) => { setMergeSelection(prev => prev.includes(orderId) ? prev.filter(id => id !== orderId) : [...prev, orderId]); };
-
-  const handleConfirmMerge = async () => {
-    if (mergeSelection.length < 2) return alert("請至少選擇兩筆訂單合併");
-    if (!window.confirm("確定要合併這幾筆訂單嗎？系統會將舊訂單刪除，並重新計算總數、運費及折扣，產生一筆新的訂單。")) return;
-
-    const ordersToMerge = allOrders.filter(o => mergeSelection.includes(o.id));
-    const combinedItemsMap = {};
-    let totalUsedPoints = 0;
-    let totalAdminDiscount = 0;
-    ordersToMerge.forEach(order => {
-      totalUsedPoints += (order.totals.usedPoints || 0);
-      totalAdminDiscount += (order.adminDiscount || 0);
-      order.items.forEach(item => {
-        if (combinedItemsMap[item.id]) { combinedItemsMap[item.id].qty += item.qty; } else { combinedItemsMap[item.id] = { ...item }; }
-      });
-    });
-    const newItems = Object.values(combinedItemsMap);
-    const combinedNotes = ordersToMerge.map(o => o.orderNote).filter(Boolean).join('\n---\n');
-
-    const baseOrder = ordersToMerge[0]; 
-    const newTotals = calculateTotals(newItems, baseOrder.deliveryMethod);
-    newTotals.finalPrice -= totalAdminDiscount;
-    const newOrderId = `MZ${Date.now().toString().slice(-6)}`;
-
-    try {
-      const batch = db.batch();
-      const newOrderRef = db.collection('orders').doc(newOrderId);
-      batch.set(newOrderRef, {
-        orderId: newOrderId, userId: selectedCustomer.id, customerInfo: selectedCustomer, items: newItems,
-        totals: { itemsBaseTotal: newTotals.itemsBaseTotal, discountAmount: newTotals.discountAmount, shippingFee: newTotals.shippingFee, finalPrice: newTotals.finalPrice, totalCost: newTotals.totalCost, usedPoints: totalUsedPoints },
-        deliveryMethod: baseOrder.deliveryMethod, status: 'pending', bankAccountLast5: '', trackingNumber: '', orderNote: combinedNotes, adminDiscount: totalAdminDiscount, pointsAwarded: false,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(), isMerged: true, mergeNote: `系統備註：由舊單號 ${mergeSelection.join(', ')} 合併產生。`
-      });
-      mergeSelection.forEach(id => { batch.delete(db.collection('orders').doc(id)); });
-      await batch.commit();
-      alert(`✅ 合併成功！已產生新訂單：${newOrderId}`); setIsMergeMode(false); setMergeSelection([]);
-    } catch (error) { alert("合併失敗：" + error.message); }
-  };
-
-  const filteredAdminOrders = useMemo(() => {
-    return allOrders.filter(order => {
-      const matchId = orderSearchId ? order.id.toLowerCase().includes(orderSearchId.toLowerCase()) : true;
-      const matchStatus = orderStatusFilter !== 'all' ? order.status === orderStatusFilter : true;
-      let matchDate = true;
-      if (orderStartDate || orderEndDate) {
-        const orderDateObj = order.createdAt ? order.createdAt.toDate() : new Date();
-        const compareDate = new Date(orderDateObj.getFullYear(), orderDateObj.getMonth(), orderDateObj.getDate());
-        if (orderStartDate) { if (compareDate < new Date(orderStartDate)) matchDate = false; }
-        if (orderEndDate) { if (compareDate > new Date(orderEndDate)) matchDate = false; }
-      }
-      return matchId && matchStatus && matchDate;
-    });
-  }, [allOrders, orderSearchId, orderStatusFilter, orderStartDate, orderEndDate]);
-
-  const downloadOrdersCSV = () => {
-    if (filteredAdminOrders.length === 0) return alert("目前沒有訂單可以下載");
-    let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; 
-    csvContent += "訂單編號,建立時間,狀態,訂購人,性別,電話,Line ID,取貨方式,地址,商品明細,運費,手動折扣,總金額,總成本,使用點數,匯款後五碼,出貨單號,買家備註,系統備註\n";
-    filteredAdminOrders.forEach(o => {
-      const date = o.createdAt ? o.createdAt.toDate().toLocaleString() : '';
-      const status = STATUS_MAP[o.status]?.label || o.status;
-      const itemsStr = o.items.map(i => `${i.name} ${i.weight ? `(${i.weight})` : ''} ($${i.price}) x ${i.qty} ${i.unit || ''}`).join(' ; ');
-      const row = [
-        o.id, date, status, o.customerInfo.name, o.customerInfo.gender || '', o.customerInfo.phone, o.customerInfo.lineId || '',
-        o.deliveryMethod === 'delivery' ? '宅配' : '自取', o.customerInfo.address || '',
-        itemsStr, o.totals.shippingFee, o.adminDiscount || 0, o.totals.finalPrice, o.totals.totalCost || 0, o.totals.usedPoints || 0, o.bankAccountLast5 || '', o.trackingNumber || '', o.orderNote || '', o.mergeNote || ''
-      ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(',');
-      csvContent += row + "\n";
-    });
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a"); link.setAttribute("href", encodedUri); link.setAttribute("download", `訂單明細_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link); link.click(); document.body.removeChild(link);
-  };
-
-  const handlePrintConfirmedOrders = () => {
-    const confirmedOrders = allOrders.filter(o => o.status === 'confirmed');
-    if (confirmedOrders.length === 0) return alert("目前沒有「已匯款，確認訂單」狀態的訂單可以列印！");
-    let html = `<html><head><title>木子家MUZI MAISON - 出貨明細單</title><style>body { font-family: "Microsoft JhengHei", sans-serif; line-height: 1.5; padding: 0; background: #fff; color: #000; } .print-page { page-break-after: always; padding: 20px; max-width: 800px; margin: 0 auto; } h1 { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; } .order-header { display: flex; justify-content: space-between; font-weight: bold; font-size: 1.2em; border-bottom: 1px dashed #ccc; padding-bottom: 10px; margin-bottom: 15px; } .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; font-size: 1.1em; } table { width: 100%; border-collapse: collapse; margin-bottom: 15px; } th, td { border: 1px solid #333; padding: 10px; text-align: left; } th { background: #f0f0f0; } .total-box { margin-top: 20px; padding-top: 15px; border-top: 2px solid #333; text-align: right; font-size: 1.1em; } .total-row { display: flex; justify-content: flex-end; gap: 20px; margin-bottom: 5px; } .total-final { font-weight: bold; font-size: 1.4em; margin-top: 10px; color: #000; } .note-box { margin-top: 15px; padding: 10px; border: 1px solid #333; background: #fafafa; }</style></head><body>`;
-    confirmedOrders.forEach(o => {
-      html += `<div class="print-page"><h1>木子家MUZI MAISON - 出貨明細單</h1><p style="text-align:right; font-size: 0.9em; margin-top:-10px;">列印時間：${new Date().toLocaleString()}</p><div class="order-header"><span>訂單編號：${o.id}</span><span>${o.deliveryMethod === 'delivery' ? '🚚 宅配' : '🏪 自取'}</span></div><div class="info-grid"><div><strong>收件人：</strong>${o.customerInfo.name}</div><div><strong>電話：</strong>${o.customerInfo.phone}</div><div style="grid-column: span 2;"><strong>地址：</strong>${o.customerInfo.address || '無'}</div><div style="grid-column: span 2;"><strong>Line ID：</strong>${o.customerInfo.lineId || '無'}</div></div><table><tr><th>商品名稱</th><th>單價</th><th>重量</th><th>數量</th><th>小計</th></tr>${o.items.map(i => `<tr><td>${i.name}</td><td>$${i.price}</td><td>${i.weight || ''}</td><td>${i.qty} ${i.unit || ''}</td><td>$${i.price * i.qty}</td></tr>`).join('')}</table>${o.orderNote ? `<div class="note-box"><strong>買家/訂單備註：</strong><br/>${o.orderNote.replace(/\n/g, '<br/>')}</div>` : ''}${o.mergeNote ? `<div class="note-box"><strong>系統備註：</strong><br/>${o.mergeNote}</div>` : ''}<div class="total-box"><div class="total-row"><span>商品小計：</span><span>$${o.totals.itemsBaseTotal}</span></div>${o.totals.discountAmount > 0 ? `<div class="total-row" style="color: #e11d48;"><span>活動折抵：</span><span>-$${o.totals.discountAmount}</span></div>` : ''}${o.adminDiscount > 0 ? `<div class="total-row" style="color: #e11d48;"><span>手動折扣：</span><span>-$${o.adminDiscount}</span></div>` : ''}<div class="total-row"><span>運費：</span><span>$${o.totals.shippingFee}</span></div><div class="total-final"><span>總計金額：</span><span>$${o.totals.finalPrice}</span></div></div></div>`;
-    });
-    html += '</body></html>';
-    const printWindow = window.open('', '', 'width=800,height=600'); printWindow.document.write(html); printWindow.document.close(); setTimeout(() => { printWindow.print(); }, 500);
-  };
-
-  const filteredUsers = useMemo(() => {
-    return allUsers.filter(user => {
-       if (showDeletedCustomers && user.role !== 'deleted') return false;
-       if (!showDeletedCustomers && user.role === 'deleted') return false;
-       const matchName = customerSearchName ? user.name?.toLowerCase().includes(customerSearchName.toLowerCase()) : true;
-       const matchPhone = customerSearchName ? user.phone?.includes(customerSearchName) : true;
-       return customerSearchName ? (matchName || matchPhone) : true;
-    });
-  }, [allUsers, customerSearchName, showDeletedCustomers]);
-
-  const handleImageUpload = (file, callback, preserveTransparency = false) => {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = preserveTransparency ? 512 : 800; 
-        let width = img.width; let height = img.height;
-        if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
-        canvas.width = width; canvas.height = height;
-        const ctx = canvas.getContext('2d'); 
-        if (!preserveTransparency) { ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, canvas.width, canvas.height); } else { ctx.clearRect(0, 0, canvas.width, canvas.height); }
-        ctx.drawImage(img, 0, 0, width, height);
-        callback(preserveTransparency ? canvas.toDataURL('image/png') : canvas.toDataURL('image/jpeg', 0.7));
-      };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-  };
-  
-  const onLogoChange = (e) => handleImageUpload(e.target.files[0], (img) => db ? db.collection('settings').doc('store').set({ logo: img }, { merge: true }) : setLogo(img), true);
-  const openProductDetail = (product) => { setEditingProduct({ intro: '', ingredients: '', notices: '', extraImages: [], isPromo: false, isAddon: false, isNew: false, isFreeShipping: true, isRewardEligible: true, unit: product.unit || '', cost: 0, ...product }); setMainDisplayImg(product.image || ''); };
-  const handleAddProduct = () => { setEditingProduct({ id: '', name: '', desc: '', weight: '', price: 0, cost: 0, category: adminCategoryNames[0] || '精選商品', image: '', intro: '', ingredients: '', notices: '', extraImages: [], isPromo: false, isAddon: false, isNew: true, isFreeShipping: true, isRewardEligible: true, unit: '' }); setMainDisplayImg(''); };
-  
-  const saveProductDetail = async () => {
-    if (editingProduct.isNew && !editingProduct.id.trim()) return alert("請輸入「商品品號」！");
-    const prodData = { ...editingProduct, id: editingProduct.id.trim(), price: Number(editingProduct.price) || 0, cost: Number(editingProduct.cost) || 0 };
-    delete prodData.isNew;
-    if (db) { try { await db.collection('products').doc(prodData.id).set(prodData); alert("商品儲存成功！"); } catch (error) { alert("儲存失敗！可能是圖片檔案過大超過限制。"); return; } }
-    setEditingProduct(null); 
-  };
-  
-  const handleDeleteProduct = async () => {
-    if (!window.confirm(`確定刪除「${editingProduct.name}」嗎？無法復原喔！`)) return;
-    if (db) await db.collection('products').doc(editingProduct.id).delete();
-    setEditingProduct(null);
-  };
-
-  const saveCategoriesToDB = async (newList) => {
-     setCategoriesList(newList);
-     if (db) await db.collection('settings').doc('categories').set({ list: newList });
-  };
-
-  const handleAddCategory = () => {
-     if (newCatName && !categoriesList.find(c => c.name === newCatName)) {
-        saveCategoriesToDB([...categoriesList, { name: newCatName, isHidden: false }]);
-        setNewCatName('');
-     }
-  };
-
-  const handleDeleteCategory = (index) => {
-     if(!window.confirm('確定刪除此分類？此動作不會刪除商品，但分類將從列表中移除。')) return;
-     const newList = [...categoriesList];
-     newList.splice(index, 1);
-     saveCategoriesToDB(newList);
-  };
-
-  const moveCategory = (index, direction) => {
-     if (direction === -1 && index === 0) return;
-     if (direction === 1 && index === categoriesList.length - 1) return;
-     const newList = [...categoriesList];
-     const temp = newList[index];
-     newList[index] = newList[index + direction];
-     newList[index + direction] = temp;
-     saveCategoriesToDB(newList);
-  };
-
-  const toggleCategoryVisibility = (index) => {
-     const newList = [...categoriesList];
-     newList[index].isHidden = !newList[index].isHidden;
-     saveCategoriesToDB(newList);
-  };
-
-  const saveSystemConfig = async () => {
-    const configToSave = { shippingFee: Number(tempConfig.shippingFee)||0, freeShippingThreshold: Number(tempConfig.freeShippingThreshold)||0, promoQty: Number(tempConfig.promoQty)||1, promoPrice: Number(tempConfig.promoPrice)||0, wholesaleThreshold: Number(tempConfig.wholesaleThreshold)||0 };
-    if (db) await db.collection('settings').doc('config').set(configToSave, { merge: true });
-    setStoreConfig(configToSave); setShowConfigModal(false);
-  };
-
-  const saveContactInfo = async () => {
-    if (db) await db.collection('settings').doc('contact').set(contactData, { merge: true });
-    setShowContactModal(false);
-  };
-
-  const saveAboutInfo = async () => {
-    if (db) { try { await db.collection('settings').doc('about').set(tempAboutData, { merge: true }); alert('「關於我們」已成功儲存！'); } catch (error) { alert('儲存失敗！可能是圖片過大。'); return; } }
-    setIsEditingAbout(false);
-  };
-
-  const saveAnnouncement = async () => {
-     let newList = [...announcements];
-     if (tempAnnounce.id) {
-        newList = newList.map(a => a.id === tempAnnounce.id ? tempAnnounce : a);
-     } else {
-        newList.push({ ...tempAnnounce, id: Date.now().toString() });
-     }
-     if (db) { await db.collection('settings').doc('announcements').set({ list: newList }); alert("公告已儲存！"); setIsEditingAnnounce(false); }
-  };
-
-  const deleteAnnouncement = async (id) => {
-     if(!window.confirm('確定刪除此公告？')) return;
-     const newList = announcements.filter(a => a.id !== id);
-     if (db) await db.collection('settings').doc('announcements').set({ list: newList });
-  };
-
-  const moveAnnounce = async (index, direction) => {
-     if (direction === -1 && index === 0) return;
-     if (direction === 1 && index === announcements.length - 1) return;
-     const newList = [...announcements];
-     const temp = newList[index];
-     newList[index] = newList[index + direction];
-     newList[index + direction] = temp;
-     setAnnouncements(newList); 
-     if (db) await db.collection('settings').doc('announcements').set({ list: newList });
-  };
-
-  const myOrders = currentUser ? allOrders.filter(o => o.userId === currentUser.uid) : [];
-  const isAnnounceExpired = (ann) => !ann.isPermanent && ann.expireDate && new Date() > new Date(ann.expireDate);
-
-  if (isAppLoading) {
-    return (
-      <div className="min-h-screen bg-[#Fdfbf7] flex flex-col items-center justify-center space-y-4">
-        <div className="w-12 h-12 border-4 border-amber-200 border-t-amber-600 rounded-full animate-spin"></div>
-        <p className="text-stone-500 font-bold tracking-widest text-sm animate-pulse">系統載入中...</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="max-w-md md:max-w-4xl lg:max-w-6xl mx-auto bg-[#Fdfbf7] min-h-screen relative font-sans text-stone-800 shadow-xl overflow-hidden flex flex-col transition-all">
+      const displayedTabs = ['全部', ...(isAdminMode && !adminOrderingFor ? adminCategoryNames : visibleCategoryNames)];
       
-      {/* Sidebar */}
-      <div className={`fixed inset-0 bg-black/50 z-[60] transition-opacity duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setSidebarOpen(false)}>
-        <div className={`absolute left-0 top-0 bottom-0 w-64 bg-[#Fdfbf7] shadow-xl transform transition-transform duration-300 flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`} onClick={e => e.stopPropagation()}>
-           <div className="p-4 border-b border-stone-200 flex items-center justify-between bg-white">
-              <h2 className="font-bold text-stone-800 tracking-wider">木子家Muzi Maison選單</h2>
-              <button onClick={() => setSidebarOpen(false)} className="text-stone-400 hover:text-stone-600"><X size={24} /></button>
-           </div>
-           <div className="flex-1 overflow-y-auto py-4">
-              <ul className="space-y-1">
-                 <li><button onClick={() => { setSidebarOpen(false); setShowAboutModal(true); }} className="w-full text-left px-6 py-3 hover:bg-amber-50 font-medium text-stone-700 flex items-center gap-3"><Info size={18}/>關於我們</button></li>
-                 <li><button onClick={() => { setSidebarOpen(false); setShowContactModal(true); }} className="w-full text-left px-6 py-3 hover:bg-amber-50 font-medium text-stone-700 flex items-center gap-3"><Phone size={18}/>聯絡我們</button></li>
-                 <li><button onClick={() => { setSidebarOpen(false); handleShareWebsite(); }} className="w-full text-left px-6 py-3 hover:bg-emerald-50 font-medium text-stone-700 flex items-center gap-3"><Share2 size={18}/>分享商店</button></li>
-                 
-                 <li className="my-2 border-t border-stone-200"></li>
-                 
-                 {currentUser && !isAdminMode && (
-                    <li><button onClick={() => { setSidebarOpen(false); setShowMemberProfile(true); setIsEditingProfile(false); }} className="w-full text-left px-6 py-3 hover:bg-stone-100 font-bold text-stone-800 flex items-center gap-3"><UserIcon size={18}/>會員中心</button></li>
-                 )}
-                 
-                 {isAdminMode && (
-                    <>
-                       <li className="px-6 py-2 text-xs font-bold text-stone-400 uppercase tracking-widest mt-2">管理員專區</li>
-                       <li><button onClick={() => { setSidebarOpen(false); setShowAdminCustomers(true); }} className="w-full text-left px-6 py-3 hover:bg-blue-50 font-medium text-blue-700 flex items-center gap-3"><UsersIcon size={18}/>客戶管理</button></li>
-                       <li><button onClick={() => { setSidebarOpen(false); setShowAdminOrders(true); }} className="w-full text-left px-6 py-3 hover:bg-amber-50 font-medium text-amber-700 flex items-center gap-3"><ClipboardList size={18}/>訂單管理</button></li>
-                       <li><button onClick={() => { setSidebarOpen(false); setTempConfig(storeConfig); setShowConfigModal(true); }} className="w-full text-left px-6 py-3 hover:bg-rose-50 font-medium text-rose-700 flex items-center gap-3"><SettingsIcon size={18}/>系統設定</button></li>
-                       <li><button onClick={() => { setSidebarOpen(false); setTempAnnounce({}); setIsEditingAnnounce(false); setShowAnnounceConfig(true); }} className="w-full text-left px-6 py-3 hover:bg-purple-50 font-medium text-purple-700 flex items-center gap-3"><Megaphone size={18}/>公告設定</button></li>
-                    </>
-                 )}
-              </ul>
-           </div>
-           <div className="p-4 border-t border-stone-200 bg-stone-50">
-              <button onClick={() => { if (currentUser) { handleLogout(); } else { setSidebarOpen(false); setLoginMode('customer'); setShowLoginModal(true); } }} className={`w-full py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 ${currentUser ? 'bg-stone-200 text-stone-700 hover:bg-stone-300' : 'bg-stone-800 text-white shadow-md'}`}>
-                 {currentUser ? <LogOut size={16} /> : <UserIcon size={16} />} {currentUser ? '登出' : '會員登入'}
-              </button>
-           </div>
-        </div>
-      </div>
+      const visibleCatNameSet = new Set(visibleCategoryNames);
+      const displayedProducts = products.filter(p => {
+        const isCatVisible = visibleCatNameSet.has(p.category);
+        if (!isAdminMode || adminOrderingFor) {
+           if (!isCatVisible) return false;
+        }
+        if (activeCategory === '全部') return true;
+        return p.category === activeCategory;
+      });
 
-      {/* 代建單橫幅 */}
-      {adminOrderingFor && (
-        <div className="bg-amber-600 text-white px-4 py-2.5 flex justify-between items-center text-sm font-bold z-30 relative shadow-md">
-          <span className="flex items-center gap-2"><ShoppingCart size={16}/> 正在為 {adminOrderingFor.name} 代建單...</span>
-          <button onClick={() => {setAdminOrderingFor(null); setCart({});}} className="bg-amber-700 px-3 py-1 rounded-md hover:bg-amber-800 transition-colors">取消代建</button>
-        </div>
-      )}
+      const displayedCategories = activeCategory === '全部' ? (isAdminMode && !adminOrderingFor ? adminCategoryNames : visibleCategoryNames) : [activeCategory];
 
-      {/* Header */}
-      <div className="sticky top-0 z-20 bg-white shadow-sm">
-        <header className="px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3 relative">
-            <button onClick={() => setSidebarOpen(true)} className="p-2 -ml-2 text-stone-600 hover:bg-stone-100 rounded-full transition-colors"><Menu size={24} /></button>
-            <label className={`relative block h-28 min-w-[6rem] max-w-[300px] flex items-center justify-center ${isAdminMode && !adminOrderingFor ? 'cursor-pointer hover:ring-2 hover:ring-amber-400 p-1 rounded-lg border border-dashed border-stone-300' : ''}`}>
-              {logo ? <img src={logo} alt="Logo" className="max-w-full max-h-full object-contain" /> : <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center"><Store size={20} className="text-amber-700" /></div>}
-              {isAdminMode && !adminOrderingFor && <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-lg"><Camera size={18} className="text-white" /></div>}
-              {isAdminMode && !adminOrderingFor && <input type="file" accept="image/*" className="hidden" onChange={onLogoChange} />}
-            </label>
-            <div>
-              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
-                <h1 className="text-xl font-bold tracking-wider text-stone-700">木子家</h1>
-                {isAdminMode && !adminOrderingFor ? (
-                  <input type="text" value={storeSlogan} onChange={e => { setStoreSlogan(e.target.value); if(db) db.collection('settings').doc('store').set({slogan: e.target.value}, {merge:true}); }} className="text-xs text-stone-500 bg-stone-100 border border-stone-200 rounded px-1 py-0.5 outline-none focus:border-amber-400 w-48" placeholder="輸入品牌標語..." />
-                ) : (
-                  <span className="text-xs text-stone-500 font-medium">{storeSlogan}</span>
-                )}
-              </div>
-              <p className="text-[10px] text-stone-400 font-semibold tracking-widest uppercase mt-0.5">Muzi Maison</p>
+      const candyProducts = products.filter(p => p.category.includes('糖果') || p.category.includes('軟糕'));
+      const addonProducts = displayedProducts.filter(p => p.isAddon);
+
+      const updateCart = (id, delta) => {
+        setCart(prev => {
+          const currentQty = prev[id] || 0;
+          const newQty = currentQty + delta;
+          if (newQty <= 0) { const newCart = { ...prev }; delete newCart[id]; return newCart; }
+          return { ...prev, [id]: newQty };
+        });
+      };
+
+      const calculateTotals = (itemsList, deliveryWay) => {
+        let totalQty = 0; let nonPromoPrice = 0; let promoItemsExpanded = [];
+        let totalCost = 0;
+        let freeShippingQty = 0;
+        let rewardEligibleBaseTotal = 0;
+
+        itemsList.forEach(item => {
+          totalQty += item.qty;
+          totalCost += (Number(item.cost) || 0) * item.qty;
+          
+          if (!item.isReward && item.isFreeShipping !== false) {
+             freeShippingQty += item.qty;
+          }
+          
+          if(item.isReward) return; 
+
+          const itemBasePrice = item.price * item.qty;
+          if (item.isRewardEligible !== false) {
+             rewardEligibleBaseTotal += itemBasePrice;
+          }
+
+          if (item.isPromo) { for(let i = 0; i < item.qty; i++) promoItemsExpanded.push(item.price); } 
+          else { nonPromoPrice += item.price * item.qty; }
+        });
+
+        promoItemsExpanded.sort((a,b) => b - a);
+        const promoSets = Math.floor(promoItemsExpanded.length / storeConfig.promoQty);
+        const promoTotal = promoSets * storeConfig.promoPrice;
+        let remainderTotal = 0;
+        for(let i = promoSets * storeConfig.promoQty; i < promoItemsExpanded.length; i++) remainderTotal += promoItemsExpanded[i];
+
+        const itemsBaseTotal = itemsList.reduce((sum, item) => sum + (item.isReward?0:item.price) * item.qty, 0);
+        const currentTotal = nonPromoPrice + promoTotal + remainderTotal; 
+        const discountAmount = itemsBaseTotal - currentTotal; 
+        
+        let shippingFee = 0;
+        if (deliveryWay === 'delivery' && freeShippingQty < storeConfig.freeShippingThreshold) shippingFee = storeConfig.shippingFee;
+        const finalPrice = currentTotal + shippingFee;
+
+        let rewardEligibleAmount = 0;
+        if (itemsBaseTotal > 0) {
+           rewardEligibleAmount = Math.floor((rewardEligibleBaseTotal / itemsBaseTotal) * currentTotal);
+        }
+
+        return { totalQty, freeShippingQty, currentTotal, finalPrice, shippingFee, discountAmount, itemsBaseTotal, totalCost, rewardEligibleAmount };
+      };
+
+      const cartData = useMemo(() => {
+        let items = Object.entries(cart).map(([id, qty]) => {
+          const product = products.find(p => p.id === id);
+          return product ? { ...product, qty } : null;
+        }).filter(Boolean);
+        
+        if (usedRewardPoints && selectedRewardId) {
+           const rewardProd = products.find(p => p.id === selectedRewardId);
+           if (rewardProd) items.push({...rewardProd, qty: 1, price: 0, isReward: true, name: `[點數兌換] ${rewardProd.name}`});
+        }
+        
+        const totals = calculateTotals(items, deliveryMethod);
+        return { items, ...totals };
+      }, [cart, products, storeConfig, deliveryMethod, usedRewardPoints, selectedRewardId]);
+
+      const handleLogout = async () => {
+        if (auth) {
+          await auth.signOut();
+          alert("已成功登出！");
+          setSidebarOpen(false);
+        }
+      };
+
+      const handleAuthSubmit = async () => {
+        if (!auth) return alert("請先設定 Firebase 金鑰！");
+        try {
+          if (isRegistering) {
+            if (!customerInfo.name || !customerInfo.phone) return alert("請填寫姓名與電話！");
+            const cred = await auth.createUserWithEmailAndPassword(emailInput, passwordInput);
+            await db.collection('users').doc(cred.user.uid).set({ ...customerInfo, email: emailInput, role: 'customer', points: 0 });
+            alert("註冊成功！歡迎加入木子家MUZI MAISON！");
+          } else {
+            await auth.signInWithEmailAndPassword(emailInput, passwordInput);
+            alert("登入成功！");
+          }
+          setShowLoginModal(false); setEmailInput(''); setPasswordInput(''); setIsRegistering(false);
+        } catch (error) {
+          alert(isRegistering ? "註冊失敗：" + error.message : "登入失敗，請檢查帳號密碼！");
+        }
+      };
+
+      const handleShareWebsite = async () => {
+        const shareData = { title: '木子家MUZI MAISON｜職人手作，純粹養生', text: '推薦給您！嚴選優質堅果、牛軋糖、核桃糕...手作，提供最便利的線上訂購體驗。快來逛逛吧！', url:'https://muzi-maison.netlify.app/?=' };
+        if (navigator.share) { try { await navigator.share(shareData); } catch (err) {} } else {
+          const fallbackCopy = () => {
+            const ta = document.createElement("textarea"); ta.value = shareData.url; ta.style.position = "fixed"; ta.style.left = "-999999px";
+            document.body.appendChild(ta); ta.select();
+            try { document.execCommand("copy"); alert("已複製網站連結！"); } catch(e) { alert("請手動複製瀏覽器上方的網址！"); } ta.remove();
+          };
+          if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(shareData.url).then(() => alert("已複製網站連結！")).catch(() => fallbackCopy()); } else { fallbackCopy(); }
+        }
+      };
+
+      const handleUpdateMyProfile = async () => {
+        if (!customerInfo.name || !customerInfo.phone) return alert("姓名與電話不能為空！");
+        if (db && currentUser) {
+          try {
+            await db.collection('users').doc(currentUser.uid).update(customerInfo);
+            alert("個人資料更新成功！"); setIsEditingProfile(false);
+          } catch (e) { alert("更新失敗：" + e.message); }
+        }
+      };
+
+      const handleUpdateCustomerByAdmin = async () => {
+        if (!selectedCustomer.name || !selectedCustomer.phone) return alert("姓名與電話不能為空！");
+        if (db) {
+          try {
+            if (isNewCustomer) {
+               const newId = `CUST${Date.now()}`;
+               await db.collection('users').doc(newId).set({
+                 name: selectedCustomer.name, phone: selectedCustomer.phone, address: selectedCustomer.address, lineId: selectedCustomer.lineId, gender: selectedCustomer.gender, points: Number(adminEditPoints), role: 'customer', email: '', createdAt: firebase.firestore.FieldValue.serverTimestamp()
+               });
+               alert("客戶新增成功！");
+            } else {
+               await db.collection('users').doc(selectedCustomer.id).update({
+                 name: selectedCustomer.name, phone: selectedCustomer.phone, address: selectedCustomer.address, lineId: selectedCustomer.lineId, gender: selectedCustomer.gender, points: Number(adminEditPoints)
+               });
+               alert("客戶資料已更新！");
+            }
+            setIsEditingAdminCustomer(false);
+            setIsNewCustomer(false);
+          } catch (e) { alert("儲存失敗：" + e.message); }
+        }
+      };
+
+      const handleAddCustomerBtn = () => {
+        setSelectedCustomer({ id: '', name: '', phone: '', lineId: '', address: '', gender: '女', points: 0 });
+        setAdminEditPoints(0);
+        setIsEditingAdminCustomer(true);
+        setIsNewCustomer(true);
+      };
+
+      const handleDeleteCustomer = async () => {
+        if(!window.confirm('確定徹底刪除此客戶資料嗎？(該帳號將被停用且無法再次登入)')) return;
+        if (db) {
+          await db.collection('users').doc(selectedCustomer.id).update({ role: 'deleted' });
+          alert("客戶帳號已刪除並停用！");
+          setSelectedCustomer(null);
+          setIsEditingAdminCustomer(false);
+        }
+      };
+
+      const handleRestoreCustomer = async () => {
+        if(!window.confirm('確定要恢復此客戶的登入與購物權限嗎？')) return;
+        if (db) {
+          await db.collection('users').doc(selectedCustomer.id).update({ role: 'customer' });
+          alert("帳號已恢復成功！客戶可以正常登入了。");
+          setSelectedCustomer(null);
+        }
+      };
+
+      const startAdminOrder = (customer) => {
+         setAdminOrderingFor(customer);
+         setCustomerInfo({
+            name: customer.name || '', phone: customer.phone || '', address: customer.address || '',
+            email: customer.email || '', lineId: customer.lineId || '', gender: customer.gender || '女'
+         });
+         setCart({});
+         setShowAdminCustomers(false);
+         setSidebarOpen(false);
+         alert(`已進入「代客建單」模式！\n目前正在幫客戶 [${customer.name}] 選購商品。\n選購完畢後請至購物車結帳送出。`);
+      };
+
+      const handleCheckout = async () => {
+        if (cartData.totalQty === 0 && !usedRewardPoints) return;
+        if (!currentUser && !adminOrderingFor) return alert("請先登入或註冊會員！");
+        if (!customerInfo.name || !customerInfo.phone) return alert("請填寫訂購人姓名與電話！");
+        if (!customerInfo.address) return alert("請務必填寫聯絡/收件地址！");
+        if (checkoutBankCode && checkoutBankCode.length > 0 && checkoutBankCode.length < 5) return alert("若要直接回報匯款，請輸入完整的後五碼！");
+        if (usedRewardPoints && !selectedRewardId) return alert("請選擇要兌換的糖果！");
+
+        let finalUserId = adminOrderingFor ? adminOrderingFor.id : (currentUser ? currentUser.uid : 'guest');
+        const orderId = `MZ${Date.now().toString().slice(-6)}`;
+        const initialStatus = (checkoutBankCode && checkoutBankCode.length === 5) ? 'confirming' : 'pending';
+
+        if (db) {
+          const batch = db.batch();
+          const orderRef = db.collection('orders').doc(orderId);
+          batch.set(orderRef, {
+            orderId, userId: finalUserId, customerInfo, items: cartData.items,
+            totals: { itemsBaseTotal: cartData.itemsBaseTotal, discountAmount: cartData.discountAmount, shippingFee: cartData.shippingFee, finalPrice: cartData.finalPrice, totalCost: cartData.totalCost, usedPoints: usedRewardPoints ? 20 : 0, rewardEligibleAmount: cartData.rewardEligibleAmount },
+            deliveryMethod, status: initialStatus, bankAccountLast5: checkoutBankCode || '', trackingNumber: '', orderNote, adminDiscount: 0, pointsAwarded: false,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            createdByAdmin: !!adminOrderingFor 
+          });
+
+          if (usedRewardPoints && finalUserId !== 'guest') {
+             const userRef = db.collection('users').doc(finalUserId);
+             batch.update(userRef, { points: firebase.firestore.FieldValue.increment(-20) });
+          }
+
+          await batch.commit();
+        }
+
+        setCart({}); setIsCartOpen(false); setOrderNote(''); setCheckoutBankCode(''); setUsedRewardPoints(false); setSelectedRewardId('');
+
+        if (adminOrderingFor) {
+           alert(`成功為客戶 ${adminOrderingFor.name} 建立訂單！`);
+           setAdminOrderingFor(null);
+           setShowAdminOrders(true);
+        } else {
+           alert("訂單已成功送出！請於您的訂單列表複製明細並加 LINE 通知我們喔！");
+           setShowMemberProfile(true);
+        }
+      };
+
+      const handleCopyOrder = (order) => {
+        const currentBankCode = bankCodeInputs[order.id] || order.bankAccountLast5;
+        if (!currentBankCode || currentBankCode.length < 5) { alert("⚠️ 請先在下方填寫完整的「匯款後五碼」才可複製明細喔！"); return; }
+        let text = `*【木子家 MUZI MAISON 新訂單】*\n\n訂單編號：${order.id}\n訂購人：${order.customerInfo.name}\n聯絡電話：${order.customerInfo.phone}\n取貨方式：${order.deliveryMethod === 'delivery' ? '宅配' : '自取'}\n地址：${order.customerInfo.address}\n----------------------\n`;
+        order.items.forEach(item => text += `▪️ ${item.name} ${item.weight ? `(${item.weight})` : ''} x ${item.qty} ${item.unit || ''}\n`);
+        text += `----------------------\n`;
+        if (order.adminDiscount > 0) text += `*手動折扣*：-$${order.adminDiscount}\n`;
+        if (order.totals.usedPoints) text += `*使用點數*：${order.totals.usedPoints} 點兌換\n`;
+        text += `*總計金額：$${order.totals.finalPrice}*\n`;
+        if (order.bankAccountLast5) { text += `*匯款後五碼*：${order.bankAccountLast5}\n`; }
+        if (order.orderNote) { text += `*備註事項*：${order.orderNote}\n`; }
+        text += `\n(⚠️ 已於網站送出訂單，請您確認喔！)\n`;
+
+        const copyFallback = (t) => {
+          const ta = document.createElement("textarea"); ta.value = t; ta.style.position = "fixed"; ta.style.left = "-999999px";
+          document.body.appendChild(ta); ta.select();
+          try { document.execCommand("copy"); setCopiedOrderId(order.id); setTimeout(() => setCopiedOrderId(null), 2000); } catch(e) {} ta.remove();
+        };
+        if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(text).then(() => { setCopiedOrderId(order.id); setTimeout(() => setCopiedOrderId(null), 2000); }).catch(() => copyFallback(text)); } else { copyFallback(text); }
+      };
+
+      const submitBankCode = async (orderId) => {
+        const code = bankCodeInputs[orderId];
+        if (!code || code.length < 5) return alert("請輸入完整的後五碼！");
+        if (db) { await db.collection('orders').doc(orderId).update({ bankAccountLast5: code, status: 'confirming' }); alert("已送出匯款後五碼，請稍候管理員確認！"); }
+      };
+
+      const requestCancelOrder = async (orderId) => {
+        if (!window.confirm("確定要申請取消此訂單嗎？（需等待管理員同意）")) return;
+        if (db) { await db.collection('orders').doc(orderId).update({ status: 'cancel_requested' }); alert("已送出取消申請！"); }
+      };
+
+      const updateOrderStatus = async (order, newStatus) => { 
+         if (!db) return;
+         const batch = db.batch();
+         const orderRef = db.collection('orders').doc(order.id);
+
+         if (newStatus === 'confirmed' && order.status !== 'confirmed' && !order.pointsAwarded && order.userId !== 'guest') {
+             const baseAmountForPoints = order.totals.rewardEligibleAmount !== undefined ? order.totals.rewardEligibleAmount : order.totals.finalPrice;
+             const addedPoints = Math.floor(baseAmountForPoints / 1000);
+             if (addedPoints > 0) {
+                 const userRef = db.collection('users').doc(order.userId);
+                 batch.update(userRef, { points: firebase.firestore.FieldValue.increment(addedPoints) });
+             }
+             batch.update(orderRef, { status: newStatus, pointsAwarded: true, earnedPoints: addedPoints || 0 });
+         } else {
+             batch.update(orderRef, { status: newStatus });
+         }
+         await batch.commit();
+      };
+      
+      const saveTrackingNumber = async (orderId) => {
+        if (db) { await db.collection('orders').doc(orderId).update({ trackingNumber: trackingInputs[orderId] }); alert("出貨單號已儲存！"); }
+      };
+      
+      const saveOrderNote = async (orderId) => {
+        if (db) { await db.collection('orders').doc(orderId).update({ orderNote: adminNoteInputs[orderId] !== undefined ? adminNoteInputs[orderId] : '' }); alert("訂單備註已儲存！"); }
+      };
+
+      const saveAdminDiscount = async (order) => {
+         const discount = Number(adminDiscountInputs[order.id]) || 0;
+         const diff = discount - (order.adminDiscount || 0);
+         const newFinalPrice = order.totals.finalPrice - diff;
+         if (db) { 
+            await db.collection('orders').doc(order.id).update({ adminDiscount: discount, 'totals.finalPrice': newFinalPrice }); 
+            alert("訂單金額已修改！"); 
+         }
+      };
+
+      const deleteOrder = async (orderId) => {
+        if (!window.confirm("確定要徹底刪除此訂單嗎？（刪除後無法復原）")) return;
+        if (db) await db.collection('orders').doc(orderId).delete();
+      };
+
+      const handleToggleMergeOrder = (orderId) => { setMergeSelection(prev => prev.includes(orderId) ? prev.filter(id => id !== orderId) : [...prev, orderId]); };
+
+      const handleConfirmMerge = async () => {
+        if (mergeSelection.length < 2) return alert("請至少選擇兩筆訂單合併");
+        if (!window.confirm("確定要合併這幾筆訂單嗎？系統會將舊訂單刪除，並重新計算總數、運費及折扣，產生一筆新的訂單。")) return;
+
+        const ordersToMerge = allOrders.filter(o => mergeSelection.includes(o.id));
+        const combinedItemsMap = {};
+        let totalUsedPoints = 0;
+        let totalAdminDiscount = 0;
+        ordersToMerge.forEach(order => {
+          totalUsedPoints += (order.totals.usedPoints || 0);
+          totalAdminDiscount += (order.adminDiscount || 0);
+          order.items.forEach(item => {
+            if (combinedItemsMap[item.id]) { combinedItemsMap[item.id].qty += item.qty; } else { combinedItemsMap[item.id] = { ...item }; }
+          });
+        });
+        const newItems = Object.values(combinedItemsMap);
+        const combinedNotes = ordersToMerge.map(o => o.orderNote).filter(Boolean).join('\n---\n');
+
+        const baseOrder = ordersToMerge[0]; 
+        const newTotals = calculateTotals(newItems, baseOrder.deliveryMethod);
+        newTotals.finalPrice -= totalAdminDiscount;
+        const newOrderId = `MZ${Date.now().toString().slice(-6)}`;
+
+        try {
+          const batch = db.batch();
+          const newOrderRef = db.collection('orders').doc(newOrderId);
+          batch.set(newOrderRef, {
+            orderId: newOrderId, userId: selectedCustomer.id, customerInfo: selectedCustomer, items: newItems,
+            totals: { itemsBaseTotal: newTotals.itemsBaseTotal, discountAmount: newTotals.discountAmount, shippingFee: newTotals.shippingFee, finalPrice: newTotals.finalPrice, totalCost: newTotals.totalCost, usedPoints: totalUsedPoints },
+            deliveryMethod: baseOrder.deliveryMethod, status: 'pending', bankAccountLast5: '', trackingNumber: '', orderNote: combinedNotes, adminDiscount: totalAdminDiscount, pointsAwarded: false,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(), isMerged: true, mergeNote: `系統備註：由舊單號 ${mergeSelection.join(', ')} 合併產生。`
+          });
+          mergeSelection.forEach(id => { batch.delete(db.collection('orders').doc(id)); });
+          await batch.commit();
+          alert(`✅ 合併成功！已產生新訂單：${newOrderId}`); setIsMergeMode(false); setMergeSelection([]);
+        } catch (error) { alert("合併失敗：" + error.message); }
+      };
+
+      const filteredAdminOrders = useMemo(() => {
+        return allOrders.filter(order => {
+          const matchId = orderSearchId ? order.id.toLowerCase().includes(orderSearchId.toLowerCase()) : true;
+          const matchStatus = orderStatusFilter !== 'all' ? order.status === orderStatusFilter : true;
+          let matchDate = true;
+          if (orderStartDate || orderEndDate) {
+            const orderDateObj = order.createdAt ? order.createdAt.toDate() : new Date();
+            const compareDate = new Date(orderDateObj.getFullYear(), orderDateObj.getMonth(), orderDateObj.getDate());
+            if (orderStartDate) { if (compareDate < new Date(orderStartDate)) matchDate = false; }
+            if (orderEndDate) { if (compareDate > new Date(orderEndDate)) matchDate = false; }
+          }
+          return matchId && matchStatus && matchDate;
+        });
+      }, [allOrders, orderSearchId, orderStatusFilter, orderStartDate, orderEndDate]);
+
+      const downloadOrdersCSV = () => {
+        if (filteredAdminOrders.length === 0) return alert("目前沒有訂單可以下載");
+        let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; 
+        csvContent += "訂單編號,建立時間,狀態,訂購人,性別,電話,Line ID,取貨方式,地址,商品明細,運費,手動折扣,總金額,總成本,使用點數,匯款後五碼,出貨單號,買家備註,系統備註\n";
+        filteredAdminOrders.forEach(o => {
+          const date = o.createdAt ? o.createdAt.toDate().toLocaleString() : '';
+          const status = STATUS_MAP[o.status]?.label || o.status;
+          const itemsStr = o.items.map(i => `${i.name} ${i.weight ? `(${i.weight})` : ''} ($${i.price}) x ${i.qty} ${i.unit || ''}`).join(' ; ');
+          const row = [
+            o.id, date, status, o.customerInfo.name, o.customerInfo.gender || '', o.customerInfo.phone, o.customerInfo.lineId || '',
+            o.deliveryMethod === 'delivery' ? '宅配' : '自取', o.customerInfo.address || '',
+            itemsStr, o.totals.shippingFee, o.adminDiscount || 0, o.totals.finalPrice, o.totals.totalCost || 0, o.totals.usedPoints || 0, o.bankAccountLast5 || '', o.trackingNumber || '', o.orderNote || '', o.mergeNote || ''
+          ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(',');
+          csvContent += row + "\n";
+        });
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a"); link.setAttribute("href", encodedUri); link.setAttribute("download", `訂單明細_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link); link.click(); document.body.removeChild(link);
+      };
+
+      const handlePrintConfirmedOrders = () => {
+        const confirmedOrders = allOrders.filter(o => o.status === 'confirmed');
+        if (confirmedOrders.length === 0) return alert("目前沒有「已匯款，確認訂單」狀態的訂單可以列印！");
+        let html = `<html><head><title>木子家MUZI MAISON - 出貨明細單</title><style>body { font-family: "Microsoft JhengHei", sans-serif; line-height: 1.5; padding: 0; background: #fff; color: #000; } .print-page { page-break-after: always; padding: 20px; max-width: 800px; margin: 0 auto; } h1 { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; } .order-header { display: flex; justify-content: space-between; font-weight: bold; font-size: 1.2em; border-bottom: 1px dashed #ccc; padding-bottom: 10px; margin-bottom: 15px; } .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; font-size: 1.1em; } table { width: 100%; border-collapse: collapse; margin-bottom: 15px; } th, td { border: 1px solid #333; padding: 10px; text-align: left; } th { background: #f0f0f0; } .total-box { margin-top: 20px; padding-top: 15px; border-top: 2px solid #333; text-align: right; font-size: 1.1em; } .total-row { display: flex; justify-content: flex-end; gap: 20px; margin-bottom: 5px; } .total-final { font-weight: bold; font-size: 1.4em; margin-top: 10px; color: #000; } .note-box { margin-top: 15px; padding: 10px; border: 1px solid #333; background: #fafafa; }</style></head><body>`;
+        confirmedOrders.forEach(o => {
+          html += `<div class="print-page"><h1>木子家MUZI MAISON - 出貨明細單</h1><p style="text-align:right; font-size: 0.9em; margin-top:-10px;">列印時間：${new Date().toLocaleString()}</p><div class="order-header"><span>訂單編號：${o.id}</span><span>${o.deliveryMethod === 'delivery' ? '🚚 宅配' : '🏪 自取'}</span></div><div class="info-grid"><div><strong>收件人：</strong>${o.customerInfo.name}</div><div><strong>電話：</strong>${o.customerInfo.phone}</div><div style="grid-column: span 2;"><strong>地址：</strong>${o.customerInfo.address || '無'}</div><div style="grid-column: span 2;"><strong>Line ID：</strong>${o.customerInfo.lineId || '無'}</div></div><table><tr><th>商品名稱</th><th>單價</th><th>重量</th><th>數量</th><th>小計</th></tr>${o.items.map(i => `<tr><td>${i.name}</td><td>$${i.price}</td><td>${i.weight || ''}</td><td>${i.qty} ${i.unit || ''}</td><td>$${i.price * i.qty}</td></tr>`).join('')}</table>${o.orderNote ? `<div class="note-box"><strong>買家/訂單備註：</strong><br/>${o.orderNote.replace(/\n/g, '<br/>')}</div>` : ''}${o.mergeNote ? `<div class="note-box"><strong>系統備註：</strong><br/>${o.mergeNote}</div>` : ''}<div class="total-box"><div class="total-row"><span>商品小計：</span><span>$${o.totals.itemsBaseTotal}</span></div>${o.totals.discountAmount > 0 ? `<div class="total-row" style="color: #e11d48;"><span>活動折抵：</span><span>-$${o.totals.discountAmount}</span></div>` : ''}${o.adminDiscount > 0 ? `<div class="total-row" style="color: #e11d48;"><span>手動折扣：</span><span>-$${o.adminDiscount}</span></div>` : ''}<div class="total-row"><span>運費：</span><span>$${o.totals.shippingFee}</span></div><div class="total-final"><span>總計金額：</span><span>$${o.totals.finalPrice}</span></div></div></div>`;
+        });
+        html += '</body></html>';
+        const printWindow = window.open('', '', 'width=800,height=600'); printWindow.document.write(html); printWindow.document.close(); setTimeout(() => { printWindow.print(); }, 500);
+      };
+
+      const filteredUsers = useMemo(() => {
+        return allUsers.filter(user => {
+           if (showDeletedCustomers && user.role !== 'deleted') return false;
+           if (!showDeletedCustomers && user.role === 'deleted') return false;
+           const matchName = customerSearchName ? user.name?.toLowerCase().includes(customerSearchName.toLowerCase()) : true;
+           const matchPhone = customerSearchName ? user.phone?.includes(customerSearchName) : true;
+           return customerSearchName ? (matchName || matchPhone) : true;
+        });
+      }, [allUsers, customerSearchName, showDeletedCustomers]);
+
+      const handleImageUpload = (file, callback, preserveTransparency = false) => {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = preserveTransparency ? 512 : 800; 
+            let width = img.width; let height = img.height;
+            if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
+            canvas.width = width; canvas.height = height;
+            const ctx = canvas.getContext('2d'); 
+            if (!preserveTransparency) { ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, canvas.width, canvas.height); } else { ctx.clearRect(0, 0, canvas.width, canvas.height); }
+            ctx.drawImage(img, 0, 0, width, height);
+            callback(preserveTransparency ? canvas.toDataURL('image/png') : canvas.toDataURL('image/jpeg', 0.7));
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      };
+      
+      const onLogoChange = (e) => handleImageUpload(e.target.files[0], (img) => db ? db.collection('settings').doc('store').set({ logo: img }, { merge: true }) : setLogo(img), true);
+      const openProductDetail = (product) => { setEditingProduct({ intro: '', ingredients: '', notices: '', extraImages: [], isPromo: false, isAddon: false, isNew: false, isFreeShipping: true, isRewardEligible: true, unit: product.unit || '', cost: 0, ...product }); setMainDisplayImg(product.image || ''); };
+      const handleAddProduct = () => { setEditingProduct({ id: '', name: '', desc: '', weight: '', price: 0, cost: 0, category: adminCategoryNames[0] || '精選商品', image: '', intro: '', ingredients: '', notices: '', extraImages: [], isPromo: false, isAddon: false, isNew: true, isFreeShipping: true, isRewardEligible: true, unit: '' }); setMainDisplayImg(''); };
+      
+      const saveProductDetail = async () => {
+        if (editingProduct.isNew && !editingProduct.id.trim()) return alert("請輸入「商品品號」！");
+        const prodData = { ...editingProduct, id: editingProduct.id.trim(), price: Number(editingProduct.price) || 0, cost: Number(editingProduct.cost) || 0 };
+        delete prodData.isNew;
+        if (db) { try { await db.collection('products').doc(prodData.id).set(prodData); alert("商品儲存成功！"); } catch (error) { alert("儲存失敗！可能是圖片檔案過大超過限制。"); return; } }
+        setEditingProduct(null); 
+      };
+      
+      const handleDeleteProduct = async () => {
+        if (!window.confirm(`確定刪除「${editingProduct.name}」嗎？無法復原喔！`)) return;
+        if (db) await db.collection('products').doc(editingProduct.id).delete();
+        setEditingProduct(null);
+      };
+
+      const saveCategoriesToDB = async (newList) => {
+         setCategoriesList(newList);
+         if (db) await db.collection('settings').doc('categories').set({ list: newList });
+      };
+
+      const handleAddCategory = () => {
+         if (newCatName && !categoriesList.find(c => c.name === newCatName)) {
+            saveCategoriesToDB([...categoriesList, { name: newCatName, isHidden: false }]);
+            setNewCatName('');
+         }
+      };
+
+      const handleDeleteCategory = (index) => {
+         if(!window.confirm('確定刪除此分類？此動作不會刪除商品，但分類將從列表中移除。')) return;
+         const newList = [...categoriesList];
+         newList.splice(index, 1);
+         saveCategoriesToDB(newList);
+      };
+
+      const moveCategory = (index, direction) => {
+         if (direction === -1 && index === 0) return;
+         if (direction === 1 && index === categoriesList.length - 1) return;
+         const newList = [...categoriesList];
+         const temp = newList[index];
+         newList[index] = newList[index + direction];
+         newList[index + direction] = temp;
+         saveCategoriesToDB(newList);
+      };
+
+      const toggleCategoryVisibility = (index) => {
+         const newList = [...categoriesList];
+         newList[index].isHidden = !newList[index].isHidden;
+         saveCategoriesToDB(newList);
+      };
+
+      const saveSystemConfig = async () => {
+        const configToSave = { shippingFee: Number(tempConfig.shippingFee)||0, freeShippingThreshold: Number(tempConfig.freeShippingThreshold)||0, promoQty: Number(tempConfig.promoQty)||1, promoPrice: Number(tempConfig.promoPrice)||0, wholesaleThreshold: Number(tempConfig.wholesaleThreshold)||0 };
+        if (db) await db.collection('settings').doc('config').set(configToSave, { merge: true });
+        setStoreConfig(configToSave); setShowConfigModal(false);
+      };
+
+      const saveContactInfo = async () => {
+        if (db) await db.collection('settings').doc('contact').set(contactData, { merge: true });
+        setShowContactModal(false);
+      };
+
+      const saveAboutInfo = async () => {
+        if (db) { try { await db.collection('settings').doc('about').set(tempAboutData, { merge: true }); alert('「關於我們」已成功儲存！'); } catch (error) { alert('儲存失敗！可能是圖片過大。'); return; } }
+        setIsEditingAbout(false);
+      };
+
+      const saveAnnouncement = async () => {
+         let newList = [...announcements];
+         if (tempAnnounce.id) {
+            newList = newList.map(a => a.id === tempAnnounce.id ? tempAnnounce : a);
+         } else {
+            newList.push({ ...tempAnnounce, id: Date.now().toString() });
+         }
+         if (db) { await db.collection('settings').doc('announcements').set({ list: newList }); alert("公告已儲存！"); setIsEditingAnnounce(false); }
+      };
+
+      const deleteAnnouncement = async (id) => {
+         if(!window.confirm('確定刪除此公告？')) return;
+         const newList = announcements.filter(a => a.id !== id);
+         if (db) await db.collection('settings').doc('announcements').set({ list: newList });
+      };
+
+      const moveAnnounce = async (index, direction) => {
+         if (direction === -1 && index === 0) return;
+         if (direction === 1 && index === announcements.length - 1) return;
+         const newList = [...announcements];
+         const temp = newList[index];
+         newList[index] = newList[index + direction];
+         newList[index + direction] = temp;
+         setAnnouncements(newList); 
+         if (db) await db.collection('settings').doc('announcements').set({ list: newList });
+      };
+
+      const myOrders = currentUser ? allOrders.filter(o => o.userId === currentUser.uid) : [];
+      const isAnnounceExpired = (ann) => !ann.isPermanent && ann.expireDate && new Date() > new Date(ann.expireDate);
+
+      if (isAppLoading) {
+        return (
+          <div className="min-h-screen bg-[#Fdfbf7] flex flex-col items-center justify-center space-y-4">
+            <div className="w-12 h-12 border-4 border-amber-200 border-t-amber-600 rounded-full animate-spin"></div>
+            <p className="text-stone-500 font-bold tracking-widest text-sm animate-pulse">系統載入中...</p>
+          </div>
+        );
+      }
+
+      return (
+        <div className="max-w-md md:max-w-4xl lg:max-w-6xl mx-auto bg-[#Fdfbf7] min-h-screen relative font-sans text-stone-800 shadow-xl overflow-hidden flex flex-col transition-all">
+          
+          {/* Sidebar */}
+          <div className={`fixed inset-0 bg-black/50 z-[60] transition-opacity duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setSidebarOpen(false)}>
+            <div className={`absolute left-0 top-0 bottom-0 w-64 bg-[#Fdfbf7] shadow-xl transform transition-transform duration-300 flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`} onClick={e => e.stopPropagation()}>
+               <div className="p-4 border-b border-stone-200 flex items-center justify-between bg-white">
+                  <h2 className="font-bold text-stone-800 tracking-wider">木子家Muzi Maison選單</h2>
+                  <button onClick={() => setSidebarOpen(false)} className="text-stone-400 hover:text-stone-600"><X size={24} /></button>
+               </div>
+               <div className="flex-1 overflow-y-auto py-4">
+                  <ul className="space-y-1">
+                     <li><button onClick={() => { setSidebarOpen(false); setShowAboutModal(true); }} className="w-full text-left px-6 py-3 hover:bg-amber-50 font-medium text-stone-700 flex items-center gap-3"><Info size={18}/>關於我們</button></li>
+                     <li><button onClick={() => { setSidebarOpen(false); setShowContactModal(true); }} className="w-full text-left px-6 py-3 hover:bg-amber-50 font-medium text-stone-700 flex items-center gap-3"><Phone size={18}/>聯絡我們</button></li>
+                     <li><button onClick={() => { setSidebarOpen(false); handleShareWebsite(); }} className="w-full text-left px-6 py-3 hover:bg-emerald-50 font-medium text-stone-700 flex items-center gap-3"><Share2 size={18}/>分享商店</button></li>
+                     
+                     <li className="my-2 border-t border-stone-200"></li>
+                     
+                     {currentUser && !isAdminMode && (
+                        <li><button onClick={() => { setSidebarOpen(false); setShowMemberProfile(true); setIsEditingProfile(false); }} className="w-full text-left px-6 py-3 hover:bg-stone-100 font-bold text-stone-800 flex items-center gap-3"><UserIcon size={18}/>會員中心</button></li>
+                     )}
+                     
+                     {isAdminMode && (
+                        <>
+                           <li className="px-6 py-2 text-xs font-bold text-stone-400 uppercase tracking-widest mt-2">管理員專區</li>
+                           <li><button onClick={() => { setSidebarOpen(false); setShowAdminCustomers(true); }} className="w-full text-left px-6 py-3 hover:bg-blue-50 font-medium text-blue-700 flex items-center gap-3"><UsersIcon size={18}/>客戶管理</button></li>
+                           <li><button onClick={() => { setSidebarOpen(false); setShowAdminOrders(true); }} className="w-full text-left px-6 py-3 hover:bg-amber-50 font-medium text-amber-700 flex items-center gap-3"><ClipboardList size={18}/>訂單管理</button></li>
+                           <li><button onClick={() => { setSidebarOpen(false); setTempConfig(storeConfig); setShowConfigModal(true); }} className="w-full text-left px-6 py-3 hover:bg-rose-50 font-medium text-rose-700 flex items-center gap-3"><SettingsIcon size={18}/>系統設定</button></li>
+                           <li><button onClick={() => { setSidebarOpen(false); setTempAnnounce({}); setIsEditingAnnounce(false); setShowAnnounceConfig(true); }} className="w-full text-left px-6 py-3 hover:bg-purple-50 font-medium text-purple-700 flex items-center gap-3"><Megaphone size={18}/>公告設定</button></li>
+                        </>
+                     )}
+                  </ul>
+               </div>
+               <div className="p-4 border-t border-stone-200 bg-stone-50">
+                  <button onClick={() => { if (currentUser) { handleLogout(); } else { setSidebarOpen(false); setLoginMode('customer'); setShowLoginModal(true); } }} className={`w-full py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 ${currentUser ? 'bg-stone-200 text-stone-700 hover:bg-stone-300' : 'bg-stone-800 text-white shadow-md'}`}>
+                     {currentUser ? <LogOut size={16} /> : <UserIcon size={16} />} {currentUser ? '登出' : '會員登入'}
+                  </button>
+               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {currentUser && !isAdminMode && (
-              <button onClick={() => { setShowMemberProfile(true); setIsEditingProfile(false); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-stone-800 text-white hover:bg-stone-700 transition-colors shadow-sm">
-                <UserIcon size={14} /> 我的帳號
-              </button>
-            )}
-            {!currentUser && !adminOrderingFor && (
-              <button onClick={() => { setLoginMode('customer'); setShowLoginModal(true); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-colors shadow-sm bg-stone-100 text-stone-500 hover:bg-stone-200">
-                 <UserIcon size={14} /> 會員登入
-              </button>
-            )}
-          </div>
-        </header>
 
-        {/* 公告列 */}
-        {announcements.filter(a => a.isActive && !isAnnounceExpired(a)).map(ann => (
-           <div key={ann.id} onClick={() => { setViewingAnnounce(ann); setShowAnnouncementModal(true); }} className="mx-4 mt-2 mb-1 bg-blue-50 border border-blue-200 text-blue-700 px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-2 cursor-pointer shadow-sm animate-pulse-slow">
-              <Megaphone size={18} className="shrink-0"/> <span className="truncate">{ann.title}</span>
-           </div>
-        ))}
-
-        <div className="px-4 py-3 flex gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          {displayedTabs.map(category => {
-            const catObj = mergedCategories.find(c => c.name === category);
-            const isHidden = catObj?.isHidden;
-            return (
-              <button key={category} onClick={() => setActiveCategory(category)} className={`whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center ${activeCategory === category ? 'bg-stone-800 text-white shadow-sm' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'}`}>
-                {category} {isHidden && <EyeOff size={14} className="inline ml-1 mb-0.5 opacity-60" />}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <main className="flex-1 overflow-y-auto pb-24 px-4">
-        {isAdminMode && !adminOrderingFor && (
-          <button onClick={handleAddProduct} className="w-full mt-4 bg-white border-2 border-dashed border-stone-300 rounded-2xl p-4 text-stone-500 font-bold flex flex-col items-center justify-center gap-2 hover:border-amber-500 hover:text-amber-600 transition-colors">
-            <div className="bg-stone-100 p-2 rounded-full"><Plus size={24} /></div> 新增商品
-          </button>
-        )}
-
-        {displayedCategories.map(category => (
-          <div key={category} className="mt-6">
-            <h2 className="text-lg font-bold mb-3 text-stone-700 flex items-center gap-2 border-b border-stone-200 pb-1">
-              {category} 
-              {mergedCategories.find(c => c.name === category)?.isHidden && <span className="text-xs font-normal text-stone-400 bg-stone-100 px-2 py-0.5 rounded ml-2">隱藏分類</span>}
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-              {displayedProducts.filter(p => p.category === category).map(product => (
-                <div key={product.id} className="bg-white rounded-2xl p-3 shadow-sm flex gap-4 border border-stone-100 relative group overflow-hidden">
-                  <div className="relative block w-24 h-24 rounded-xl shrink-0 overflow-hidden cursor-pointer hover:ring-2 hover:ring-amber-400 transition-all" onClick={() => openProductDetail(product)}>
-                    <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-black/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><span className="bg-white/90 text-stone-800 text-[10px] font-bold px-2 py-1 rounded-full">{isAdminMode && !adminOrderingFor ? '編輯' : '詳情'}</span></div>
-                    {product.isPromo && <div className="absolute top-0 left-0 bg-rose-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-br-lg z-10 shadow-sm">活動</div>}
-                    {product.isAddon && <div className="absolute bottom-0 left-0 right-0 bg-purple-500/90 text-white text-[9px] font-bold text-center py-0.5 z-10 shadow-sm">加購商品</div>}
-                  </div>
-                  <div className="flex-1 flex flex-col justify-between py-0.5">
-                    <div onClick={() => openProductDetail(product)} className="cursor-pointer">
-                      <h3 className="font-bold text-stone-800 leading-tight flex items-center justify-between">{product.name} <ChevronRight size={16} className="text-stone-300" /></h3>
-                      {product.desc && <p className="text-xs text-stone-500 mt-1">{product.desc}</p>}
-                      <span className="inline-block mt-1 px-2 py-0.5 bg-stone-100 text-stone-500 text-[10px] rounded-md">{product.weight}</span>
-                    </div>
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-lg font-bold text-amber-600">${product.price} {product.unit && <span className="text-xs text-stone-400 font-normal">/{product.unit}</span>}</span>
-                      {(!isAdminMode || adminOrderingFor) && (
-                        <div className="flex items-center gap-3 bg-stone-50 rounded-full px-2 py-1 border border-stone-200">
-                          <button onClick={() => updateCart(product.id, -1)} className="w-6 h-6 rounded-full flex items-center justify-center text-stone-500 hover:bg-stone-200 active:bg-stone-300"><Minus size={14} /></button>
-                          <span className="w-4 text-center text-sm font-bold">{cart[product.id] || 0}</span>
-                          <button onClick={() => updateCart(product.id, 1)} className="w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-sm active:bg-amber-600"><Plus size={14} /></button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
+          {/* 代建單橫幅 */}
+          {adminOrderingFor && (
+            <div className="bg-amber-600 text-white px-4 py-2.5 flex justify-between items-center text-sm font-bold z-30 relative shadow-md">
+              <span className="flex items-center gap-2"><ShoppingCart size={16}/> 正在為 {adminOrderingFor.name} 代建單...</span>
+              <button onClick={() => {setAdminOrderingFor(null); setCart({});}} className="bg-amber-700 px-3 py-1 rounded-md hover:bg-amber-800 transition-colors">取消代建</button>
             </div>
-          </div>
-        ))}
-      </main>
+          )}
 
-      {/* 商品編輯/詳情 */}
-      {editingProduct && (
-        <div className="fixed inset-0 z-50 flex justify-center items-end sm:items-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-[#Fdfbf7] w-full max-w-md md:max-w-4xl h-[90vh] sm:h-[85vh] rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl animate-in slide-in-from-bottom-full duration-300">
-            <div className="flex items-center justify-between p-4 bg-white/80 backdrop-blur-md absolute top-0 left-0 right-0 z-10 border-b border-stone-100 shadow-sm">
-              <h2 className="font-bold text-stone-800 flex-1 truncate pr-4">{isAdminMode && !adminOrderingFor ? (editingProduct.isNew ? '新增商品' : '編輯商品') : editingProduct.name}</h2>
-              <button onClick={() => setEditingProduct(null)} className="w-8 h-8 flex items-center justify-center bg-stone-100 rounded-full text-stone-500"><X size={20} /></button>
-            </div>
-            <div className="flex-1 overflow-y-auto pt-16 pb-24 md:flex md:flex-row">
-              <div className="md:w-1/2 md:border-r border-stone-200 flex flex-col">
-                <div className="w-full h-64 md:h-80 bg-stone-200 flex-shrink-0 relative">
-                  {mainDisplayImg ? <img src={mainDisplayImg} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-stone-400 bg-stone-100"><ImageIcon size={48} opacity={0.5}/></div>}
-                </div>
-                <div className="flex gap-2 p-4 overflow-x-auto [&::-webkit-scrollbar]:hidden bg-white shadow-sm relative z-0">
-                  <div className="relative shrink-0">
-                    <img src={editingProduct.image || 'https://via.placeholder.com/150?text=Empty'} onClick={() => editingProduct.image && setMainDisplayImg(editingProduct.image)} className={`w-16 h-16 object-cover rounded-lg cursor-pointer border-2 ${mainDisplayImg === editingProduct.image ? 'border-amber-500' : 'border-stone-200'}`} />
-                    {isAdminMode && !adminOrderingFor && <label className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-lg cursor-pointer"><Camera size={16} className="text-white" /><input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], (img) => { setEditingProduct({...editingProduct, image: img}); setMainDisplayImg(img); })} /></label>}
-                  </div>
-                  {(editingProduct.extraImages || []).map((img, idx) => (
-                    <div key={idx} className="relative shrink-0 group">
-                      <img src={img} onClick={() => setMainDisplayImg(img)} className={`w-16 h-16 object-cover rounded-lg cursor-pointer border-2 ${mainDisplayImg === img ? 'border-amber-500' : 'border-stone-200'}`} />
-                      {isAdminMode && !adminOrderingFor && <button onClick={() => { const newExtra = [...editingProduct.extraImages]; newExtra.splice(idx, 1); setEditingProduct({...editingProduct, extraImages: newExtra}); if(mainDisplayImg === img) setMainDisplayImg(editingProduct.image); }} className="absolute -top-1 -right-1 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center shadow-md"><X size={12} /></button>}
-                    </div>
-                  ))}
-                  {isAdminMode && !adminOrderingFor && (editingProduct.extraImages || []).length < 4 && (
-                    <label className="w-16 h-16 shrink-0 border-2 border-dashed border-stone-300 rounded-lg flex flex-col items-center justify-center text-stone-400 cursor-pointer hover:border-amber-500"><ImagePlus size={20} /><input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], (img) => setEditingProduct({...editingProduct, extraImages: [...(editingProduct.extraImages||[]), img]}))} /></label>
-                  )}
-                </div>
-              </div>
-              <div className="md:w-1/2 p-5 space-y-5">
-                {isAdminMode && !adminOrderingFor ? (
-                  <div className="bg-stone-50 p-4 rounded-2xl border border-stone-200 space-y-3">
-                    <h3 className="font-bold text-stone-800 border-b border-stone-200 pb-2 flex justify-between items-center">
-                      基礎設定 
-                      <div className="flex gap-2">
-                         <label className="flex items-center gap-1.5 text-xs bg-rose-100 text-rose-700 px-2 py-1 rounded-md cursor-pointer"><input type="checkbox" checked={editingProduct.isPromo} onChange={e => setEditingProduct({...editingProduct, isPromo: e.target.checked})} className="accent-rose-500 w-3 h-3" />參與優惠</label>
-                         <label className="flex items-center gap-1.5 text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-md cursor-pointer"><input type="checkbox" checked={editingProduct.isAddon} onChange={e => setEditingProduct({...editingProduct, isAddon: e.target.checked})} className="accent-purple-500 w-3 h-3" />設為加購</label>
-                      </div>
-                    </h3>
-                    <div className="flex flex-wrap gap-2 text-xs mb-2">
-                        <label className="flex items-center gap-1.5 bg-emerald-50 text-emerald-700 px-2 py-1 rounded-md cursor-pointer border border-emerald-100"><input type="checkbox" checked={editingProduct.isFreeShipping !== false} onChange={e => setEditingProduct({...editingProduct, isFreeShipping: e.target.checked})} className="accent-emerald-500 w-3 h-3" />計入免運件數</label>
-                        <label className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-2 py-1 rounded-md cursor-pointer border border-blue-100"><input type="checkbox" checked={editingProduct.isRewardEligible !== false} onChange={e => setEditingProduct({...editingProduct, isRewardEligible: e.target.checked})} className="accent-blue-500 w-3 h-3" />參與集點計算</label>
-                    </div>
-                    <div className="flex gap-3"><input type="text" value={editingProduct.id} onChange={e => setEditingProduct({...editingProduct, id: e.target.value.toUpperCase()})} disabled={!editingProduct.isNew} placeholder="品號 (如D01)" className="w-1/3 bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500 disabled:bg-stone-100" /><input type="text" value={editingProduct.name} onChange={e => setEditingProduct({...editingProduct, name: e.target.value})} placeholder="商品名稱" className="w-2/3 bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500" /></div>
-                    <div className="flex gap-3">
-                       <div className="flex-[1.5] flex gap-1">
-                          <select value={editingProduct.category} onChange={e => setEditingProduct({...editingProduct, category: e.target.value})} className="flex-1 w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500">
-                             {adminCategoryNames.map(c => <option key={c} value={c}>{c}</option>)}
-                          </select>
-                          <button onClick={() => setShowCategoryManager(true)} className="bg-stone-200 text-stone-600 px-3 rounded hover:bg-stone-300 text-xs font-bold shrink-0 whitespace-nowrap">管理分類</button>
-                       </div>
-                       <div className="flex-[0.5]"><input type="text" value={editingProduct.unit || ''} onChange={e => setEditingProduct({...editingProduct, unit: e.target.value})} placeholder="單位(罐/袋)" className="w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500 text-center" /></div>
-                       <input type="number" value={editingProduct.price} onChange={e => setEditingProduct({...editingProduct, price: e.target.value})} placeholder="售價" className="flex-1 w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none text-amber-600 font-bold focus:border-amber-500" />
-                       <input type="number" value={editingProduct.cost || ''} onChange={e => setEditingProduct({...editingProduct, cost: e.target.value})} placeholder="成本" className="flex-1 w-full bg-stone-200 border border-stone-300 rounded p-2 text-sm outline-none text-purple-600 font-bold focus:border-purple-500" title="僅管理員可見之成本" />
-                    </div>
-                    <input type="text" value={editingProduct.desc} onChange={e => setEditingProduct({...editingProduct, desc: e.target.value})} placeholder="簡介 (顯示於列表)" className="w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500" />
-                  </div>
-                ) : (
-                  <div>
-                    {editingProduct.isPromo && <span className="inline-block bg-rose-100 text-rose-600 text-[10px] font-bold px-2 py-0.5 rounded-md mb-2 mr-2 border border-rose-200">享任選優惠活動</span>}
-                    {editingProduct.isAddon && <span className="inline-block bg-purple-100 text-purple-600 text-[10px] font-bold px-2 py-0.5 rounded-md mb-2 border border-purple-200">可做為加購商品</span>}
-                    <div className="text-3xl font-bold text-amber-600 mb-1">${editingProduct.price} {editingProduct.unit && <span className="text-sm font-normal text-stone-500">/{editingProduct.unit}</span>}</div>
-                    <h1 className="text-2xl font-bold text-stone-800">{editingProduct.name}</h1>
-                    <p className="text-sm text-stone-500 mt-1">{editingProduct.desc}</p>
-                  </div>
-                )}
-                <hr className="border-stone-200" />
-                {(isAdminMode || editingProduct.intro) && <div className="space-y-1.5"><h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 bg-amber-500 rounded-full"></span>產品介紹</h3>{isAdminMode && !adminOrderingFor ? <textarea rows="3" value={editingProduct.intro} onChange={e => setEditingProduct({...editingProduct, intro: e.target.value})} className="w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500"></textarea> : <p className="text-sm text-stone-600 whitespace-pre-wrap">{editingProduct.intro}</p>}</div>}
-                {(isAdminMode || editingProduct.ingredients) && <div className="space-y-1.5"><h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 bg-emerald-500 rounded-full"></span>產品成分</h3>{isAdminMode && !adminOrderingFor ? <textarea rows="2" value={editingProduct.ingredients} onChange={e => setEditingProduct({...editingProduct, ingredients: e.target.value})} className="w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500"></textarea> : <p className="text-sm text-stone-600 whitespace-pre-wrap">{editingProduct.ingredients}</p>}</div>}
-                {(isAdminMode || editingProduct.weight) && <div className="space-y-1.5"><h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 bg-blue-500 rounded-full"></span>產品重量</h3>{isAdminMode && !adminOrderingFor ? <input type="text" value={editingProduct.weight} onChange={e => setEditingProduct({...editingProduct, weight: e.target.value})} className="w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500" /> : <p className="text-sm text-stone-600">{editingProduct.weight}</p>}</div>}
-                {(isAdminMode || editingProduct.notices) && <div className="space-y-1.5"><h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 bg-rose-500 rounded-full"></span>注意事項</h3>{isAdminMode && !adminOrderingFor ? <textarea rows="50" value={editingProduct.notices} onChange={e => setEditingProduct({...editingProduct, notices: e.target.value})} className="w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500"></textarea> : <div className="bg-rose-50 text-rose-700 p-3 rounded-xl text-sm whitespace-pre-wrap">{editingProduct.notices}</div>}</div>}
-              </div>
-            </div>
-            <div className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-stone-200">
-              {isAdminMode && !adminOrderingFor ? (
-                <div className="flex gap-3">
-                  {!editingProduct.isNew && <button onClick={handleDeleteProduct} className="bg-red-100 text-red-600 px-4 rounded-xl hover:bg-red-200 transition-colors"><Trash2 size={20} /></button>}
-                  <button onClick={saveProductDetail} className="flex-1 bg-stone-800 text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform">儲存商品</button>
-                </div>
-              ) : (
-                <div className="flex gap-4">
-                  <div className="flex items-center gap-4 bg-stone-50 rounded-xl px-4 py-3 border border-stone-200 flex-1 justify-center"><button onClick={() => updateCart(editingProduct.id, -1)} className="p-1 text-stone-500"><Minus size={18} /></button><span className="w-6 text-center text-lg font-bold">{cart[editingProduct.id] || 0}</span><button onClick={() => updateCart(editingProduct.id, 1)} className="p-1 text-amber-600"><Plus size={18} /></button></div>
-                  <button onClick={() => setEditingProduct(null)} className="flex-[1.5] bg-amber-500 text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform">確認返回</button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 購物車懸浮按鈕 */}
-      {cartData.totalQty > 0 && (!isAdminMode || adminOrderingFor) && !editingProduct && (
-        <div className="fixed bottom-0 left-0 right-0 max-w-md md:max-w-4xl lg:max-w-6xl mx-auto p-4 bg-gradient-to-t from-white via-white to-transparent pointer-events-none z-10">
-          <button onClick={() => setIsCartOpen(true)} className="w-full bg-stone-800 text-white rounded-2xl p-4 flex items-center justify-between shadow-xl pointer-events-auto active:scale-95 transition-transform">
-            <div className="flex items-center gap-3"><div className="relative"><ShoppingCart size={24} /><span className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">{cartData.totalQty}</span></div><span className="font-medium">查看購物車</span></div>
-            <div className="text-lg font-bold">${cartData.currentTotal}</div>
-          </button>
-        </div>
-      )}
-
-      {/* 購物車/結帳 */}
-      {isCartOpen && (
-        <div className="fixed inset-0 z-50 flex justify-center items-end bg-black/50 backdrop-blur-sm sm:items-center">
-          <div className="w-full max-w-md md:max-w-4xl bg-[#Fdfbf7] rounded-t-3xl sm:rounded-3xl h-[85vh] sm:h-auto sm:max-h-[85vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-full duration-300">
-            <div className="flex items-center justify-between p-5 border-b border-stone-200">
-              <h2 className="text-xl font-bold text-stone-800 flex items-center gap-2"><ShoppingCart size={20} /> 訂單結帳</h2>
-              <button onClick={() => setIsCartOpen(false)} className="w-8 h-8 flex items-center justify-center bg-stone-100 rounded-full text-stone-500"><X size={20} /></button>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto p-5 md:flex md:gap-8">
-              <div className="md:w-1/2">
-                <h3 className="hidden md:block font-bold text-stone-800 mb-4 border-b border-stone-200 pb-2">已選商品</h3>
-                {cartData.items.map((item, idx) => (
-                  <div key={item.id + idx} className="flex items-center justify-between py-3 border-b border-stone-100 last:border-0">
-                    <div className="flex-1"><h4 className="font-bold text-stone-800 flex items-center gap-1">{item.name}{item.isPromo && <span className="text-[9px] bg-rose-100 text-rose-600 px-1 py-0.5 rounded">活動</span>}{item.isReward && <span className="text-[9px] bg-purple-100 text-purple-600 px-1 py-0.5 rounded">兌換</span>}{item.isAddon && !item.isReward && <span className="text-[9px] bg-purple-100 text-purple-600 px-1 py-0.5 rounded">加購</span>}</h4><p className="text-xs text-stone-500">${item.price} {item.unit ? `/${item.unit}` : ''}</p></div>
-                    <div className="flex items-center gap-4">
-                      {!item.isReward ? (
-                         <div className="flex items-center gap-3 bg-white rounded-full px-2 py-1 border border-stone-200"><button onClick={() => updateCart(item.id, -1)} className="p-1 text-stone-500"><Minus size={14} /></button><span className="w-4 text-center text-sm font-bold">{item.qty}</span><button onClick={() => updateCart(item.id, 1)} className="p-1 text-stone-800"><Plus size={14} /></button></div>
-                      ) : (
-                         <span className="text-sm font-bold text-purple-600">x 1</span>
-                      )}
-                      <div className="w-12 text-right font-bold text-stone-700">${item.price * item.qty}</div>
-                    </div>
-                  </div>
-                ))}
-                
-                {/* 加購專區 */}
-                {addonProducts.length > 0 && (
-                  <div className="mt-6 pt-4 border-t border-stone-100">
-                    <h3 className="font-bold text-stone-800 mb-3 flex items-center gap-2"><Plus size={18} className="text-amber-500"/> 加購專區</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {addonProducts.map(addon => (
-                        <div key={addon.id} className="bg-white border border-stone-200 rounded-xl p-2.5 flex gap-3 shadow-sm relative overflow-hidden">
-                          <img src={addon.image || 'https://via.placeholder.com/150?text=Empty'} className="w-14 h-14 object-cover rounded-lg shrink-0" />
-                          <div className="flex-1 flex flex-col justify-between py-0.5">
-                            <h4 className="font-bold text-stone-800 text-xs truncate" title={addon.name}>{addon.name}</h4>
-                            <div className="flex justify-between items-end mt-1">
-                              <span className="text-amber-600 font-bold text-sm">${addon.price} {addon.unit && <span className="text-[10px] text-stone-400">/{addon.unit}</span>}</span>
-                              {cart[addon.id] ? (
-                                <div className="flex items-center gap-2 bg-stone-50 rounded-full px-1.5 py-0.5 border border-stone-200">
-                                  <button onClick={() => updateCart(addon.id, -1)} className="text-stone-500 p-0.5"><Minus size={10} /></button>
-                                  <span className="text-xs font-bold w-3 text-center">{cart[addon.id]}</span>
-                                  <button onClick={() => updateCart(addon.id, 1)} className="text-amber-600 p-0.5"><Plus size={10} /></button>
-                                </div>
-                              ) : (
-                                <button onClick={() => updateCart(addon.id, 1)} className="text-[10px] bg-stone-800 text-white px-3 py-1.5 rounded-full font-bold hover:bg-stone-700 shadow-sm active:scale-95 transition-transform">加入</button>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                <div className="mt-6 pt-4 border-t border-stone-100">
-                  <h3 className="font-bold text-stone-800 mb-3">取貨方式</h3>
-                  <div className="flex gap-4 mb-4">
-                    <label className={`flex-1 border rounded-xl p-3 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors ${deliveryMethod==='delivery' ? 'bg-amber-50 border-amber-500 text-amber-700' : 'bg-white border-stone-200 text-stone-500'}`}><input type="radio" name="delivery" value="delivery" checked={deliveryMethod === 'delivery'} onChange={(e) => setDeliveryMethod(e.target.value)} className="hidden" /><Truck size={20} /><span className="text-sm font-bold">宅配</span><span className="text-[10px] text-center whitespace-pre-line">{cartData.freeShippingQty >= storeConfig.freeShippingThreshold ? `已滿 ${storeConfig.freeShippingThreshold} 件免運` : `免運進度 ${cartData.freeShippingQty}/${storeConfig.freeShippingThreshold} 件\n(運費 $${storeConfig.shippingFee})`}</span></label>
-                    <label className={`flex-1 border rounded-xl p-3 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors ${deliveryMethod==='pickup' ? 'bg-amber-50 border-amber-500 text-amber-700' : 'bg-white border-stone-200 text-stone-500'}`}><input type="radio" name="delivery" value="pickup" checked={deliveryMethod === 'pickup'} onChange={(e) => setDeliveryMethod(e.target.value)} className="hidden" /><Store size={20} /><span className="text-sm font-bold">自取</span><span className="text-[10px]">免運費</span></label>
-                  </div>
-                </div>
-
-                <div className="mt-4 bg-stone-50 p-4 rounded-2xl space-y-2">
-                  <div className="flex justify-between text-sm text-stone-600"><span>商品小計</span><span>${cartData.itemsBaseTotal}</span></div>
-                  {cartData.discountAmount > 0 && <div className="flex justify-between text-sm text-rose-500 font-bold"><span>活動折抵</span><span>-${cartData.discountAmount}</span></div>}
-                  <div className="flex justify-between text-sm text-stone-600"><span>運費</span><span className={cartData.shippingFee === 0 && deliveryMethod === 'delivery' ? 'text-emerald-500 font-bold' : ''}>{cartData.shippingFee === 0 ? (deliveryMethod==='pickup' ? '$0' : '免運費') : `$${cartData.shippingFee}`}</span></div>
-                  <div className="pt-2 mt-2 border-t border-stone-200 flex justify-between items-center"><span className="font-bold text-stone-800">總計金額</span><span className="text-2xl font-black text-stone-800">${cartData.finalPrice}</span></div>
-                </div>
-                {cartData.rewardEligibleAmount >= 1000 && (
-                  <div className="mt-3 bg-purple-50 border border-purple-100 text-purple-700 text-xs p-3 rounded-xl flex items-start gap-2 shadow-sm">
-                    <Gift size={16} className="shrink-0 mt-0.5" />
-                    <span><strong className="font-bold">滿 $1000 集點活動：</strong>此訂單含可集點金額 <strong>${cartData.rewardEligibleAmount}</strong>，點數將於「匯款完成確認訂單」後自動發放 <strong>{Math.floor(cartData.rewardEligibleAmount / 1000)}</strong> 點！</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="md:w-1/2 md:border-l border-stone-200 md:pl-8 flex flex-col mt-6 md:mt-0">
-                {!currentUser && !adminOrderingFor ? (
-                  <div className="flex-1 flex flex-col items-center justify-center bg-amber-50 border border-amber-200 p-6 rounded-2xl text-center h-full">
-                    <UserIcon size={48} className="text-amber-500 mb-4 opacity-50" />
-                    <h3 className="text-lg font-bold text-amber-800 mb-2">會員專屬服務</h3>
-                    <p className="text-sm text-amber-700 mb-6 leading-relaxed">為了給您更好的服務與後續訂單追蹤，木子家MUZI MAISON目前<span className="font-bold text-rose-600">僅開放會員訂購</span>喔！</p>
-                    <button onClick={() => { setIsCartOpen(false); setLoginMode('customer'); setShowLoginModal(true); }} className="w-full bg-amber-500 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform flex justify-center items-center gap-2">
-                      <Lock size={18} /> 前往登入 / 免費註冊
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col justify-between h-full">
-                    <div className="space-y-4">
-                      <h3 className="font-bold text-stone-800 border-b border-stone-200 pb-2 flex justify-between items-center">
-                        聯絡資訊
-                        <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-bold">{adminOrderingFor ? '管理員代建單' : '會員已登入'}</span>
-                      </h3>
-
-                      {userProfile?.points >= 20 && !adminOrderingFor && (
-                        <div className="bg-purple-50 border border-purple-200 p-4 rounded-xl">
-                           <p className="text-sm font-bold text-purple-800 flex items-center gap-1 mb-2"><Gift size={18}/> 集點兌換 (您有 {userProfile.points} 點)</p>
-                           <label className="flex items-center gap-2 text-sm text-purple-700 cursor-pointer mb-2">
-                              <input type="checkbox" checked={usedRewardPoints} onChange={e => {setUsedRewardPoints(e.target.value); if(!e.target.checked) setSelectedRewardId('');}} className="accent-purple-600 w-4 h-4"/>
-                              我要使用 20 點兌換糖果軟糕系列
-                           </label>
-                           {usedRewardPoints && (
-                              <select value={selectedRewardId} onChange={e => setSelectedRewardId(e.target.value)} className="w-full bg-white border border-purple-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-500 font-bold text-purple-800">
-                                 <option value="">-- 請選擇兌換商品 --</option>
-                                 {candyProducts.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                              </select>
-                           )}
-                        </div>
-                      )}
-
-                      {adminOrderingFor && adminOrderingFor.points >= 20 && (
-                        <div className="bg-purple-50 border border-purple-200 p-4 rounded-xl">
-                           <p className="text-sm font-bold text-purple-800 flex items-center gap-1 mb-2"><Gift size={18}/> 代客操作兌換 (客戶有 {adminOrderingFor.points} 點)</p>
-                           <label className="flex items-center gap-2 text-sm text-purple-700 cursor-pointer mb-2">
-                              <input type="checkbox" checked={usedRewardPoints} onChange={e => {setUsedRewardPoints(e.target.value); if(!e.target.checked) setSelectedRewardId('');}} className="accent-purple-600 w-4 h-4"/>
-                              替他扣除 20 點兌換糖果軟糕系列
-                           </label>
-                           {usedRewardPoints && (
-                              <select value={selectedRewardId} onChange={e => setSelectedRewardId(e.target.value)} className="w-full bg-white border border-purple-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-500 font-bold text-purple-800">
-                                 <option value="">-- 請選擇兌換商品 --</option>
-                                 {candyProducts.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                              </select>
-                           )}
-                        </div>
-                      )}
-
-                      <div className="grid grid-cols-2 gap-3">
-                        <input type="text" placeholder="姓名" value={customerInfo.name} onChange={e => setCustomerInfo({...customerInfo, name: e.target.value})} className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500 text-sm"/>
-                        <input type="tel" placeholder="聯絡電話" value={customerInfo.phone} onChange={e => setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500 text-sm"/>
-                      </div>
-                      <input type="text" placeholder="Line ID (必填，方便聯繫)" value={customerInfo.lineId} onChange={e => setCustomerInfo({...customerInfo, lineId: e.target.value})} className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500 text-sm"/>
-                      <input type="text" placeholder="收件/聯絡地址 (必填)" value={customerInfo.address} onChange={e => setCustomerInfo({...customerInfo, address: e.target.value})} className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500 text-sm"/>
-                      <textarea placeholder="訂單備註 (選填，例如：請避開假日送件)" value={orderNote} onChange={e => setOrderNote(e.target.value)} rows="2" className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500 text-sm mt-2"></textarea>
-
-                      {!adminOrderingFor && (
-                         <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-xl mt-4">
-                           <p className="text-sm font-bold text-emerald-800 flex items-center gap-1 mb-1"><CreditCard size={16}/> 匯款資訊 (若已匯款可直接填寫)</p>
-                           <p className="text-xs text-emerald-700 whitespace-pre-wrap font-medium mb-3">{contactData.bankAccount || '店家尚未設定匯款帳號，請加 LINE 詢問'}</p>
-                           <input type="text" maxLength="5" placeholder="輸入帳戶後五碼 (選填)" value={checkoutBankCode} onChange={e => setCheckoutBankCode(e.target.value.replace(/\D/g, ''))} className="w-full bg-white border border-emerald-200 rounded-xl px-3 py-2.5 outline-none focus:border-emerald-500 text-sm tracking-widest font-bold" />
-                         </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            <div className="p-5 border-t border-stone-200 bg-white">
-              {currentUser || adminOrderingFor ? (
-                <>
-                  <button onClick={handleCheckout} className="w-full bg-[#06C755] text-white font-bold rounded-2xl p-4 flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform"><MessageCircle size={20} />{adminOrderingFor ? '完成代建訂單' : '送出訂單並前往確認'}</button>
-                  <p className="text-center text-[10px] text-stone-400 mt-3 font-medium">※ 為保持良好賞味，接單後7～15天出貨，敬請見諒</p>
-                </>
-              ) : (
-                <button onClick={() => { setIsCartOpen(false); setLoginMode('customer'); setShowLoginModal(true); }} className="w-full bg-stone-800 text-white font-bold rounded-2xl p-4 flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform">
-                  <UserIcon size={20} /> 點此登入會員結帳
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 會員專區 */}
-      {showMemberProfile && currentUser && !isAdminMode && (
-        <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4 md:px-10 py-6">
-          <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-4xl h-full flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
-            <button onClick={() => setShowMemberProfile(false)} className="absolute top-4 right-4 text-stone-400"><X size={20} /></button>
-            <h2 className="text-xl md:text-2xl font-bold text-stone-800 mb-4 flex items-center gap-2 border-b border-stone-200 pb-2"><UserIcon size={24} className="text-amber-600"/> 會員中心</h2>
-            
-            <div className="flex-1 overflow-y-auto space-y-6 md:flex md:space-y-0 md:gap-6">
-              <div className="md:w-1/3 space-y-4">
-                <div className="bg-gradient-to-br from-amber-500 to-amber-600 text-white p-5 rounded-2xl shadow-sm relative overflow-hidden">
-                   <div className="absolute right-0 top-0 opacity-10 transform translate-x-4 -translate-y-4"><Gift size={100}/></div>
-                   <h3 className="font-bold mb-1 opacity-90 text-sm">目前累積點數</h3>
-                   <div className="text-4xl font-black">{userProfile?.points || 0} <span className="text-sm font-medium">點</span></div>
-                   <p className="text-xs mt-2 bg-white/20 px-2 py-1 rounded inline-block">滿 1000 元可集 1 點</p>
-                </div>
-
-                <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm">
-                  <div className="flex justify-between items-center mb-4 border-b border-stone-100 pb-2">
-                    <h3 className="font-bold text-stone-700">我的資料</h3>
-                    {!isEditingProfile ? (
-                      <button onClick={() => setIsEditingProfile(true)} className="text-xs flex items-center gap-1 text-amber-600 font-bold hover:text-amber-700"><EditIcon size={14}/> 修改</button>
+          {/* Header */}
+          <div className="sticky top-0 z-20 bg-white shadow-sm">
+            <header className="px-4 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-3 relative">
+                <button onClick={() => setSidebarOpen(true)} className="p-2 -ml-2 text-stone-600 hover:bg-stone-100 rounded-full transition-colors"><Menu size={24} /></button>
+                <label className={`relative block h-28 min-w-[6rem] max-w-[300px] flex items-center justify-center ${isAdminMode && !adminOrderingFor ? 'cursor-pointer hover:ring-2 hover:ring-amber-400 p-1 rounded-lg border border-dashed border-stone-300' : ''}`}>
+                  {logo ? <img src={logo} alt="Logo" className="max-w-full max-h-full object-contain" /> : <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center"><Store size={20} className="text-amber-700" /></div>}
+                  {isAdminMode && !adminOrderingFor && <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-lg"><Camera size={18} className="text-white" /></div>}
+                  {isAdminMode && !adminOrderingFor && <input type="file" accept="image/*" className="hidden" onChange={onLogoChange} />}
+                </label>
+                <div>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                    <h1 className="text-xl font-bold tracking-wider text-stone-700">木子家</h1>
+                    {isAdminMode && !adminOrderingFor ? (
+                      <input type="text" value={storeSlogan} onChange={e => { setStoreSlogan(e.target.value); if(db) db.collection('settings').doc('store').set({slogan: e.target.value}, {merge:true}); }} className="text-xs text-stone-500 bg-stone-100 border border-stone-200 rounded px-1 py-0.5 outline-none focus:border-amber-400 w-48" placeholder="輸入品牌標語..." />
                     ) : (
-                      <button onClick={() => { setIsEditingProfile(false); setCustomerInfo({ name: userProfile?.name||'', phone: userProfile?.phone||'', address: userProfile?.address||'', email: userProfile?.email||'', lineId: userProfile?.lineId||'', gender: userProfile?.gender||'女' }); }} className="text-xs text-stone-400 font-bold hover:text-stone-600">取消</button>
+                      <span className="text-xs text-stone-500 font-medium">{storeSlogan}</span>
                     )}
                   </div>
+                  <p className="text-[10px] text-stone-400 font-semibold tracking-widest uppercase mt-0.5">Muzi Maison</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {currentUser && !isAdminMode && (
+                  <button onClick={() => { setShowMemberProfile(true); setIsEditingProfile(false); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-stone-800 text-white hover:bg-stone-700 transition-colors shadow-sm">
+                    <UserIcon size={14} /> 我的帳號
+                  </button>
+                )}
+                {!currentUser && !adminOrderingFor && (
+                  <button onClick={() => { setLoginMode('customer'); setShowLoginModal(true); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-colors shadow-sm bg-stone-100 text-stone-500 hover:bg-stone-200">
+                     <UserIcon size={14} /> 會員登入
+                  </button>
+                )}
+              </div>
+            </header>
 
-                  {isEditingProfile ? (
-                    <div className="space-y-3 text-sm">
-                      <input type="text" placeholder="姓名" value={customerInfo.name} onChange={e=>setCustomerInfo({...customerInfo, name: e.target.value})} className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 outline-none focus:border-amber-500" />
-                      <div className="flex gap-4">
-                         <label className="flex items-center gap-1"><input type="radio" name="gender" value="男" checked={customerInfo.gender==='男'} onChange={e=>setCustomerInfo({...customerInfo, gender:e.target.value})} className="accent-amber-500"/>男</label>
-                         <label className="flex items-center gap-1"><input type="radio" name="gender" value="女" checked={customerInfo.gender==='女'} onChange={e=>setCustomerInfo({...customerInfo, gender:e.target.value})} className="accent-amber-500"/>女</label>
+            {/* 公告列 */}
+            {announcements.filter(a => a.isActive && !isAnnounceExpired(a)).map(ann => (
+               <div key={ann.id} onClick={() => { setViewingAnnounce(ann); setShowAnnouncementModal(true); }} className="mx-4 mt-2 mb-1 bg-blue-50 border border-blue-200 text-blue-700 px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-2 cursor-pointer shadow-sm animate-pulse-slow">
+                  <Megaphone size={18} className="shrink-0"/> <span className="truncate">{ann.title}</span>
+               </div>
+            ))}
+
+            <div className="px-4 py-3 flex gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+              {displayedTabs.map(category => {
+                const catObj = mergedCategories.find(c => c.name === category);
+                const isHidden = catObj?.isHidden;
+                return (
+                  <button key={category} onClick={() => setActiveCategory(category)} className={`whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center ${activeCategory === category ? 'bg-stone-800 text-white shadow-sm' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'}`}>
+                    {category} {isHidden && <EyeOff size={14} className="inline ml-1 mb-0.5 opacity-60" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <main className="flex-1 overflow-y-auto pb-24 px-4">
+            {isAdminMode && !adminOrderingFor && (
+              <button onClick={handleAddProduct} className="w-full mt-4 bg-white border-2 border-dashed border-stone-300 rounded-2xl p-4 text-stone-500 font-bold flex flex-col items-center justify-center gap-2 hover:border-amber-500 hover:text-amber-600 transition-colors">
+                <div className="bg-stone-100 p-2 rounded-full"><Plus size={24} /></div> 新增商品
+              </button>
+            )}
+
+            {displayedCategories.map(category => (
+              <div key={category} className="mt-6">
+                <h2 className="text-lg font-bold mb-3 text-stone-700 flex items-center gap-2 border-b border-stone-200 pb-1">
+                  {category} 
+                  {mergedCategories.find(c => c.name === category)?.isHidden && <span className="text-xs font-normal text-stone-400 bg-stone-100 px-2 py-0.5 rounded ml-2">隱藏分類</span>}
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                  {displayedProducts.filter(p => p.category === category).map(product => (
+                    <div key={product.id} className="bg-white rounded-2xl p-3 shadow-sm flex gap-4 border border-stone-100 relative group overflow-hidden">
+                      <div className="relative block w-24 h-24 rounded-xl shrink-0 overflow-hidden cursor-pointer hover:ring-2 hover:ring-amber-400 transition-all" onClick={() => openProductDetail(product)}>
+                        <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><span className="bg-white/90 text-stone-800 text-[10px] font-bold px-2 py-1 rounded-full">{isAdminMode && !adminOrderingFor ? '編輯' : '詳情'}</span></div>
+                        {product.isPromo && <div className="absolute top-0 left-0 bg-rose-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-br-lg z-10 shadow-sm">活動</div>}
+                        {product.isAddon && <div className="absolute bottom-0 left-0 right-0 bg-purple-500/90 text-white text-[9px] font-bold text-center py-0.5 z-10 shadow-sm">加購商品</div>}
                       </div>
-                      <input type="tel" placeholder="聯絡電話" value={customerInfo.phone} onChange={e=>setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 outline-none focus:border-amber-500" />
-                      <input type="text" placeholder="Line ID" value={customerInfo.lineId} onChange={e=>setCustomerInfo({...customerInfo, lineId: e.target.value})} className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 outline-none focus:border-amber-500" />
-                      <textarea placeholder="預設地址" value={customerInfo.address} onChange={e=>setCustomerInfo({...customerInfo, address: e.target.value})} rows="2" className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 outline-none focus:border-amber-500"></textarea>
-                      <button onClick={handleUpdateMyProfile} className="w-full bg-amber-500 text-white font-bold py-2.5 rounded-lg shadow-sm hover:bg-amber-600 transition-colors">儲存修改</button>
+                      <div className="flex-1 flex flex-col justify-between py-0.5">
+                        <div onClick={() => openProductDetail(product)} className="cursor-pointer">
+                          <h3 className="font-bold text-stone-800 leading-tight flex items-center justify-between">{product.name} <ChevronRight size={16} className="text-stone-300" /></h3>
+                          {product.desc && <p className="text-xs text-stone-500 mt-1">{product.desc}</p>}
+                          <span className="inline-block mt-1 px-2 py-0.5 bg-stone-100 text-stone-500 text-[10px] rounded-md">{product.weight}</span>
+                        </div>
+                        <div className="flex items-center justify-between mt-2">
+                          <span className="text-lg font-bold text-amber-600">${product.price} {product.unit && <span className="text-xs text-stone-400 font-normal">/{product.unit}</span>}</span>
+                          {(!isAdminMode || adminOrderingFor) && (
+                            <div className="flex items-center gap-3 bg-stone-50 rounded-full px-2 py-1 border border-stone-200">
+                              <button onClick={() => updateCart(product.id, -1)} className="w-6 h-6 rounded-full flex items-center justify-center text-stone-500 hover:bg-stone-200 active:bg-stone-300"><Minus size={14} /></button>
+                              <span className="w-4 text-center text-sm font-bold">{cart[product.id] || 0}</span>
+                              <button onClick={() => updateCart(product.id, 1)} className="w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-sm active:bg-amber-600"><Plus size={14} /></button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </main>
+
+          {/* 商品編輯/詳情 */}
+          {editingProduct && (
+            <div className="fixed inset-0 z-50 flex justify-center items-end sm:items-center bg-black/60 backdrop-blur-sm">
+              <div className="bg-[#Fdfbf7] w-full max-w-md md:max-w-4xl h-[90vh] sm:h-[85vh] rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl animate-in slide-in-from-bottom-full duration-300">
+                <div className="flex items-center justify-between p-4 bg-white/80 backdrop-blur-md absolute top-0 left-0 right-0 z-10 border-b border-stone-100 shadow-sm">
+                  <h2 className="font-bold text-stone-800 flex-1 truncate pr-4">{isAdminMode && !adminOrderingFor ? (editingProduct.isNew ? '新增商品' : '編輯商品') : editingProduct.name}</h2>
+                  <button onClick={() => setEditingProduct(null)} className="w-8 h-8 flex items-center justify-center bg-stone-100 rounded-full text-stone-500"><X size={20} /></button>
+                </div>
+                <div className="flex-1 overflow-y-auto pt-16 pb-24 md:flex md:flex-row">
+                  <div className="md:w-1/2 md:border-r border-stone-200 flex flex-col">
+                    <div className="w-full h-64 md:h-80 bg-stone-200 flex-shrink-0 relative">
+                      {mainDisplayImg ? <img src={mainDisplayImg} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-stone-400 bg-stone-100"><ImageIcon size={48} opacity={0.5}/></div>}
+                    </div>
+                    <div className="flex gap-2 p-4 overflow-x-auto [&::-webkit-scrollbar]:hidden bg-white shadow-sm relative z-0">
+                      <div className="relative shrink-0">
+                        <img src={editingProduct.image || 'https://via.placeholder.com/150?text=Empty'} onClick={() => editingProduct.image && setMainDisplayImg(editingProduct.image)} className={`w-16 h-16 object-cover rounded-lg cursor-pointer border-2 ${mainDisplayImg === editingProduct.image ? 'border-amber-500' : 'border-stone-200'}`} />
+                        {isAdminMode && !adminOrderingFor && <label className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-lg cursor-pointer"><Camera size={16} className="text-white" /><input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], (img) => { setEditingProduct({...editingProduct, image: img}); setMainDisplayImg(img); })} /></label>}
+                      </div>
+                      {(editingProduct.extraImages || []).map((img, idx) => (
+                        <div key={idx} className="relative shrink-0 group">
+                          <img src={img} onClick={() => setMainDisplayImg(img)} className={`w-16 h-16 object-cover rounded-lg cursor-pointer border-2 ${mainDisplayImg === img ? 'border-amber-500' : 'border-stone-200'}`} />
+                          {isAdminMode && !adminOrderingFor && <button onClick={() => { const newExtra = [...editingProduct.extraImages]; newExtra.splice(idx, 1); setEditingProduct({...editingProduct, extraImages: newExtra}); if(mainDisplayImg === img) setMainDisplayImg(editingProduct.image); }} className="absolute -top-1 -right-1 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center shadow-md"><X size={12} /></button>}
+                        </div>
+                      ))}
+                      {isAdminMode && !adminOrderingFor && (editingProduct.extraImages || []).length < 4 && (
+                        <label className="w-16 h-16 shrink-0 border-2 border-dashed border-stone-300 rounded-lg flex flex-col items-center justify-center text-stone-400 cursor-pointer hover:border-amber-500"><ImagePlus size={20} /><input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], (img) => setEditingProduct({...editingProduct, extraImages: [...(editingProduct.extraImages||[]), img]}))} /></label>
+                      )}
+                    </div>
+                  </div>
+                  <div className="md:w-1/2 p-5 space-y-5">
+                    {isAdminMode && !adminOrderingFor ? (
+                      <div className="bg-stone-50 p-4 rounded-2xl border border-stone-200 space-y-3">
+                        <h3 className="font-bold text-stone-800 border-b border-stone-200 pb-2 flex justify-between items-center">
+                          基礎設定 
+                          <div className="flex gap-2">
+                             <label className="flex items-center gap-1.5 text-xs bg-rose-100 text-rose-700 px-2 py-1 rounded-md cursor-pointer"><input type="checkbox" checked={editingProduct.isPromo} onChange={e => setEditingProduct({...editingProduct, isPromo: e.target.checked})} className="accent-rose-500 w-3 h-3" />參與優惠</label>
+                             <label className="flex items-center gap-1.5 text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-md cursor-pointer"><input type="checkbox" checked={editingProduct.isAddon} onChange={e => setEditingProduct({...editingProduct, isAddon: e.target.checked})} className="accent-purple-500 w-3 h-3" />設為加購</label>
+                          </div>
+                        </h3>
+                        <div className="flex flex-wrap gap-2 text-xs mb-2">
+                            <label className="flex items-center gap-1.5 bg-emerald-50 text-emerald-700 px-2 py-1 rounded-md cursor-pointer border border-emerald-100"><input type="checkbox" checked={editingProduct.isFreeShipping !== false} onChange={e => setEditingProduct({...editingProduct, isFreeShipping: e.target.checked})} className="accent-emerald-500 w-3 h-3" />計入免運件數</label>
+                            <label className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-2 py-1 rounded-md cursor-pointer border border-blue-100"><input type="checkbox" checked={editingProduct.isRewardEligible !== false} onChange={e => setEditingProduct({...editingProduct, isRewardEligible: e.target.checked})} className="accent-blue-500 w-3 h-3" />參與集點計算</label>
+                        </div>
+                        <div className="flex gap-3"><input type="text" value={editingProduct.id} onChange={e => setEditingProduct({...editingProduct, id: e.target.value.toUpperCase()})} disabled={!editingProduct.isNew} placeholder="品號 (如D01)" className="w-1/3 bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500 disabled:bg-stone-100" /><input type="text" value={editingProduct.name} onChange={e => setEditingProduct({...editingProduct, name: e.target.value})} placeholder="商品名稱" className="w-2/3 bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500" /></div>
+                        <div className="flex gap-3">
+                           <div className="flex-[1.5] flex gap-1">
+                              <select value={editingProduct.category} onChange={e => setEditingProduct({...editingProduct, category: e.target.value})} className="flex-1 w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500">
+                                 {adminCategoryNames.map(c => <option key={c} value={c}>{c}</option>)}
+                              </select>
+                              <button onClick={() => setShowCategoryManager(true)} className="bg-stone-200 text-stone-600 px-3 rounded hover:bg-stone-300 text-xs font-bold shrink-0 whitespace-nowrap">管理分類</button>
+                           </div>
+                           <div className="flex-[0.5]"><input type="text" value={editingProduct.unit || ''} onChange={e => setEditingProduct({...editingProduct, unit: e.target.value})} placeholder="單位(罐/袋)" className="w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500 text-center" /></div>
+                           <input type="number" value={editingProduct.price} onChange={e => setEditingProduct({...editingProduct, price: e.target.value})} placeholder="售價" className="flex-1 w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none text-amber-600 font-bold focus:border-amber-500" />
+                           <input type="number" value={editingProduct.cost || ''} onChange={e => setEditingProduct({...editingProduct, cost: e.target.value})} placeholder="成本" className="flex-1 w-full bg-stone-200 border border-stone-300 rounded p-2 text-sm outline-none text-purple-600 font-bold focus:border-purple-500" title="僅管理員可見之成本" />
+                        </div>
+                        <input type="text" value={editingProduct.desc} onChange={e => setEditingProduct({...editingProduct, desc: e.target.value})} placeholder="簡介 (顯示於列表)" className="w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500" />
+                      </div>
+                    ) : (
+                      <div>
+                        {editingProduct.isPromo && <span className="inline-block bg-rose-100 text-rose-600 text-[10px] font-bold px-2 py-0.5 rounded-md mb-2 mr-2 border border-rose-200">享任選優惠活動</span>}
+                        {editingProduct.isAddon && <span className="inline-block bg-purple-100 text-purple-600 text-[10px] font-bold px-2 py-0.5 rounded-md mb-2 border border-purple-200">可做為加購商品</span>}
+                        <div className="text-3xl font-bold text-amber-600 mb-1">${editingProduct.price} {editingProduct.unit && <span className="text-sm font-normal text-stone-500">/{editingProduct.unit}</span>}</div>
+                        <h1 className="text-2xl font-bold text-stone-800">{editingProduct.name}</h1>
+                        <p className="text-sm text-stone-500 mt-1">{editingProduct.desc}</p>
+                      </div>
+                    )}
+                    <hr className="border-stone-200" />
+                    {(isAdminMode || editingProduct.intro) && <div className="space-y-1.5"><h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 bg-amber-500 rounded-full"></span>產品介紹</h3>{isAdminMode && !adminOrderingFor ? <textarea rows="3" value={editingProduct.intro} onChange={e => setEditingProduct({...editingProduct, intro: e.target.value})} className="w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500"></textarea> : <p className="text-sm text-stone-600 whitespace-pre-wrap">{editingProduct.intro}</p>}</div>}
+                    {(isAdminMode || editingProduct.ingredients) && <div className="space-y-1.5"><h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 bg-emerald-500 rounded-full"></span>產品成分</h3>{isAdminMode && !adminOrderingFor ? <textarea rows="2" value={editingProduct.ingredients} onChange={e => setEditingProduct({...editingProduct, ingredients: e.target.value})} className="w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500"></textarea> : <p className="text-sm text-stone-600 whitespace-pre-wrap">{editingProduct.ingredients}</p>}</div>}
+                    {(isAdminMode || editingProduct.weight) && <div className="space-y-1.5"><h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 bg-blue-500 rounded-full"></span>產品重量</h3>{isAdminMode && !adminOrderingFor ? <input type="text" value={editingProduct.weight} onChange={e => setEditingProduct({...editingProduct, weight: e.target.value})} className="w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500" /> : <p className="text-sm text-stone-600">{editingProduct.weight}</p>}</div>}
+                    {(isAdminMode || editingProduct.notices) && <div className="space-y-1.5"><h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 bg-rose-500 rounded-full"></span>注意事項</h3>{isAdminMode && !adminOrderingFor ? <textarea rows="50" value={editingProduct.notices} onChange={e => setEditingProduct({...editingProduct, notices: e.target.value})} className="w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500"></textarea> : <div className="bg-rose-50 text-rose-700 p-3 rounded-xl text-sm whitespace-pre-wrap">{editingProduct.notices}</div>}</div>}
+                  </div>
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-stone-200">
+                  {isAdminMode && !adminOrderingFor ? (
+                    <div className="flex gap-3">
+                      {!editingProduct.isNew && <button onClick={handleDeleteProduct} className="bg-red-100 text-red-600 px-4 rounded-xl hover:bg-red-200 transition-colors"><Trash2 size={20} /></button>}
+                      <button onClick={saveProductDetail} className="flex-1 bg-stone-800 text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform">儲存商品</button>
                     </div>
                   ) : (
-                    <div className="text-sm text-stone-600 space-y-3">
-                      <p className="flex justify-between"><span className="text-stone-400">姓名</span> <span className="font-bold">{customerInfo.name} ({customerInfo.gender})</span></p>
-                      <p className="flex justify-between"><span className="text-stone-400">電話</span> <span>{customerInfo.phone}</span></p>
-                      <p className="flex justify-between"><span className="text-stone-400">Line</span> <span>{customerInfo.lineId || '-'}</span></p>
-                      <p><span className="text-stone-400 block mb-1">預設地址</span> <span className="block bg-stone-50 p-2 rounded">{customerInfo.address || '未設定'}</span></p>
+                    <div className="flex gap-4">
+                      <div className="flex items-center gap-4 bg-stone-50 rounded-xl px-4 py-3 border border-stone-200 flex-1 justify-center"><button onClick={() => updateCart(editingProduct.id, -1)} className="p-1 text-stone-500"><Minus size={18} /></button><span className="w-6 text-center text-lg font-bold">{cart[editingProduct.id] || 0}</span><button onClick={() => updateCart(editingProduct.id, 1)} className="p-1 text-amber-600"><Plus size={18} /></button></div>
+                      <button onClick={() => setEditingProduct(null)} className="flex-[1.5] bg-amber-500 text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform">確認返回</button>
                     </div>
                   )}
                 </div>
               </div>
-
-              <div className="md:w-2/3">
-                <h3 className="font-bold text-stone-700 mb-3 border-b border-stone-200 pb-2">我的訂單紀錄</h3>
-                {myOrders.length === 0 ? (
-                  <p className="text-center text-stone-400 text-sm py-10 bg-white rounded-2xl border border-stone-200 border-dashed">尚無訂單紀錄</p>
-                ) : (
-                  <div className="space-y-4">
-                    {myOrders.map(order => {
-                      const statusInfo = STATUS_MAP[order.status] || STATUS_MAP['pending'];
-                      const isCancellable = ['pending', 'confirming', 'confirmed'].includes(order.status);
-                      return (
-                        <div key={order.id} className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm text-sm relative">
-                          {['pending', 'confirming'].includes(order.status) && <div className="absolute top-0 left-0 w-full h-1 bg-[#06C755] rounded-t-2xl"></div>}
-                          <div className="flex justify-between items-start mb-3 border-b border-stone-100 pb-3 mt-1">
-                            <div>
-                              <span className="font-black text-stone-800 text-lg block tracking-wide">{order.id}</span>
-                              <span className="text-[10px] text-stone-400">{order.createdAt?.toDate().toLocaleString()}</span>
-                              {order.isMerged && <span className="text-[10px] bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded mt-1 inline-block">合併訂單</span>}
-                              {order.createdByAdmin && <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded mt-1 inline-block ml-1">管理員代建</span>}
-                            </div>
-                            <div className="text-right">
-                              <span className={`px-2.5 py-1 rounded-md text-xs font-bold ${statusInfo.color}`}>{statusInfo.label}</span>
-                              {order.status === 'shipped' && <div className="mt-2 text-xs font-bold text-stone-600 bg-stone-100 px-2 py-1 rounded">物流單號: {order.trackingNumber}</div>}
-                            </div>
-                          </div>
-                          <div className="text-stone-600 text-xs space-y-1.5 mb-4 bg-stone-50 p-3 rounded-lg">
-                            {order.items.map((item, i) => (
-                              <div key={i} className="flex justify-between items-center">
-                                <span>{item.name} {item.weight && <span className="text-[10px] text-stone-500 font-normal ml-1">({item.weight})</span>} {item.isReward && <span className="text-[10px] bg-purple-100 text-purple-600 px-1 rounded">兌換</span>} {item.isAddon && !item.isReward && <span className="text-[10px] bg-purple-100 text-purple-600 px-1 rounded">加購</span>} <span className="text-stone-400 text-[10px]">(${item.price})</span></span>
-                                <span className="font-bold">x{item.qty} {item.unit || ''}</span>
-                              </div>
-                            ))}
-                            {order.orderNote && <div className="mt-2 pt-2 border-t border-stone-200 text-amber-700"><strong>備註：</strong>{order.orderNote}</div>}
-                          </div>
-
-                          {['pending', 'confirming'].includes(order.status) && (
-                            <div className="mb-4 p-4 bg-[#06C755]/10 border border-[#06C755]/30 rounded-xl flex flex-col items-center text-center space-y-3">
-                              <p className="text-xs font-bold text-[#06C755] flex items-center gap-1"><MessageCircle size={16}/> 訂單已送出，請點擊下方加 LINE 通知我們！</p>
-                              <div className="flex w-full gap-2">
-                                <button onClick={() => handleCopyOrder(order)} className="flex-1 flex items-center justify-center gap-1 bg-stone-800 text-white text-xs font-bold py-2.5 rounded-lg shadow-sm hover:bg-stone-700 transition-colors active:scale-95">{copiedOrderId === order.id ? <CheckCircle size={14} className="text-emerald-400"/> : <Copy size={14}/>}{copiedOrderId === order.id ? '已複製！' : '1. 複製明細'}</button>
-                                {contactData.lineLink ? <a href={contactData.lineLink} target="_blank" rel="noreferrer" className="flex-[1.5] bg-[#06C755] hover:bg-[#05b34c] text-white text-xs font-bold rounded-lg py-2.5 flex items-center justify-center gap-1 shadow-sm transition-all active:scale-95"><MessageCircle size={16} /> 2. 前往 LINE 傳送</a> : <button disabled className="flex-[1.5] bg-stone-300 text-white text-xs font-bold rounded-lg py-2.5 flex items-center justify-center gap-1 shadow-sm cursor-not-allowed">LINE 尚未設定</button>}
-                              </div>
-                            </div>
-                          )}
-
-                          {order.status === 'pending' && (
-                            <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl space-y-3">
-                              <div><p className="text-xs font-bold text-rose-800 mb-1 flex items-center gap-1"><CreditCard size={14}/> 匯款帳號資訊：</p><p className="text-xs text-rose-700 whitespace-pre-wrap font-medium bg-white/60 p-2 rounded border border-rose-100">{contactData.bankAccount || '店家尚未設定匯款帳號，請加 LINE 詢問'}</p></div>
-                              <div><p className="text-xs font-bold text-rose-700 mb-2">⚠️ 請匯款後加 LINE 通知，並輸入帳戶後五碼：</p><div className="flex gap-2"><input type="text" maxLength="5" placeholder="輸入後五碼" value={bankCodeInputs[order.id] || ''} onChange={e => setBankCodeInputs({...bankCodeInputs, [order.id]: e.target.value})} className="flex-1 bg-white border border-rose-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-rose-400 font-bold tracking-widest text-center" /><button onClick={() => submitBankCode(order.id)} className="bg-rose-500 text-white font-bold px-4 rounded-lg shadow-sm active:scale-95 transition-transform">送出</button></div></div>
-                            </div>
-                          )}
-                          {order.status === 'confirming' && <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs font-bold text-amber-700 text-center">已送出後五碼 ({order.bankAccountLast5})，等待對帳確認中...</div>}
-                          {order.status === 'confirmed' && <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs font-bold text-blue-700 text-center">💡 為保持良好的賞味，皆 7～15 天出貨，感謝您的耐心等候！</div>}
-
-                          <div className="flex justify-between items-end mt-4 pt-3 border-t border-stone-100">
-                            {isCancellable ? <button onClick={() => requestCancelOrder(order.id)} className="text-xs text-stone-400 hover:text-rose-500 font-bold transition-colors underline mb-1">申請取消訂單</button> : <div></div>}
-                            <div className="text-right text-xs text-stone-500 space-y-1">
-                              <div>商品小計：${order.totals.itemsBaseTotal}</div>
-                              {order.totals.discountAmount > 0 && <div className="text-rose-500">活動折抵：-${order.totals.discountAmount}</div>}
-                              {order.adminDiscount > 0 && <div className="text-amber-500">特別折扣：-${order.adminDiscount}</div>}
-                              <div>運費：${order.totals.shippingFee}</div>
-                              <div className="font-black text-stone-800 text-xl pt-1">總計：${order.totals.finalPrice}</div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
             </div>
-          </div>
-        </div>
-      )}
+          )}
 
-      {/* 管理員訂單 */}
-      {showAdminOrders && isAdminMode && (
-        <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4 md:px-10 py-6">
-          <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-6xl h-full flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
-            <button onClick={() => setShowAdminOrders(false)} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full"><X size={24} /></button>
-            <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 border-b border-stone-200 pb-3 gap-4">
-              <h2 className="text-xl md:text-2xl font-bold text-stone-800 flex items-center gap-2"><ClipboardList size={24} className="text-amber-600"/> 訂單管理中心</h2>
-              <button onClick={handlePrintConfirmedOrders} className="flex items-center justify-center gap-2 bg-stone-800 text-white text-sm font-bold px-4 py-2.5 rounded-xl shadow-md hover:bg-stone-700 transition-colors active:scale-95">
-                <Printer size={18} /> 列印出貨單
+          {/* 購物車懸浮按鈕 */}
+          {cartData.totalQty > 0 && (!isAdminMode || adminOrderingFor) && !editingProduct && (
+            <div className="fixed bottom-0 left-0 right-0 max-w-md md:max-w-4xl lg:max-w-6xl mx-auto p-4 bg-gradient-to-t from-white via-white to-transparent pointer-events-none z-10">
+              <button onClick={() => setIsCartOpen(true)} className="w-full bg-stone-800 text-white rounded-2xl p-4 flex items-center justify-between shadow-xl pointer-events-auto active:scale-95 transition-transform">
+                <div className="flex items-center gap-3"><div className="relative"><ShoppingCart size={24} /><span className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">{cartData.totalQty}</span></div><span className="font-medium">查看購物車</span></div>
+                <div className="text-lg font-bold">${cartData.currentTotal}</div>
               </button>
             </div>
+          )}
 
-            <div className="flex flex-wrap gap-3 mb-4 bg-stone-50 p-4 rounded-xl border border-stone-200">
-              <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-stone-200 flex-1 min-w-[200px]"><SearchIcon size={16} className="text-stone-400" /><input type="text" placeholder="搜尋訂單編號..." value={orderSearchId} onChange={e => setOrderSearchId(e.target.value)} className="w-full text-sm outline-none font-bold tracking-wider" /></div>
-              <select value={orderStatusFilter} onChange={e => setOrderStatusFilter(e.target.value)} className="bg-white px-3 py-2 rounded-lg border border-stone-200 text-sm font-bold text-stone-600 outline-none flex-1 min-w-[120px] cursor-pointer"><option value="all">所有狀態</option>{Object.entries(STATUS_MAP).map(([key, info]) => <option key={key} value={key}>{info.label}</option>)}</select>
-              <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-stone-200 flex-1 min-w-[250px]"><input type="date" value={orderStartDate} onChange={e => setOrderStartDate(e.target.value)} className="text-sm outline-none text-stone-600 cursor-pointer" /><span className="text-stone-400">-</span><input type="date" value={orderEndDate} onChange={e => setOrderEndDate(e.target.value)} className="text-sm outline-none text-stone-600 cursor-pointer" /></div>
-              <button onClick={downloadOrdersCSV} className="flex items-center justify-center gap-2 bg-emerald-100 text-emerald-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-emerald-200 transition-colors shadow-sm active:scale-95 min-w-[120px]"><DownloadIcon size={16} /> 下載明細</button>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto">
-              {filteredAdminOrders.length === 0 ? <p className="text-center text-stone-400 mt-10">找不到符合條件的訂單</p> : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredAdminOrders.map(order => {
-                    const isCancelReq = order.status === 'cancel_requested';
-                    return (
-                      <div key={order.id} className={`bg-white p-5 rounded-2xl border shadow-sm flex flex-col transition-colors ${isCancelReq ? 'border-orange-400 ring-2 ring-orange-100' : 'border-stone-200'}`}>
-                        <div className="flex justify-between items-start mb-3 border-b border-stone-100 pb-3 relative">
-                          <div>
-                            <span className="font-black text-stone-800 text-lg block tracking-wide">{order.id}</span>
-                            <span className="text-[10px] text-stone-400">{order.createdAt?.toDate().toLocaleString()}</span>
-                            {order.isMerged && <span className="text-[10px] bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded mt-1 inline-block">合併訂單</span>}
-                            {order.createdByAdmin && <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded mt-1 inline-block ml-1">代建單</span>}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <select value={order.status || 'pending'} onChange={(e) => updateOrderStatus(order, e.target.value)} className={`text-xs font-bold outline-none rounded p-1.5 cursor-pointer shadow-sm border border-stone-200 ${STATUS_MAP[order.status]?.color || 'bg-stone-100 text-stone-700'}`}>
-                              {Object.entries(STATUS_MAP).map(([key, info]) => <option key={key} value={key}>{info.label}</option>)}
-                            </select>
-                            <button onClick={() => deleteOrder(order.id)} className="text-stone-300 hover:text-red-500 transition-colors p-1"><Trash2 size={16} /></button>
-                          </div>
+          {/* 購物車/結帳 */}
+          {isCartOpen && (
+            <div className="fixed inset-0 z-50 flex justify-center items-end bg-black/50 backdrop-blur-sm sm:items-center">
+              <div className="w-full max-w-md md:max-w-4xl bg-[#Fdfbf7] rounded-t-3xl sm:rounded-3xl h-[85vh] sm:h-auto sm:max-h-[85vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-full duration-300">
+                <div className="flex items-center justify-between p-5 border-b border-stone-200">
+                  <h2 className="text-xl font-bold text-stone-800 flex items-center gap-2"><ShoppingCart size={20} /> 訂單結帳</h2>
+                  <button onClick={() => setIsCartOpen(false)} className="w-8 h-8 flex items-center justify-center bg-stone-100 rounded-full text-stone-500"><X size={20} /></button>
+                </div>
+                
+                <div className="flex-1 overflow-y-auto p-5 md:flex md:gap-8">
+                  <div className="md:w-1/2">
+                    <h3 className="hidden md:block font-bold text-stone-800 mb-4 border-b border-stone-200 pb-2">已選商品</h3>
+                    {cartData.items.map((item, idx) => (
+                      <div key={item.id + idx} className="flex items-center justify-between py-3 border-b border-stone-100 last:border-0">
+                        <div className="flex-1"><h4 className="font-bold text-stone-800 flex items-center gap-1">{item.name}{item.isPromo && <span className="text-[9px] bg-rose-100 text-rose-600 px-1 py-0.5 rounded">活動</span>}{item.isReward && <span className="text-[9px] bg-purple-100 text-purple-600 px-1 py-0.5 rounded">兌換</span>}{item.isAddon && !item.isReward && <span className="text-[9px] bg-purple-100 text-purple-600 px-1 py-0.5 rounded">加購</span>}</h4><p className="text-xs text-stone-500">${item.price} {item.unit ? `/${item.unit}` : ''}</p></div>
+                        <div className="flex items-center gap-4">
+                          {!item.isReward ? (
+                             <div className="flex items-center gap-3 bg-white rounded-full px-2 py-1 border border-stone-200"><button onClick={() => updateCart(item.id, -1)} className="p-1 text-stone-500"><Minus size={14} /></button><span className="w-4 text-center text-sm font-bold">{item.qty}</span><button onClick={() => updateCart(item.id, 1)} className="p-1 text-stone-800"><Plus size={14} /></button></div>
+                          ) : (
+                             <span className="text-sm font-bold text-purple-600">x 1</span>
+                          )}
+                          <div className="w-12 text-right font-bold text-stone-700">${item.price * item.qty}</div>
                         </div>
-                        
-                        {order.status === 'confirming' && <div className="mb-3 bg-amber-50 text-amber-700 text-xs font-bold p-2 rounded-lg text-center border border-amber-200">💰 客填後五碼：<span className="text-base tracking-widest">{order.bankAccountLast5}</span></div>}
-                        {isCancelReq && <div className="mb-3 bg-orange-50 text-orange-700 text-xs font-bold p-2 rounded-lg text-center border border-orange-200 animate-pulse">⚠️ 買家已送出取消申請，請審核！</div>}
-                        {order.status === 'shipped' && <div className="mb-3 flex gap-2"><input type="text" placeholder="輸入出貨單號" value={trackingInputs[order.id] || ''} onChange={e => setTrackingInputs({...trackingInputs, [order.id]: e.target.value})} className="flex-1 bg-stone-50 border border-stone-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-purple-400 font-bold" /><button onClick={() => saveTrackingNumber(order.id)} className="bg-purple-100 text-purple-700 text-xs font-bold px-3 rounded-lg hover:bg-purple-200 transition-colors">儲存</button></div>}
-                        
-                        <div className="text-sm text-stone-600 space-y-1 mb-3 bg-stone-50 p-3 rounded-lg">
-                          <p><span className="font-bold text-stone-500">姓名：</span>{order.customerInfo.name} ({order.customerInfo.gender})</p>
-                          <p><span className="font-bold text-stone-500">電話：</span>{order.customerInfo.phone}</p>
-                          <p><span className="font-bold text-stone-500">Line：</span>{order.customerInfo.lineId || '-'}</p>
-                          <p className="truncate" title={order.customerInfo.address}><span className="font-bold text-stone-500">地址：</span>{order.customerInfo.address}</p>
-                        </div>
-
-                        <div className="flex-1 text-xs text-stone-600 space-y-1 mb-3">
-                          <p className="font-bold text-stone-500 mb-1 border-b border-stone-200 pb-1">購買明細：</p>
-                          {order.items.map((item, i) => (
-                            <div key={i} className="flex justify-between items-center mb-1">
-                              <span>{item.name} {item.weight && <span className="text-[10px] text-stone-500 font-normal ml-1">({item.weight})</span>} {item.isReward && <span className="text-[10px] bg-purple-100 text-purple-600 px-1 rounded">兌換</span>} {item.isAddon && !item.isReward && <span className="text-[10px] bg-purple-100 text-purple-600 px-1 rounded">加購</span>} <span className="text-stone-400 text-[10px]">(${item.price})</span></span>
-                              <span className="font-bold">x{item.qty} {item.unit || ''}</span>
+                      </div>
+                    ))}
+                    
+                    {/* 加購專區 */}
+                    {addonProducts.length > 0 && (
+                      <div className="mt-6 pt-4 border-t border-stone-100">
+                        <h3 className="font-bold text-stone-800 mb-3 flex items-center gap-2"><Plus size={18} className="text-amber-500"/> 加購專區</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {addonProducts.map(addon => (
+                            <div key={addon.id} className="bg-white border border-stone-200 rounded-xl p-2.5 flex gap-3 shadow-sm relative overflow-hidden">
+                              <img src={addon.image || 'https://via.placeholder.com/150?text=Empty'} className="w-14 h-14 object-cover rounded-lg shrink-0" />
+                              <div className="flex-1 flex flex-col justify-between py-0.5">
+                                <h4 className="font-bold text-stone-800 text-xs truncate" title={addon.name}>{addon.name}</h4>
+                                <div className="flex justify-between items-end mt-1">
+                                  <span className="text-amber-600 font-bold text-sm">${addon.price} {addon.unit && <span className="text-[10px] text-stone-400">/{addon.unit}</span>}</span>
+                                  {cart[addon.id] ? (
+                                    <div className="flex items-center gap-2 bg-stone-50 rounded-full px-1.5 py-0.5 border border-stone-200">
+                                      <button onClick={() => updateCart(addon.id, -1)} className="text-stone-500 p-0.5"><Minus size={10} /></button>
+                                      <span className="text-xs font-bold w-3 text-center">{cart[addon.id]}</span>
+                                      <button onClick={() => updateCart(addon.id, 1)} className="text-amber-600 p-0.5"><Plus size={10} /></button>
+                                    </div>
+                                  ) : (
+                                    <button onClick={() => updateCart(addon.id, 1)} className="text-[10px] bg-stone-800 text-white px-3 py-1.5 rounded-full font-bold hover:bg-stone-700 shadow-sm active:scale-95 transition-transform">加入</button>
+                                  )}
+                                </div>
+                              </div>
                             </div>
                           ))}
                         </div>
+                      </div>
+                    )}
+                    
+                    <div className="mt-6 pt-4 border-t border-stone-100">
+                      <h3 className="font-bold text-stone-800 mb-3">取貨方式</h3>
+                      <div className="flex gap-4 mb-4">
+                        <label className={`flex-1 border rounded-xl p-3 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors ${deliveryMethod==='delivery' ? 'bg-amber-50 border-amber-500 text-amber-700' : 'bg-white border-stone-200 text-stone-500'}`}><input type="radio" name="delivery" value="delivery" checked={deliveryMethod === 'delivery'} onChange={(e) => setDeliveryMethod(e.target.value)} className="hidden" /><Truck size={20} /><span className="text-sm font-bold">宅配</span><span className="text-[10px] text-center whitespace-pre-line">{cartData.freeShippingQty >= storeConfig.freeShippingThreshold ? `已滿 ${storeConfig.freeShippingThreshold} 件免運` : `免運進度 ${cartData.freeShippingQty}/${storeConfig.freeShippingThreshold} 件\n(運費 $${storeConfig.shippingFee})`}</span></label>
+                        <label className={`flex-1 border rounded-xl p-3 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors ${deliveryMethod==='pickup' ? 'bg-amber-50 border-amber-500 text-amber-700' : 'bg-white border-stone-200 text-stone-500'}`}><input type="radio" name="delivery" value="pickup" checked={deliveryMethod === 'pickup'} onChange={(e) => setDeliveryMethod(e.target.value)} className="hidden" /><Store size={20} /><span className="text-sm font-bold">自取</span><span className="text-[10px]">免運費</span></label>
+                      </div>
+                    </div>
 
-                        <div className="mb-3 border-t border-stone-100 pt-3 flex gap-2 items-center">
-                           <p className="font-bold text-stone-500 text-xs shrink-0">手動折扣：</p>
-                           <input type="number" value={adminDiscountInputs[order.id] !== undefined ? adminDiscountInputs[order.id] : (order.adminDiscount || 0)} onChange={e => setAdminDiscountInputs({...adminDiscountInputs, [order.id]: e.target.value})} className="flex-1 bg-white border border-stone-200 rounded p-1 text-xs outline-none focus:border-amber-400 font-bold text-red-500" />
-                           <button onClick={() => saveAdminDiscount(order)} className="bg-stone-200 text-stone-600 text-xs font-bold px-2 py-1 rounded hover:bg-stone-300 transition-colors">儲存</button>
-                        </div>
+                    <div className="mt-4 bg-stone-50 p-4 rounded-2xl space-y-2">
+                      <div className="flex justify-between text-sm text-stone-600"><span>商品小計</span><span>${cartData.itemsBaseTotal}</span></div>
+                      {cartData.discountAmount > 0 && <div className="flex justify-between text-sm text-rose-500 font-bold"><span>活動折抵</span><span>-${cartData.discountAmount}</span></div>}
+                      <div className="flex justify-between text-sm text-stone-600"><span>運費</span><span className={cartData.shippingFee === 0 && deliveryMethod === 'delivery' ? 'text-emerald-500 font-bold' : ''}>{cartData.shippingFee === 0 ? (deliveryMethod==='pickup' ? '$0' : '免運費') : `$${cartData.shippingFee}`}</span></div>
+                      <div className="pt-2 mt-2 border-t border-stone-200 flex justify-between items-center"><span className="font-bold text-stone-800">總計金額</span><span className="text-2xl font-black text-stone-800">${cartData.finalPrice}</span></div>
+                    </div>
+                    {cartData.rewardEligibleAmount >= 1000 && (
+                      <div className="mt-3 bg-purple-50 border border-purple-100 text-purple-700 text-xs p-3 rounded-xl flex items-start gap-2 shadow-sm">
+                        <Gift size={16} className="shrink-0 mt-0.5" />
+                        <span><strong className="font-bold">滿 $1000 集點活動：</strong>此訂單含可集點金額 <strong>${cartData.rewardEligibleAmount}</strong>，點數將於「匯款完成確認訂單」後自動發放 <strong>{Math.floor(cartData.rewardEligibleAmount / 1000)}</strong> 點！</span>
+                      </div>
+                    )}
+                  </div>
 
-                        <div className="mb-3 border-t border-stone-100 pt-3">
-                          <p className="font-bold text-stone-500 mb-1 text-xs flex justify-between">訂單備註： <span className="text-[9px] font-normal text-stone-400">可查看與編輯</span></p>
-                          <div className="flex gap-2">
-                            <textarea placeholder="買家未填寫或輸入您的備註" value={adminNoteInputs[order.id] !== undefined ? adminNoteInputs[order.id] : (order.orderNote || '')} onChange={e => setAdminNoteInputs({...adminNoteInputs, [order.id]: e.target.value})} className="flex-1 bg-amber-50/50 border border-amber-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-amber-400 min-h-[40px] text-amber-900"/>
-                            <button onClick={() => saveOrderNote(order.id)} className="bg-amber-100 text-amber-700 text-xs font-bold px-3 rounded-lg hover:bg-amber-200 transition-colors shrink-0">儲存<br/>備註</button>
+                  <div className="md:w-1/2 md:border-l border-stone-200 md:pl-8 flex flex-col mt-6 md:mt-0">
+                    {!currentUser && !adminOrderingFor ? (
+                      <div className="flex-1 flex flex-col items-center justify-center bg-amber-50 border border-amber-200 p-6 rounded-2xl text-center h-full">
+                        <UserIcon size={48} className="text-amber-500 mb-4 opacity-50" />
+                        <h3 className="text-lg font-bold text-amber-800 mb-2">會員專屬服務</h3>
+                        <p className="text-sm text-amber-700 mb-6 leading-relaxed">為了給您更好的服務與後續訂單追蹤，木子家MUZI MAISON目前<span className="font-bold text-rose-600">僅開放會員訂購</span>喔！</p>
+                        <button onClick={() => { setIsCartOpen(false); setLoginMode('customer'); setShowLoginModal(true); }} className="w-full bg-amber-500 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform flex justify-center items-center gap-2">
+                          <Lock size={18} /> 前往登入 / 免費註冊
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col justify-between h-full">
+                        <div className="space-y-4">
+                          <h3 className="font-bold text-stone-800 border-b border-stone-200 pb-2 flex justify-between items-center">
+                            聯絡資訊
+                            <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-bold">{adminOrderingFor ? '管理員代建單' : '會員已登入'}</span>
+                          </h3>
+
+                          {userProfile?.points >= 20 && !adminOrderingFor && (
+                            <div className="bg-purple-50 border border-purple-200 p-4 rounded-xl">
+                               <p className="text-sm font-bold text-purple-800 flex items-center gap-1 mb-2"><Gift size={18}/> 集點兌換 (您有 {userProfile.points} 點)</p>
+                               <label className="flex items-center gap-2 text-sm text-purple-700 cursor-pointer mb-2">
+                                  <input type="checkbox" checked={usedRewardPoints} onChange={e => {setUsedRewardPoints(e.target.value); if(!e.target.checked) setSelectedRewardId('');}} className="accent-purple-600 w-4 h-4"/>
+                                  我要使用 20 點兌換糖果軟糕系列
+                               </label>
+                               {usedRewardPoints && (
+                                  <select value={selectedRewardId} onChange={e => setSelectedRewardId(e.target.value)} className="w-full bg-white border border-purple-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-500 font-bold text-purple-800">
+                                     <option value="">-- 請選擇兌換商品 --</option>
+                                     {candyProducts.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                  </select>
+                               )}
+                            </div>
+                          )}
+
+                          {adminOrderingFor && adminOrderingFor.points >= 20 && (
+                            <div className="bg-purple-50 border border-purple-200 p-4 rounded-xl">
+                               <p className="text-sm font-bold text-purple-800 flex items-center gap-1 mb-2"><Gift size={18}/> 代客操作兌換 (客戶有 {adminOrderingFor.points} 點)</p>
+                               <label className="flex items-center gap-2 text-sm text-purple-700 cursor-pointer mb-2">
+                                  <input type="checkbox" checked={usedRewardPoints} onChange={e => {setUsedRewardPoints(e.target.value); if(!e.target.checked) setSelectedRewardId('');}} className="accent-purple-600 w-4 h-4"/>
+                                  替他扣除 20 點兌換糖果軟糕系列
+                               </label>
+                               {usedRewardPoints && (
+                                  <select value={selectedRewardId} onChange={e => setSelectedRewardId(e.target.value)} className="w-full bg-white border border-purple-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-500 font-bold text-purple-800">
+                                     <option value="">-- 請選擇兌換商品 --</option>
+                                     {candyProducts.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                  </select>
+                               )}
+                            </div>
+                          )}
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <input type="text" placeholder="姓名" value={customerInfo.name} onChange={e => setCustomerInfo({...customerInfo, name: e.target.value})} className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500 text-sm"/>
+                            <input type="tel" placeholder="聯絡電話" value={customerInfo.phone} onChange={e => setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500 text-sm"/>
                           </div>
-                        </div>
-                        
-                        <div className="mt-auto border-t border-stone-100 pt-3">
-                          <div className="bg-stone-50 p-2 rounded-lg text-right text-xs text-stone-500 mb-2 space-y-1">
-                             <div className="flex justify-between"><span>商品小計</span><span>${order.totals.itemsBaseTotal}</span></div>
-                             {order.totals.discountAmount > 0 && <div className="flex justify-between text-rose-500"><span>活動折抵</span><span>-${order.totals.discountAmount}</span></div>}
-                             <div className="flex justify-between"><span>運費</span><span>${order.totals.shippingFee}</span></div>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-xs text-stone-500 font-bold">總金額</span>
-                            <span className="font-black text-amber-600 text-xl">${order.totals.finalPrice}</span>
-                          </div>
+                          <input type="text" placeholder="Line ID (必填，方便聯繫)" value={customerInfo.lineId} onChange={e => setCustomerInfo({...customerInfo, lineId: e.target.value})} className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500 text-sm"/>
+                          <input type="text" placeholder="收件/聯絡地址 (必填)" value={customerInfo.address} onChange={e => setCustomerInfo({...customerInfo, address: e.target.value})} className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500 text-sm"/>
+                          <textarea placeholder="訂單備註 (選填，例如：請避開假日送件)" value={orderNote} onChange={e => setOrderNote(e.target.value)} rows="2" className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500 text-sm mt-2"></textarea>
+
+                          {!adminOrderingFor && (
+                             <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-xl mt-4">
+                               <p className="text-sm font-bold text-emerald-800 flex items-center gap-1 mb-1"><CreditCard size={16}/> 匯款資訊 (若已匯款可直接填寫)</p>
+                               <p className="text-xs text-emerald-700 whitespace-pre-wrap font-medium mb-3">{contactData.bankAccount || '店家尚未設定匯款帳號，請加 LINE 詢問'}</p>
+                               <input type="text" maxLength="5" placeholder="輸入帳戶後五碼 (選填)" value={checkoutBankCode} onChange={e => setCheckoutBankCode(e.target.value.replace(/\D/g, ''))} className="w-full bg-white border border-emerald-200 rounded-xl px-3 py-2.5 outline-none focus:border-emerald-500 text-sm tracking-widest font-bold" />
+                             </div>
+                          )}
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 管理員客戶管理 */}
-      {showAdminCustomers && isAdminMode && (
-        <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4 md:px-10 py-6">
-          <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-6xl h-full flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
-            <button onClick={() => {setShowAdminCustomers(false); setSelectedCustomer(null); setIsEditingAdminCustomer(false); setIsMergeMode(false); setMergeSelection([]); setIsNewCustomer(false); setShowDeletedCustomers(false);}} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full"><X size={24} /></button>
-            <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 border-b border-stone-200 pb-3 gap-4">
-              <h2 className="text-xl md:text-2xl font-bold text-stone-800 flex items-center gap-2"><UsersIcon size={24} className="text-blue-600"/> 客戶管理中心</h2>
-              {!selectedCustomer && (
-                <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-                  <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-stone-200 flex-1 min-w-[200px]">
-                    <SearchIcon size={16} className="text-stone-400" />
-                    <input type="text" placeholder="搜尋客戶姓名或電話..." value={customerSearchName} onChange={e => setCustomerSearchName(e.target.value)} className="w-full text-sm outline-none font-bold" />
+                    )}
                   </div>
-                  <button onClick={() => setShowDeletedCustomers(!showDeletedCustomers)} className={`text-sm font-bold px-3 py-2 rounded-lg shadow-sm transition-colors border ${showDeletedCustomers ? 'bg-rose-100 text-rose-700 border-rose-200 hover:bg-rose-200' : 'bg-stone-100 text-stone-600 border-stone-200 hover:bg-stone-200'}`}>
-                    {showDeletedCustomers ? '返回正常名單' : '查看停用名單'}
-                  </button>
-                  {!showDeletedCustomers && <button onClick={handleAddCustomerBtn} className="bg-blue-600 text-white text-sm font-bold px-3 py-2 rounded-lg shadow-sm hover:bg-blue-700 transition-colors flex items-center gap-1 whitespace-nowrap"><Plus size={16}/> 新增客戶</button>}
                 </div>
-              )}
+                
+                <div className="p-5 border-t border-stone-200 bg-white">
+                  {currentUser || adminOrderingFor ? (
+                    <>
+                      <button onClick={handleCheckout} className="w-full bg-[#06C755] text-white font-bold rounded-2xl p-4 flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform"><MessageCircle size={20} />{adminOrderingFor ? '完成代建訂單' : '送出訂單並前往確認'}</button>
+                      <p className="text-center text-[10px] text-stone-400 mt-3 font-medium">※ 為保持良好賞味，接單後7～15天出貨，敬請見諒</p>
+                    </>
+                  ) : (
+                    <button onClick={() => { setIsCartOpen(false); setLoginMode('customer'); setShowLoginModal(true); }} className="w-full bg-stone-800 text-white font-bold rounded-2xl p-4 flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform">
+                      <UserIcon size={20} /> 點此登入會員結帳
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
+          )}
 
-            <div className="flex-1 overflow-y-auto">
-              {!selectedCustomer ? (
-                filteredUsers.length === 0 ? <p className="text-center text-stone-400 mt-10">找不到客戶資料</p> : (
-                  <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {filteredUsers.map(user => (
-                      <div key={user.id} onClick={() => setSelectedCustomer({...user})} className={`bg-white p-5 rounded-2xl border shadow-sm cursor-pointer hover:shadow-md transition-all flex flex-col items-center text-center relative overflow-hidden ${user.role === 'deleted' ? 'border-rose-200 opacity-80' : 'border-stone-200 hover:border-blue-400'}`}>
-                        <div className="absolute top-0 right-0 bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-1 rounded-bl-lg">點數: {user.points||0}</div>
-                        <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-3 mt-2 ${user.role === 'deleted' ? 'bg-rose-100 text-rose-600' : 'bg-blue-100 text-blue-600'}`}><UserIcon size={32} /></div>
-                        <h3 className="font-black text-stone-800 text-lg">{user.name} <span className="text-sm font-normal text-stone-500">({user.gender||'-'})</span></h3>
-                        {user.role === 'deleted' && <div className="bg-rose-100 text-rose-600 text-[10px] font-bold px-2 py-0.5 rounded-md mt-1">已停用</div>}
-                        <p className="text-sm text-stone-500 font-bold mt-1">{user.phone}</p>
-                        <span className="mt-3 text-[10px] bg-stone-100 text-stone-500 px-3 py-1 rounded-full font-bold">點擊查看詳細資料與訂單</span>
-                      </div>
-                    ))}
-                  </div>
-                )
-              ) : (
-                <div className="flex flex-col md:flex-row gap-6 h-full">
-                  <div className="md:w-1/3">
-                    <div className="bg-white p-6 rounded-2xl border border-blue-200 shadow-sm sticky top-0 relative">
-                      <button onClick={() => {setSelectedCustomer(null); setIsEditingAdminCustomer(false); setIsMergeMode(false); setMergeSelection([]);}} className="absolute top-4 right-4 text-stone-400 hover:text-stone-700 font-bold text-xs flex items-center gap-1 bg-stone-100 px-2 py-1 rounded-md"><ChevronRight size={14} className="rotate-180"/> 返回</button>
-                      <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-4 mt-4 mx-auto ${selectedCustomer.role === 'deleted' ? 'bg-rose-100 text-rose-600' : 'bg-blue-100 text-blue-600'}`}><UserIcon size={40} /></div>
-                      <div className="flex justify-between items-center mb-2">
-                        <h3 className="font-black text-stone-800 text-2xl">{selectedCustomer.name}</h3>
-                        {selectedCustomer.role !== 'deleted' && (
-                          !isEditingAdminCustomer ? (
-                            <button onClick={() => setIsEditingAdminCustomer(true)} className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-md flex items-center gap-1 hover:bg-blue-100"><EditIcon size={14}/> 編輯</button>
-                          ) : (
-                            <button onClick={() => { setIsEditingAdminCustomer(false); setSelectedCustomer(allUsers.find(u => u.id === selectedCustomer.id)); }} className="text-xs font-bold text-stone-400 hover:text-stone-600">取消</button>
-                          )
+          {/* 會員專區 */}
+          {showMemberProfile && currentUser && !isAdminMode && (
+            <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4 md:px-10 py-6">
+              <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-4xl h-full flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
+                <button onClick={() => setShowMemberProfile(false)} className="absolute top-4 right-4 text-stone-400"><X size={20} /></button>
+                <h2 className="text-xl md:text-2xl font-bold text-stone-800 mb-4 flex items-center gap-2 border-b border-stone-200 pb-2"><UserIcon size={24} className="text-amber-600"/> 會員中心</h2>
+                
+                <div className="flex-1 overflow-y-auto space-y-6 md:flex md:space-y-0 md:gap-6">
+                  <div className="md:w-1/3 space-y-4">
+                    <div className="bg-gradient-to-br from-amber-500 to-amber-600 text-white p-5 rounded-2xl shadow-sm relative overflow-hidden">
+                       <div className="absolute right-0 top-0 opacity-10 transform translate-x-4 -translate-y-4"><Gift size={100}/></div>
+                       <h3 className="font-bold mb-1 opacity-90 text-sm">目前累積點數</h3>
+                       <div className="text-4xl font-black">{userProfile?.points || 0} <span className="text-sm font-medium">點</span></div>
+                       <p className="text-xs mt-2 bg-white/20 px-2 py-1 rounded inline-block">滿 1000 元可集 1 點</p>
+                    </div>
+
+                    <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm">
+                      <div className="flex justify-between items-center mb-4 border-b border-stone-100 pb-2">
+                        <h3 className="font-bold text-stone-700">我的資料</h3>
+                        {!isEditingProfile ? (
+                          <button onClick={() => setIsEditingProfile(true)} className="text-xs flex items-center gap-1 text-amber-600 font-bold hover:text-amber-700"><EditIcon size={14}/> 修改</button>
+                        ) : (
+                          <button onClick={() => { setIsEditingProfile(false); setCustomerInfo({ name: userProfile?.name||'', phone: userProfile?.phone||'', address: userProfile?.address||'', email: userProfile?.email||'', lineId: userProfile?.lineId||'', gender: userProfile?.gender||'女' }); }} className="text-xs text-stone-400 font-bold hover:text-stone-600">取消</button>
                         )}
                       </div>
 
-                      {selectedCustomer.role !== 'deleted' && !isEditingAdminCustomer && (
-                        <button onClick={() => startAdminOrder(selectedCustomer)} className="w-full mt-3 mb-2 bg-amber-500 text-white font-bold py-2.5 rounded-md shadow-sm hover:bg-amber-600 transition-colors flex justify-center items-center gap-2">
-                           <ShoppingCart size={18}/> 幫客戶代建單
-                        </button>
-                      )}
-                      
-                      {isEditingAdminCustomer ? (
-                        <div className="space-y-3 text-sm bg-stone-50 p-4 rounded-xl border border-stone-200 mt-4">
-                          <input type="text" placeholder="姓名" value={selectedCustomer.name} onChange={e=>setSelectedCustomer({...selectedCustomer, name: e.target.value})} className="w-full bg-white border border-stone-200 rounded-md px-2 py-1.5 outline-none focus:border-blue-400" />
+                      {isEditingProfile ? (
+                        <div className="space-y-3 text-sm">
+                          <input type="text" placeholder="姓名" value={customerInfo.name} onChange={e=>setCustomerInfo({...customerInfo, name: e.target.value})} className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 outline-none focus:border-amber-500" />
                           <div className="flex gap-4">
-                             <label className="flex items-center gap-1"><input type="radio" name="adminGender" value="男" checked={selectedCustomer.gender==='男'} onChange={e=>setSelectedCustomer({...selectedCustomer, gender:e.target.value})}/>男</label>
-                             <label className="flex items-center gap-1"><input type="radio" name="adminGender" value="女" checked={selectedCustomer.gender==='女'} onChange={e=>setSelectedCustomer({...selectedCustomer, gender:e.target.value})}/>女</label>
+                             <label className="flex items-center gap-1"><input type="radio" name="gender" value="男" checked={customerInfo.gender==='男'} onChange={e=>setCustomerInfo({...customerInfo, gender:e.target.value})} className="accent-amber-500"/>男</label>
+                             <label className="flex items-center gap-1"><input type="radio" name="gender" value="女" checked={customerInfo.gender==='女'} onChange={e=>setCustomerInfo({...customerInfo, gender:e.target.value})} className="accent-amber-500"/>女</label>
                           </div>
-                          <input type="tel" placeholder="聯絡電話" value={selectedCustomer.phone} onChange={e=>setSelectedCustomer({...selectedCustomer, phone: e.target.value})} className="w-full bg-white border border-stone-200 rounded-md px-2 py-1.5 outline-none focus:border-blue-400" />
-                          <input type="text" placeholder="Line ID" value={selectedCustomer.lineId} onChange={e=>setSelectedCustomer({...selectedCustomer, lineId: e.target.value})} className="w-full bg-white border border-stone-200 rounded-md px-2 py-1.5 outline-none focus:border-blue-400" />
-                          <textarea placeholder="聯絡地址" value={selectedCustomer.address} onChange={e=>setSelectedCustomer({...selectedCustomer, address: e.target.value})} rows="2" className="w-full bg-white border border-stone-200 rounded-md px-2 py-1.5 outline-none focus:border-blue-400"></textarea>
-                          <div className="flex items-center gap-2 pt-2 border-t border-stone-200 mb-3">
-                             <span className="font-bold text-stone-600">目前點數:</span>
-                             <input type="number" value={adminEditPoints} onChange={e=>setAdminEditPoints(e.target.value)} className="w-20 bg-white border border-stone-200 rounded-md px-2 py-1 outline-none focus:border-amber-400 font-bold text-amber-600" />
-                          </div>
-                          <div className="flex gap-2">
-                            {!isNewCustomer && <button onClick={handleDeleteCustomer} className="bg-red-100 text-red-600 font-bold px-3 py-2 rounded-md hover:bg-red-200 transition-colors" title="刪除客戶"><Trash2 size={18}/></button>}
-                            <button onClick={handleUpdateCustomerByAdmin} className="flex-1 bg-blue-600 text-white font-bold py-2 rounded-md shadow-sm hover:bg-blue-700 transition-colors">儲存修改</button>
-                          </div>
+                          <input type="tel" placeholder="聯絡電話" value={customerInfo.phone} onChange={e=>setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 outline-none focus:border-amber-500" />
+                          <input type="text" placeholder="Line ID" value={customerInfo.lineId} onChange={e=>setCustomerInfo({...customerInfo, lineId: e.target.value})} className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 outline-none focus:border-amber-500" />
+                          <textarea placeholder="預設地址" value={customerInfo.address} onChange={e=>setCustomerInfo({...customerInfo, address: e.target.value})} rows="2" className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 outline-none focus:border-amber-500"></textarea>
+                          <button onClick={handleUpdateMyProfile} className="w-full bg-amber-500 text-white font-bold py-2.5 rounded-lg shadow-sm hover:bg-amber-600 transition-colors">儲存修改</button>
                         </div>
                       ) : (
-                        <div className="space-y-4 text-sm text-stone-600 bg-stone-50 p-4 rounded-xl mt-4">
-                          <div><span className="text-xs font-bold text-stone-400 block mb-1">性別</span><span className="font-bold">{selectedCustomer.gender || '-'}</span></div>
-                          <div><span className="text-xs font-bold text-stone-400 block mb-1">聯絡電話</span><span className="font-bold">{selectedCustomer.phone}</span></div>
-                          <div><span className="text-xs font-bold text-stone-400 block mb-1">Line ID</span><span className="font-bold text-[#06C755]">{selectedCustomer.lineId || '未提供'}</span></div>
-                          <div><span className="text-xs font-bold text-stone-400 block mb-1">預設地址</span><span className="font-bold">{selectedCustomer.address || '未提供'}</span></div>
-                          <div><span className="text-xs font-bold text-amber-600 block mb-1">累積點數</span><span className="font-black text-xl text-amber-600">{selectedCustomer.points || 0}</span></div>
-                          
-                          {selectedCustomer.role === 'deleted' && (
-                            <div className="mt-4 pt-4 border-t border-stone-200">
-                               <p className="text-xs text-rose-600 font-bold mb-3 text-center bg-rose-50 py-2 rounded-lg">⚠️ 此帳號目前為停用狀態</p>
-                               <button onClick={handleRestoreCustomer} className="w-full bg-emerald-500 text-white font-bold py-2 rounded-md shadow-sm hover:bg-emerald-600 transition-colors flex justify-center items-center gap-1">
-                                 恢復帳號權限
-                               </button>
-                            </div>
-                          )}
+                        <div className="text-sm text-stone-600 space-y-3">
+                          <p className="flex justify-between"><span className="text-stone-400">姓名</span> <span className="font-bold">{customerInfo.name} ({customerInfo.gender})</span></p>
+                          <p className="flex justify-between"><span className="text-stone-400">電話</span> <span>{customerInfo.phone}</span></p>
+                          <p className="flex justify-between"><span className="text-stone-400">Line</span> <span>{customerInfo.lineId || '-'}</span></p>
+                          <p><span className="text-stone-400 block mb-1">預設地址</span> <span className="block bg-stone-50 p-2 rounded">{customerInfo.address || '未設定'}</span></p>
                         </div>
                       )}
                     </div>
                   </div>
 
                   <div className="md:w-2/3">
-                    <div className="flex justify-between items-center mb-4 border-b border-stone-200 pb-2">
-                      <h3 className="font-bold text-stone-800">歷史訂單</h3>
-                      <div className="flex gap-2">
-                        {isMergeMode && mergeSelection.length > 0 && <button onClick={handleConfirmMerge} className="bg-purple-600 text-white text-xs font-bold px-3 py-1.5 rounded shadow-md hover:bg-purple-700 transition-colors flex items-center gap-1"><LinkIcon size={14}/> 確認合併 ({mergeSelection.length})</button>}
-                        {selectedCustomer.role !== 'deleted' && (
-                          <button onClick={() => { setIsMergeMode(!isMergeMode); setMergeSelection([]); }} className={`text-xs font-bold px-3 py-1.5 rounded transition-colors flex items-center gap-1 ${isMergeMode ? 'bg-stone-200 text-stone-600' : 'bg-purple-100 text-purple-700 hover:bg-purple-200'}`}><LinkIcon size={14}/> {isMergeMode ? '取消合併模式' : '合併未處理訂單'}</button>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="space-y-4 pb-10">
-                      {allOrders.filter(o => o.userId === selectedCustomer.id).length === 0 ? <p className="text-center text-stone-400 py-10 bg-white rounded-2xl border border-stone-200 border-dashed">尚無訂單紀錄</p> : (
-                        allOrders.filter(o => o.userId === selectedCustomer.id).map(order => {
-                          const canMerge = isMergeMode && (order.status === 'pending' || order.status === 'confirming');
-                          const isSelectedForMerge = mergeSelection.includes(order.id);
+                    <h3 className="font-bold text-stone-700 mb-3 border-b border-stone-200 pb-2">我的訂單紀錄</h3>
+                    {myOrders.length === 0 ? (
+                      <p className="text-center text-stone-400 text-sm py-10 bg-white rounded-2xl border border-stone-200 border-dashed">尚無訂單紀錄</p>
+                    ) : (
+                      <div className="space-y-4">
+                        {myOrders.map(order => {
+                          const statusInfo = STATUS_MAP[order.status] || STATUS_MAP['pending'];
+                          const isCancellable = ['pending', 'confirming', 'confirmed'].includes(order.status);
                           return (
-                            <div key={order.id} onClick={() => { if(canMerge) handleToggleMergeOrder(order.id); }} className={`bg-white p-5 rounded-2xl border shadow-sm flex flex-col md:flex-row md:justify-between md:items-center gap-4 transition-all ${canMerge ? 'cursor-pointer hover:border-purple-300' : 'border-stone-200'} ${isSelectedForMerge ? 'border-purple-500 ring-2 ring-purple-200 bg-purple-50' : ''}`}>
-                              <div className="flex items-start gap-3">
-                                {isMergeMode && <div className={`mt-1 w-5 h-5 rounded border flex items-center justify-center shrink-0 ${isSelectedForMerge ? 'bg-purple-600 border-purple-600 text-white' : (canMerge ? 'border-stone-300 bg-white' : 'border-stone-200 bg-stone-100 opacity-50')}`}>{isSelectedForMerge && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}</div>}
+                            <div key={order.id} className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm text-sm relative">
+                              {['pending', 'confirming'].includes(order.status) && <div className="absolute top-0 left-0 w-full h-1 bg-[#06C755] rounded-t-2xl"></div>}
+                              <div className="flex justify-between items-start mb-3 border-b border-stone-100 pb-3 mt-1">
                                 <div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-black text-blue-600 hover:text-blue-800 text-lg tracking-wide cursor-pointer underline" onClick={(e) => { e.stopPropagation(); setShowAdminCustomers(false); setOrderSearchId(order.id); setOrderStatusFilter('all'); setShowAdminOrders(true); }}>{order.id}</span>
-                                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${STATUS_MAP[order.status]?.color || 'bg-stone-100'}`}>{STATUS_MAP[order.status]?.label}</span>
-                                    {order.createdByAdmin && <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded inline-block ml-1">代建</span>}
-                                  </div>
-                                  <p className="text-xs text-stone-400 mt-1">{order.createdAt?.toDate().toLocaleString()}</p>
+                                  <span className="font-black text-stone-800 text-lg block tracking-wide">{order.id}</span>
+                                  <span className="text-[10px] text-stone-400">{order.createdAt?.toDate().toLocaleString()}</span>
+                                  {order.isMerged && <span className="text-[10px] bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded mt-1 inline-block">合併訂單</span>}
+                                  {order.createdByAdmin && <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded mt-1 inline-block ml-1">管理員代建</span>}
+                                </div>
+                                <div className="text-right">
+                                  <span className={`px-2.5 py-1 rounded-md text-xs font-bold ${statusInfo.color}`}>{statusInfo.label}</span>
+                                  {order.status === 'shipped' && <div className="mt-2 text-xs font-bold text-stone-600 bg-stone-100 px-2 py-1 rounded">物流單號: {order.trackingNumber}</div>}
                                 </div>
                               </div>
-                              <div className="text-right shrink-0">
-                                <div className="font-black text-amber-600 text-xl mt-1">${order.totals.finalPrice}</div>
+                              <div className="text-stone-600 text-xs space-y-1.5 mb-4 bg-stone-50 p-3 rounded-lg">
+                                {order.items.map((item, i) => (
+                                  <div key={i} className="flex justify-between items-center">
+                                    <span>{item.name} {item.weight && <span className="text-[10px] text-stone-500 font-normal ml-1">({item.weight})</span>} {item.isReward && <span className="text-[10px] bg-purple-100 text-purple-600 px-1 rounded">兌換</span>} {item.isAddon && !item.isReward && <span className="text-[10px] bg-purple-100 text-purple-600 px-1 rounded">加購</span>} <span className="text-stone-400 text-[10px]">(${item.price})</span></span>
+                                    <span className="font-bold">x{item.qty} {item.unit || ''}</span>
+                                  </div>
+                                ))}
+                                {order.orderNote && <div className="mt-2 pt-2 border-t border-stone-200 text-amber-700"><strong>備註：</strong>{order.orderNote}</div>}
+                              </div>
+
+                              {['pending', 'confirming'].includes(order.status) && (
+                                <div className="mb-4 p-4 bg-[#06C755]/10 border border-[#06C755]/30 rounded-xl flex flex-col items-center text-center space-y-3">
+                                  <p className="text-xs font-bold text-[#06C755] flex items-center gap-1"><MessageCircle size={16}/> 訂單已送出，請點擊下方加 LINE 通知我們！</p>
+                                  <div className="flex w-full gap-2">
+                                    <button onClick={() => handleCopyOrder(order)} className="flex-1 flex items-center justify-center gap-1 bg-stone-800 text-white text-xs font-bold py-2.5 rounded-lg shadow-sm hover:bg-stone-700 transition-colors active:scale-95">{copiedOrderId === order.id ? <CheckCircle size={14} className="text-emerald-400"/> : <Copy size={14}/>}{copiedOrderId === order.id ? '已複製！' : '1. 複製明細'}</button>
+                                    {contactData.lineLink ? <a href={contactData.lineLink} target="_blank" rel="noreferrer" className="flex-[1.5] bg-[#06C755] hover:bg-[#05b34c] text-white text-xs font-bold rounded-lg py-2.5 flex items-center justify-center gap-1 shadow-sm transition-all active:scale-95"><MessageCircle size={16} /> 2. 前往 LINE 傳送</a> : <button disabled className="flex-[1.5] bg-stone-300 text-white text-xs font-bold rounded-lg py-2.5 flex items-center justify-center gap-1 shadow-sm cursor-not-allowed">LINE 尚未設定</button>}
+                                  </div>
+                                </div>
+                              )}
+
+                              {order.status === 'pending' && (
+                                <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl space-y-3">
+                                  <div><p className="text-xs font-bold text-rose-800 mb-1 flex items-center gap-1"><CreditCard size={14}/> 匯款帳號資訊：</p><p className="text-xs text-rose-700 whitespace-pre-wrap font-medium bg-white/60 p-2 rounded border border-rose-100">{contactData.bankAccount || '店家尚未設定匯款帳號，請加 LINE 詢問'}</p></div>
+                                  <div><p className="text-xs font-bold text-rose-700 mb-2">⚠️ 請匯款後加 LINE 通知，並輸入帳戶後五碼：</p><div className="flex gap-2"><input type="text" maxLength="5" placeholder="輸入後五碼" value={bankCodeInputs[order.id] || ''} onChange={e => setBankCodeInputs({...bankCodeInputs, [order.id]: e.target.value})} className="flex-1 bg-white border border-rose-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-rose-400 font-bold tracking-widest text-center" /><button onClick={() => submitBankCode(order.id)} className="bg-rose-500 text-white font-bold px-4 rounded-lg shadow-sm active:scale-95 transition-transform">送出</button></div></div>
+                                </div>
+                              )}
+                              {order.status === 'confirming' && <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs font-bold text-amber-700 text-center">已送出後五碼 ({order.bankAccountLast5})，等待對帳確認中...</div>}
+                              {order.status === 'confirmed' && <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs font-bold text-blue-700 text-center">💡 為保持良好的賞味，皆 7～15 天出貨，感謝您的耐心等候！</div>}
+
+                              <div className="flex justify-between items-end mt-4 pt-3 border-t border-stone-100">
+                                {isCancellable ? <button onClick={() => requestCancelOrder(order.id)} className="text-xs text-stone-400 hover:text-rose-500 font-bold transition-colors underline mb-1">申請取消訂單</button> : <div></div>}
+                                <div className="text-right text-xs text-stone-500 space-y-1">
+                                  <div>商品小計：${order.totals.itemsBaseTotal}</div>
+                                  {order.totals.discountAmount > 0 && <div className="text-rose-500">活動折抵：-${order.totals.discountAmount}</div>}
+                                  {order.adminDiscount > 0 && <div className="text-amber-500">特別折扣：-${order.adminDiscount}</div>}
+                                  <div>運費：${order.totals.shippingFee}</div>
+                                  <div className="font-black text-stone-800 text-xl pt-1">總計：${order.totals.finalPrice}</div>
+                                </div>
                               </div>
                             </div>
                           );
-                        })
-                      )}
-                    </div>
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
-              )}
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          )}
 
-      {/* 登入註冊 */}
-      {showLoginModal && (
-        <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4">
-          <div className="bg-white p-6 md:p-8 rounded-3xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 relative">
-            <button onClick={() => setShowLoginModal(false)} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full"><X size={20} /></button>
-            <h3 className="text-xl font-bold text-stone-800 mb-6 flex items-center gap-2 justify-center">
-              {loginMode === 'admin' ? <Lock size={24} className="text-rose-600" /> : <UserIcon size={24} className="text-amber-600" />}
-              {loginMode === 'admin' ? '管理員登入' : (isRegistering ? '註冊新會員' : '會員登入')}
-            </h3>
-            
-            {isRegistering && loginMode === 'customer' && (
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                <input type="text" placeholder="真實姓名 (必填)" value={customerInfo.name} onChange={e => setCustomerInfo({...customerInfo, name: e.target.value})} className="col-span-2 w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 text-sm"/>
-                <div className="col-span-2 flex gap-4 px-2 py-1">
-                   <span className="text-sm text-stone-500 font-bold">性別：</span>
-                   <label className="flex items-center gap-1 text-sm"><input type="radio" name="regGender" value="男" checked={customerInfo.gender==='男'} onChange={e=>setCustomerInfo({...customerInfo, gender:e.target.value})} className="accent-amber-500"/>男</label>
-                   <label className="flex items-center gap-1 text-sm"><input type="radio" name="regGender" value="女" checked={customerInfo.gender==='女'} onChange={e=>setCustomerInfo({...customerInfo, gender:e.target.value})} className="accent-amber-500"/>女</label>
+          {/* 管理員訂單 */}
+          {showAdminOrders && isAdminMode && (
+            <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4 md:px-10 py-6">
+              <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-6xl h-full flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
+                <button onClick={() => setShowAdminOrders(false)} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full"><X size={24} /></button>
+                <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 border-b border-stone-200 pb-3 gap-4">
+                  <h2 className="text-xl md:text-2xl font-bold text-stone-800 flex items-center gap-2"><ClipboardList size={24} className="text-amber-600"/> 訂單管理中心</h2>
+                  <button onClick={handlePrintConfirmedOrders} className="flex items-center justify-center gap-2 bg-stone-800 text-white text-sm font-bold px-4 py-2.5 rounded-xl shadow-md hover:bg-stone-700 transition-colors active:scale-95">
+                    <Printer size={18} /> 列印出貨單
+                  </button>
                 </div>
-                <input type="tel" placeholder="手機號碼 (必填)" value={customerInfo.phone} onChange={e => setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 text-sm"/>
-                <input type="text" placeholder="Line ID (選填)" value={customerInfo.lineId} onChange={e => setCustomerInfo({...customerInfo, lineId: e.target.value})} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 text-sm"/>
-                <input type="text" placeholder="聯絡地址 (必填)" value={customerInfo.address} onChange={e => setCustomerInfo({...customerInfo, address: e.target.value})} className="col-span-2 w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 text-sm"/>
-              </div>
-            )}
 
-            <input type="email" placeholder="Email 信箱" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 mb-3 outline-none focus:border-amber-500 text-sm"/>
-            <input type="password" placeholder="密碼" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAuthSubmit()} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 mb-5 outline-none focus:border-amber-500 text-sm"/>
-            
-            <div className="flex flex-col gap-3">
-              <button onClick={handleAuthSubmit} className="w-full bg-amber-500 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform">{isRegistering ? '立即註冊' : '登入'}</button>
-              <button onClick={() => { setShowLoginModal(false); setEmailInput(''); setPasswordInput(''); setIsRegistering(false); }} className="w-full bg-stone-100 text-stone-600 font-bold py-3 rounded-xl active:scale-95 transition-transform">取消</button>
-            </div>
+                <div className="flex flex-wrap gap-3 mb-4 bg-stone-50 p-4 rounded-xl border border-stone-200">
+                  <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-stone-200 flex-1 min-w-[200px]"><SearchIcon size={16} className="text-stone-400" /><input type="text" placeholder="搜尋訂單編號..." value={orderSearchId} onChange={e => setOrderSearchId(e.target.value)} className="w-full text-sm outline-none font-bold tracking-wider" /></div>
+                  <select value={orderStatusFilter} onChange={e => setOrderStatusFilter(e.target.value)} className="bg-white px-3 py-2 rounded-lg border border-stone-200 text-sm font-bold text-stone-600 outline-none flex-1 min-w-[120px] cursor-pointer"><option value="all">所有狀態</option>{Object.entries(STATUS_MAP).map(([key, info]) => <option key={key} value={key}>{info.label}</option>)}</select>
+                  <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-stone-200 flex-1 min-w-[250px]"><input type="date" value={orderStartDate} onChange={e => setOrderStartDate(e.target.value)} className="text-sm outline-none text-stone-600 cursor-pointer" /><span className="text-stone-400">-</span><input type="date" value={orderEndDate} onChange={e => setOrderEndDate(e.target.value)} className="text-sm outline-none text-stone-600 cursor-pointer" /></div>
+                  <button onClick={downloadOrdersCSV} className="flex items-center justify-center gap-2 bg-emerald-100 text-emerald-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-emerald-200 transition-colors shadow-sm active:scale-95 min-w-[120px]"><DownloadIcon size={16} /> 下載明細</button>
+                </div>
+                
+                <div className="flex-1 overflow-y-auto">
+                  {filteredAdminOrders.length === 0 ? <p className="text-center text-stone-400 mt-10">找不到符合條件的訂單</p> : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {filteredAdminOrders.map(order => {
+                        const isCancelReq = order.status === 'cancel_requested';
+                        return (
+                          <div key={order.id} className={`bg-white p-5 rounded-2xl border shadow-sm flex flex-col transition-colors ${isCancelReq ? 'border-orange-400 ring-2 ring-orange-100' : 'border-stone-200'}`}>
+                            <div className="flex justify-between items-start mb-3 border-b border-stone-100 pb-3 relative">
+                              <div>
+                                <span className="font-black text-stone-800 text-lg block tracking-wide">{order.id}</span>
+                                <span className="text-[10px] text-stone-400">{order.createdAt?.toDate().toLocaleString()}</span>
+                                {order.isMerged && <span className="text-[10px] bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded mt-1 inline-block">合併訂單</span>}
+                                {order.createdByAdmin && <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded mt-1 inline-block ml-1">代建單</span>}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <select value={order.status || 'pending'} onChange={(e) => updateOrderStatus(order, e.target.value)} className={`text-xs font-bold outline-none rounded p-1.5 cursor-pointer shadow-sm border border-stone-200 ${STATUS_MAP[order.status]?.color || 'bg-stone-100 text-stone-700'}`}>
+                                  {Object.entries(STATUS_MAP).map(([key, info]) => <option key={key} value={key}>{info.label}</option>)}
+                                </select>
+                                <button onClick={() => deleteOrder(order.id)} className="text-stone-300 hover:text-red-500 transition-colors p-1"><Trash2 size={16} /></button>
+                              </div>
+                            </div>
+                            
+                            {order.status === 'confirming' && <div className="mb-3 bg-amber-50 text-amber-700 text-xs font-bold p-2 rounded-lg text-center border border-amber-200">💰 客填後五碼：<span className="text-base tracking-widest">{order.bankAccountLast5}</span></div>}
+                            {isCancelReq && <div className="mb-3 bg-orange-50 text-orange-700 text-xs font-bold p-2 rounded-lg text-center border border-orange-200 animate-pulse">⚠️ 買家已送出取消申請，請審核！</div>}
+                            {order.status === 'shipped' && <div className="mb-3 flex gap-2"><input type="text" placeholder="輸入出貨單號" value={trackingInputs[order.id] || ''} onChange={e => setTrackingInputs({...trackingInputs, [order.id]: e.target.value})} className="flex-1 bg-stone-50 border border-stone-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-purple-400 font-bold" /><button onClick={() => saveTrackingNumber(order.id)} className="bg-purple-100 text-purple-700 text-xs font-bold px-3 rounded-lg hover:bg-purple-200 transition-colors">儲存</button></div>}
+                            
+                            <div className="text-sm text-stone-600 space-y-1 mb-3 bg-stone-50 p-3 rounded-lg">
+                              <p><span className="font-bold text-stone-500">姓名：</span>{order.customerInfo.name} ({order.customerInfo.gender})</p>
+                              <p><span className="font-bold text-stone-500">電話：</span>{order.customerInfo.phone}</p>
+                              <p><span className="font-bold text-stone-500">Line：</span>{order.customerInfo.lineId || '-'}</p>
+                              <p className="truncate" title={order.customerInfo.address}><span className="font-bold text-stone-500">地址：</span>{order.customerInfo.address}</p>
+                            </div>
 
-            <div className="mt-6 pt-4 border-t border-stone-100 flex justify-between items-center text-xs text-stone-500">
-              {loginMode === 'customer' ? (
-                <>
-                  <button onClick={() => setIsRegistering(!isRegistering)} className="hover:text-amber-600 font-bold">{isRegistering ? '已有帳號？返回登入' : '還沒有帳號？立即註冊'}</button>
-                  <button onClick={() => setLoginMode('admin')} className="hover:text-rose-600">管理員通道</button>
-                </>
-              ) : (
-                <button onClick={() => setLoginMode('customer')} className="hover:text-amber-600 w-full text-center">返回會員登入</button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+                            <div className="flex-1 text-xs text-stone-600 space-y-1 mb-3">
+                              <p className="font-bold text-stone-500 mb-1 border-b border-stone-200 pb-1">購買明細：</p>
+                              {order.items.map((item, i) => (
+                                <div key={i} className="flex justify-between items-center mb-1">
+                                  <span>{item.name} {item.weight && <span className="text-[10px] text-stone-500 font-normal ml-1">({item.weight})</span>} {item.isReward && <span className="text-[10px] bg-purple-100 text-purple-600 px-1 rounded">兌換</span>} {item.isAddon && !item.isReward && <span className="text-[10px] bg-purple-100 text-purple-600 px-1 rounded">加購</span>} <span className="text-stone-400 text-[10px]">(${item.price})</span></span>
+                                  <span className="font-bold">x{item.qty} {item.unit || ''}</span>
+                                </div>
+                              ))}
+                            </div>
 
-      {/* 系統設定彈窗 */}
-      {showConfigModal && (
-        <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4">
-          <div className="bg-white p-6 rounded-3xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 relative border border-stone-100">
-            <button onClick={() => setShowConfigModal(false)} className="absolute top-4 right-4 text-stone-400"><X size={20} /></button>
-            <h2 className="text-lg font-bold text-stone-800 mb-5 flex items-center gap-2 border-b border-stone-100 pb-3"><SettingsIcon size={20} className="text-amber-600"/> 系統規則設定</h2>
-            <div className="space-y-4">
-              <div className="bg-stone-50 p-3 rounded-xl border border-stone-200">
-                <p className="text-sm font-bold text-stone-700 mb-2 flex items-center gap-1"><Truck size={16}/> 運費與免運</p>
-                <div className="flex items-center justify-between mb-2"><span className="text-xs text-stone-500">基本運費 ($)</span><input type="number" value={tempConfig.shippingFee} onChange={e => setTempConfig({...tempConfig, shippingFee: e.target.value})} className="w-20 bg-white border border-stone-300 rounded p-1 text-sm outline-none text-right font-bold focus:border-amber-500" /></div>
-                <div className="flex items-center justify-between"><span className="text-xs text-stone-500">免運門檻 (滿X件)</span><input type="number" value={tempConfig.freeShippingThreshold} onChange={e => setTempConfig({...tempConfig, freeShippingThreshold: e.target.value})} className="w-20 bg-white border border-stone-300 rounded p-1 text-sm outline-none text-right font-bold focus:border-amber-500" /></div>
-              </div>
-              <div className="bg-rose-50 p-3 rounded-xl border border-rose-100">
-                <p className="text-sm font-bold text-rose-700 mb-2 flex items-center gap-1"><Info size={16}/> 任選優惠活動</p>
-                <div className="flex items-center gap-2"><span className="text-xs text-stone-600">任選</span><input type="number" value={tempConfig.promoQty} onChange={e => setTempConfig({...tempConfig, promoQty: e.target.value})} className="w-16 bg-white border border-rose-200 rounded p-1 text-sm text-center font-bold text-rose-600" /><span className="text-xs text-stone-600">件，優惠總價 $</span><input type="number" value={tempConfig.promoPrice} onChange={e => setTempConfig({...tempConfig, promoPrice: e.target.value})} className="w-20 bg-white border border-rose-200 rounded p-1 text-sm text-center font-bold text-rose-600" /></div>
-              </div>
-            </div>
-            <button onClick={saveSystemConfig} className="mt-5 w-full bg-stone-800 text-white font-bold py-3 rounded-xl shadow-md active:scale-95 transition-transform">儲存設定</button>
-          </div>
-        </div>
-      )}
+                            <div className="mb-3 border-t border-stone-100 pt-3 flex gap-2 items-center">
+                               <p className="font-bold text-stone-500 text-xs shrink-0">手動折扣：</p>
+                               <input type="number" value={adminDiscountInputs[order.id] !== undefined ? adminDiscountInputs[order.id] : (order.adminDiscount || 0)} onChange={e => setAdminDiscountInputs({...adminDiscountInputs, [order.id]: e.target.value})} className="flex-1 bg-white border border-stone-200 rounded p-1 text-xs outline-none focus:border-amber-400 font-bold text-red-500" />
+                               <button onClick={() => saveAdminDiscount(order)} className="bg-stone-200 text-stone-600 text-xs font-bold px-2 py-1 rounded hover:bg-stone-300 transition-colors">儲存</button>
+                            </div>
 
-      {/* 公告設定彈窗 (管理員) */}
-      {showAnnounceConfig && isAdminMode && (
-         <div className="fixed inset-0 z-[60] flex justify-center items-center bg-black/50 backdrop-blur-sm px-4">
-          <div className="bg-white p-6 rounded-3xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 relative border border-stone-100 max-h-[90vh] overflow-y-auto flex flex-col">
-            <button onClick={() => {setShowAnnounceConfig(false); setIsEditingAnnounce(false);}} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full"><X size={20} /></button>
-            <h2 className="text-lg font-bold text-stone-800 mb-4 flex items-center justify-between border-b border-stone-100 pb-3">
-              <span className="flex items-center gap-2"><Megaphone size={20} className="text-purple-600"/> 系統公告設定</span>
-              {!isEditingAnnounce && <button onClick={() => {setTempAnnounce({ title: '', content: '', image: '', isActive: false, showOnLoad: false, isPermanent: true, expireDate: '' }); setIsEditingAnnounce(true);}} className="bg-purple-100 text-purple-700 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-purple-200 flex items-center gap-1"><Plus size={14}/>新增公告</button>}
-            </h2>
-            
-            <div className="flex-1 overflow-y-auto min-h-[50vh]">
-              {!isEditingAnnounce ? (
-                <div className="space-y-3">
-                  {announcements.length === 0 ? <p className="text-center text-stone-400 py-10">目前沒有任何公告</p> : (
-                    announcements.map((ann, index) => (
-                      <div key={ann.id} className="bg-stone-50 border border-stone-200 rounded-xl p-4 flex gap-3 relative">
-                         <div className="flex flex-col gap-1 items-center justify-center border-r border-stone-200 pr-3 shrink-0">
-                           <button onClick={() => moveAnnounce(index, -1)} disabled={index === 0} className={`p-1 rounded transition-colors ${index === 0 ? 'text-stone-300' : 'text-stone-500 hover:bg-stone-200 hover:text-stone-700'}`} title="往上移"><ArrowUp size={16}/></button>
-                           <button onClick={() => moveAnnounce(index, 1)} disabled={index === announcements.length - 1} className={`p-1 rounded transition-colors ${index === announcements.length - 1 ? 'text-stone-300' : 'text-stone-500 hover:bg-stone-200 hover:text-stone-700'}`} title="往下移"><ArrowDown size={16}/></button>
-                         </div>
-                         
-                         <div className="flex-1 flex flex-col relative pr-16">
-                           <div className="flex justify-between items-start mb-1">
-                             <h3 className="font-bold text-stone-800">{ann.title}</h3>
-                             <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${ann.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-200 text-stone-500'}`}>{ann.isActive ? '啟用中' : '未啟用'}</span>
-                           </div>
-                           <p className="text-xs text-stone-500 truncate mb-1">{ann.content}</p>
-                           <div className="text-[10px] text-stone-400 mt-auto">
-                             {ann.isPermanent ? '永久顯示' : (ann.expireDate ? `顯示至 ${ann.expireDate}` : '未設定期限')} | {ann.showOnLoad ? '進站主動彈出' : '僅顯示標題列'}
-                           </div>
-                         </div>
-                         
-                         <div className="absolute top-3 right-3 flex gap-1">
-                           <button onClick={() => {setTempAnnounce(ann); setIsEditingAnnounce(true);}} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-md bg-white border border-blue-100 shadow-sm"><EditIcon size={16}/></button>
-                           <button onClick={() => deleteAnnouncement(ann.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-md bg-white border border-red-100 shadow-sm"><Trash2 size={16}/></button>
-                         </div>
-                      </div>
-                    ))
+                            <div className="mb-3 border-t border-stone-100 pt-3">
+                              <p className="font-bold text-stone-500 mb-1 text-xs flex justify-between">訂單備註： <span className="text-[9px] font-normal text-stone-400">可查看與編輯</span></p>
+                              <div className="flex gap-2">
+                                <textarea placeholder="買家未填寫或輸入您的備註" value={adminNoteInputs[order.id] !== undefined ? adminNoteInputs[order.id] : (order.orderNote || '')} onChange={e => setAdminNoteInputs({...adminNoteInputs, [order.id]: e.target.value})} className="flex-1 bg-amber-50/50 border border-amber-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-amber-400 min-h-[40px] text-amber-900"/>
+                                <button onClick={() => saveOrderNote(order.id)} className="bg-amber-100 text-amber-700 text-xs font-bold px-3 rounded-lg hover:bg-amber-200 transition-colors shrink-0">儲存<br/>備註</button>
+                              </div>
+                            </div>
+                            
+                            <div className="mt-auto border-t border-stone-100 pt-3">
+                              <div className="bg-stone-50 p-2 rounded-lg text-right text-xs text-stone-500 mb-2 space-y-1">
+                                 <div className="flex justify-between"><span>商品小計</span><span>${order.totals.itemsBaseTotal}</span></div>
+                                 {order.totals.discountAmount > 0 && <div className="flex justify-between text-rose-500"><span>活動折抵</span><span>-${order.totals.discountAmount}</span></div>}
+                                 <div className="flex justify-between"><span>運費</span><span>${order.totals.shippingFee}</span></div>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs text-stone-500 font-bold">總金額</span>
+                                <span className="font-black text-amber-600 text-xl">${order.totals.finalPrice}</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
-              ) : (
-                <div className="space-y-4">
-                   <label className="flex items-center gap-2 bg-purple-50 p-3 rounded-xl border border-purple-200 cursor-pointer">
-                      <input type="checkbox" checked={tempAnnounce.isActive} onChange={e=>setTempAnnounce({...tempAnnounce, isActive: e.target.checked})} className="accent-purple-600 w-5 h-5"/>
-                      <span className="font-bold text-purple-800">啟用此公告</span>
-                   </label>
-
-                   <div className="space-y-1">
-                      <label className="text-xs font-bold text-stone-500">公告標題</label>
-                      <input type="text" value={tempAnnounce.title||''} onChange={e=>setTempAnnounce({...tempAnnounce, title: e.target.value})} className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-500" placeholder="例如：春節連假出貨公告" />
-                   </div>
-
-                   <div className="space-y-1">
-                      <label className="text-xs font-bold text-stone-500">公告內容</label>
-                      <textarea value={tempAnnounce.content||''} onChange={e=>setTempAnnounce({...tempAnnounce, content: e.target.value})} rows="4" className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-500"></textarea>
-                   </div>
-
-                   <div className="space-y-1">
-                      <label className="text-xs font-bold text-stone-500">公告圖片 (選填)</label>
-                      <div className="relative">
-                         <div className="h-32 bg-stone-100 rounded-xl border-2 border-dashed border-stone-300 flex items-center justify-center relative overflow-hidden group">
-                            {tempAnnounce.image ? <img src={tempAnnounce.image} className="w-full h-full object-contain" /> : <div className="text-stone-400 flex flex-col items-center"><ImagePlus size={24}/></div>}
-                            <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity"><Camera size={24} className="text-white"/><input type="file" accept="image/*" className="hidden" onChange={(e)=>handleImageUpload(e.target.files[0], img=>setTempAnnounce({...tempAnnounce, image:img}))} /></label>
-                         </div>
-                         {tempAnnounce.image && (
-                            <button onClick={() => setTempAnnounce({...tempAnnounce, image: ''})} className="absolute -top-2 -right-2 bg-rose-500 text-white rounded-full p-1.5 shadow-lg hover:bg-rose-600 z-10 hover:scale-110 transition-transform">
-                               <X size={14}/>
-                            </button>
-                         )}
-                      </div>
-                   </div>
-
-                   <div className="bg-stone-50 p-3 rounded-xl border border-stone-200 space-y-3">
-                      <label className="flex items-center gap-2 text-sm font-bold text-stone-700 cursor-pointer">
-                         <input type="checkbox" checked={tempAnnounce.showOnLoad} onChange={e=>setTempAnnounce({...tempAnnounce, showOnLoad: e.target.checked})} className="accent-purple-600 w-4 h-4"/> 首頁載入時主動跳出大視窗 (每個用戶只跳一次)
-                      </label>
-                      <div className="border-t border-stone-200 pt-3">
-                         <label className="flex items-center gap-2 text-sm font-bold text-stone-700 cursor-pointer mb-2">
-                            <input type="checkbox" checked={tempAnnounce.isPermanent} onChange={e=>setTempAnnounce({...tempAnnounce, isPermanent: e.target.checked})} className="accent-purple-600 w-4 h-4"/> 永久顯示 (不設定期限)
-                         </label>
-                         {!tempAnnounce.isPermanent && (
-                            <div className="flex items-center gap-2 text-sm">
-                               <span className="text-stone-500 font-bold">下架日期：</span>
-                               <input type="date" value={tempAnnounce.expireDate||''} onChange={e=>setTempAnnounce({...tempAnnounce, expireDate: e.target.value})} className="bg-white border border-stone-300 rounded px-2 py-1 outline-none focus:border-purple-400" />
-                            </div>
-                         )}
-                      </div>
-                   </div>
-                </div>
-              )}
-            </div>
-
-            {isEditingAnnounce && (
-              <div className="mt-4 pt-4 border-t border-stone-100 flex gap-2">
-                <button onClick={() => setIsEditingAnnounce(false)} className="flex-1 bg-stone-100 text-stone-600 font-bold py-2.5 rounded-xl hover:bg-stone-200 transition-colors">取消</button>
-                <button onClick={saveAnnouncement} className="flex-[2] bg-purple-600 text-white font-bold py-2.5 rounded-xl shadow-md active:scale-95 transition-transform">儲存公告</button>
               </div>
-            )}
-          </div>
-        </div>
-      )}
+            </div>
+          )}
 
-      {/* 前台大公告視窗 */}
-      {showAnnouncementModal && viewingAnnounce && (
-         <div className="fixed inset-0 z-[60] flex justify-center items-center bg-black/60 backdrop-blur-sm px-4">
-          <div className="bg-white p-1 rounded-3xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 relative border border-stone-100 overflow-hidden flex flex-col max-h-[85vh]">
-            <button onClick={() => setShowAnnouncementModal(false)} className="absolute top-3 right-3 text-stone-400 hover:bg-stone-100 p-1.5 rounded-full z-10 bg-white/80 backdrop-blur"><X size={20} /></button>
-            <div className="flex-1 overflow-y-auto p-5">
-               <h2 className="text-xl font-black text-stone-800 mb-4 flex items-center gap-2 border-b border-stone-100 pb-3"><Megaphone size={24} className="text-amber-500"/> {viewingAnnounce.title}</h2>
-               {viewingAnnounce.image && (
-                  <div className="w-full bg-stone-50 rounded-xl overflow-hidden mb-4 border border-stone-100">
-                     <img src={viewingAnnounce.image} className="w-full object-contain" />
+          {/* 管理員客戶管理 */}
+          {showAdminCustomers && isAdminMode && (
+            <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4 md:px-10 py-6">
+              <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-6xl h-full flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
+                <button onClick={() => {setShowAdminCustomers(false); setSelectedCustomer(null); setIsEditingAdminCustomer(false); setIsMergeMode(false); setMergeSelection([]); setIsNewCustomer(false); setShowDeletedCustomers(false);}} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full"><X size={24} /></button>
+                <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 border-b border-stone-200 pb-3 gap-4">
+                  <h2 className="text-xl md:text-2xl font-bold text-stone-800 flex items-center gap-2"><UsersIcon size={24} className="text-blue-600"/> 客戶管理中心</h2>
+                  {!selectedCustomer && (
+                    <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                      <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-stone-200 flex-1 min-w-[200px]">
+                        <SearchIcon size={16} className="text-stone-400" />
+                        <input type="text" placeholder="搜尋客戶姓名或電話..." value={customerSearchName} onChange={e => setCustomerSearchName(e.target.value)} className="w-full text-sm outline-none font-bold" />
+                      </div>
+                      <button onClick={() => setShowDeletedCustomers(!showDeletedCustomers)} className={`text-sm font-bold px-3 py-2 rounded-lg shadow-sm transition-colors border ${showDeletedCustomers ? 'bg-rose-100 text-rose-700 border-rose-200 hover:bg-rose-200' : 'bg-stone-100 text-stone-600 border-stone-200 hover:bg-stone-200'}`}>
+                        {showDeletedCustomers ? '返回正常名單' : '查看停用名單'}
+                      </button>
+                      {!showDeletedCustomers && <button onClick={handleAddCustomerBtn} className="bg-blue-600 text-white text-sm font-bold px-3 py-2 rounded-lg shadow-sm hover:bg-blue-700 transition-colors flex items-center gap-1 whitespace-nowrap"><Plus size={16}/> 新增客戶</button>}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex-1 overflow-y-auto">
+                  {!selectedCustomer ? (
+                    filteredUsers.length === 0 ? <p className="text-center text-stone-400 mt-10">找不到客戶資料</p> : (
+                      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {filteredUsers.map(user => (
+                          <div key={user.id} onClick={() => setSelectedCustomer({...user})} className={`bg-white p-5 rounded-2xl border shadow-sm cursor-pointer hover:shadow-md transition-all flex flex-col items-center text-center relative overflow-hidden ${user.role === 'deleted' ? 'border-rose-200 opacity-80' : 'border-stone-200 hover:border-blue-400'}`}>
+                            <div className="absolute top-0 right-0 bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-1 rounded-bl-lg">點數: {user.points||0}</div>
+                            <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-3 mt-2 ${user.role === 'deleted' ? 'bg-rose-100 text-rose-600' : 'bg-blue-100 text-blue-600'}`}><UserIcon size={32} /></div>
+                            <h3 className="font-black text-stone-800 text-lg">{user.name} <span className="text-sm font-normal text-stone-500">({user.gender||'-'})</span></h3>
+                            {user.role === 'deleted' && <div className="bg-rose-100 text-rose-600 text-[10px] font-bold px-2 py-0.5 rounded-md mt-1">已停用</div>}
+                            <p className="text-sm text-stone-500 font-bold mt-1">{user.phone}</p>
+                            <span className="mt-3 text-[10px] bg-stone-100 text-stone-500 px-3 py-1 rounded-full font-bold">點擊查看詳細資料與訂單</span>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  ) : (
+                    <div className="flex flex-col md:flex-row gap-6 h-full">
+                      <div className="md:w-1/3">
+                        <div className="bg-white p-6 rounded-2xl border border-blue-200 shadow-sm sticky top-0 relative">
+                          <button onClick={() => {setSelectedCustomer(null); setIsEditingAdminCustomer(false); setIsMergeMode(false); setMergeSelection([]);}} className="absolute top-4 right-4 text-stone-400 hover:text-stone-700 font-bold text-xs flex items-center gap-1 bg-stone-100 px-2 py-1 rounded-md"><ChevronRight size={14} className="rotate-180"/> 返回</button>
+                          <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-4 mt-4 mx-auto ${selectedCustomer.role === 'deleted' ? 'bg-rose-100 text-rose-600' : 'bg-blue-100 text-blue-600'}`}><UserIcon size={40} /></div>
+                          <div className="flex justify-between items-center mb-2">
+                            <h3 className="font-black text-stone-800 text-2xl">{selectedCustomer.name}</h3>
+                            {selectedCustomer.role !== 'deleted' && (
+                              !isEditingAdminCustomer ? (
+                                <button onClick={() => setIsEditingAdminCustomer(true)} className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-md flex items-center gap-1 hover:bg-blue-100"><EditIcon size={14}/> 編輯</button>
+                              ) : (
+                                <button onClick={() => { setIsEditingAdminCustomer(false); setSelectedCustomer(allUsers.find(u => u.id === selectedCustomer.id)); }} className="text-xs font-bold text-stone-400 hover:text-stone-600">取消</button>
+                              )
+                            )}
+                          </div>
+
+                          {selectedCustomer.role !== 'deleted' && !isEditingAdminCustomer && (
+                            <button onClick={() => startAdminOrder(selectedCustomer)} className="w-full mt-3 mb-2 bg-amber-500 text-white font-bold py-2.5 rounded-md shadow-sm hover:bg-amber-600 transition-colors flex justify-center items-center gap-2">
+                               <ShoppingCart size={18}/> 幫客戶代建單
+                            </button>
+                          )}
+                          
+                          {isEditingAdminCustomer ? (
+                            <div className="space-y-3 text-sm bg-stone-50 p-4 rounded-xl border border-stone-200 mt-4">
+                              <input type="text" placeholder="姓名" value={selectedCustomer.name} onChange={e=>setSelectedCustomer({...selectedCustomer, name: e.target.value})} className="w-full bg-white border border-stone-200 rounded-md px-2 py-1.5 outline-none focus:border-blue-400" />
+                              <div className="flex gap-4">
+                                 <label className="flex items-center gap-1"><input type="radio" name="adminGender" value="男" checked={selectedCustomer.gender==='男'} onChange={e=>setSelectedCustomer({...selectedCustomer, gender:e.target.value})}/>男</label>
+                                 <label className="flex items-center gap-1"><input type="radio" name="adminGender" value="女" checked={selectedCustomer.gender==='女'} onChange={e=>setSelectedCustomer({...selectedCustomer, gender:e.target.value})}/>女</label>
+                              </div>
+                              <input type="tel" placeholder="聯絡電話" value={selectedCustomer.phone} onChange={e=>setSelectedCustomer({...selectedCustomer, phone: e.target.value})} className="w-full bg-white border border-stone-200 rounded-md px-2 py-1.5 outline-none focus:border-blue-400" />
+                              <input type="text" placeholder="Line ID" value={selectedCustomer.lineId} onChange={e=>setSelectedCustomer({...selectedCustomer, lineId: e.target.value})} className="w-full bg-white border border-stone-200 rounded-md px-2 py-1.5 outline-none focus:border-blue-400" />
+                              <textarea placeholder="聯絡地址" value={selectedCustomer.address} onChange={e=>setSelectedCustomer({...selectedCustomer, address: e.target.value})} rows="2" className="w-full bg-white border border-stone-200 rounded-md px-2 py-1.5 outline-none focus:border-blue-400"></textarea>
+                              <div className="flex items-center gap-2 pt-2 border-t border-stone-200 mb-3">
+                                 <span className="font-bold text-stone-600">目前點數:</span>
+                                 <input type="number" value={adminEditPoints} onChange={e=>setAdminEditPoints(e.target.value)} className="w-20 bg-white border border-stone-200 rounded-md px-2 py-1 outline-none focus:border-amber-400 font-bold text-amber-600" />
+                              </div>
+                              <div className="flex gap-2">
+                                {!isNewCustomer && <button onClick={handleDeleteCustomer} className="bg-red-100 text-red-600 font-bold px-3 py-2 rounded-md hover:bg-red-200 transition-colors" title="刪除客戶"><Trash2 size={18}/></button>}
+                                <button onClick={handleUpdateCustomerByAdmin} className="flex-1 bg-blue-600 text-white font-bold py-2 rounded-md shadow-sm hover:bg-blue-700 transition-colors">儲存修改</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="space-y-4 text-sm text-stone-600 bg-stone-50 p-4 rounded-xl mt-4">
+                              <div><span className="text-xs font-bold text-stone-400 block mb-1">性別</span><span className="font-bold">{selectedCustomer.gender || '-'}</span></div>
+                              <div><span className="text-xs font-bold text-stone-400 block mb-1">聯絡電話</span><span className="font-bold">{selectedCustomer.phone}</span></div>
+                              <div><span className="text-xs font-bold text-stone-400 block mb-1">Line ID</span><span className="font-bold text-[#06C755]">{selectedCustomer.lineId || '未提供'}</span></div>
+                              <div><span className="text-xs font-bold text-stone-400 block mb-1">預設地址</span><span className="font-bold">{selectedCustomer.address || '未提供'}</span></div>
+                              <div><span className="text-xs font-bold text-amber-600 block mb-1">累積點數</span><span className="font-black text-xl text-amber-600">{selectedCustomer.points || 0}</span></div>
+                              
+                              {selectedCustomer.role === 'deleted' && (
+                                <div className="mt-4 pt-4 border-t border-stone-200">
+                                   <p className="text-xs text-rose-600 font-bold mb-3 text-center bg-rose-50 py-2 rounded-lg">⚠️ 此帳號目前為停用狀態</p>
+                                   <button onClick={handleRestoreCustomer} className="w-full bg-emerald-500 text-white font-bold py-2 rounded-md shadow-sm hover:bg-emerald-600 transition-colors flex justify-center items-center gap-1">
+                                     恢復帳號權限
+                                   </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="md:w-2/3">
+                        <div className="flex justify-between items-center mb-4 border-b border-stone-200 pb-2">
+                          <h3 className="font-bold text-stone-800">歷史訂單</h3>
+                          <div className="flex gap-2">
+                            {isMergeMode && mergeSelection.length > 0 && <button onClick={handleConfirmMerge} className="bg-purple-600 text-white text-xs font-bold px-3 py-1.5 rounded shadow-md hover:bg-purple-700 transition-colors flex items-center gap-1"><LinkIcon size={14}/> 確認合併 ({mergeSelection.length})</button>}
+                            {selectedCustomer.role !== 'deleted' && (
+                              <button onClick={() => { setIsMergeMode(!isMergeMode); setMergeSelection([]); }} className={`text-xs font-bold px-3 py-1.5 rounded transition-colors flex items-center gap-1 ${isMergeMode ? 'bg-stone-200 text-stone-600' : 'bg-purple-100 text-purple-700 hover:bg-purple-200'}`}><LinkIcon size={14}/> {isMergeMode ? '取消合併模式' : '合併未處理訂單'}</button>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="space-y-4 pb-10">
+                          {allOrders.filter(o => o.userId === selectedCustomer.id).length === 0 ? <p className="text-center text-stone-400 py-10 bg-white rounded-2xl border border-stone-200 border-dashed">尚無訂單紀錄</p> : (
+                            allOrders.filter(o => o.userId === selectedCustomer.id).map(order => {
+                              const canMerge = isMergeMode && (order.status === 'pending' || order.status === 'confirming');
+                              const isSelectedForMerge = mergeSelection.includes(order.id);
+                              return (
+                                <div key={order.id} onClick={() => { if(canMerge) handleToggleMergeOrder(order.id); }} className={`bg-white p-5 rounded-2xl border shadow-sm flex flex-col md:flex-row md:justify-between md:items-center gap-4 transition-all ${canMerge ? 'cursor-pointer hover:border-purple-300' : 'border-stone-200'} ${isSelectedForMerge ? 'border-purple-500 ring-2 ring-purple-200 bg-purple-50' : ''}`}>
+                                  <div className="flex items-start gap-3">
+                                    {isMergeMode && <div className={`mt-1 w-5 h-5 rounded border flex items-center justify-center shrink-0 ${isSelectedForMerge ? 'bg-purple-600 border-purple-600 text-white' : (canMerge ? 'border-stone-300 bg-white' : 'border-stone-200 bg-stone-100 opacity-50')}`}>{isSelectedForMerge && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}</div>}
+                                    <div>
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-black text-blue-600 hover:text-blue-800 text-lg tracking-wide cursor-pointer underline" onClick={(e) => { e.stopPropagation(); setShowAdminCustomers(false); setOrderSearchId(order.id); setOrderStatusFilter('all'); setShowAdminOrders(true); }}>{order.id}</span>
+                                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${STATUS_MAP[order.status]?.color || 'bg-stone-100'}`}>{STATUS_MAP[order.status]?.label}</span>
+                                        {order.createdByAdmin && <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded inline-block ml-1">代建</span>}
+                                      </div>
+                                      <p className="text-xs text-stone-400 mt-1">{order.createdAt?.toDate().toLocaleString()}</p>
+                                    </div>
+                                  </div>
+                                  <div className="text-right shrink-0">
+                                    <div className="font-black text-amber-600 text-xl mt-1">${order.totals.finalPrice}</div>
+                                  </div>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 登入註冊 */}
+          {showLoginModal && (
+            <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4">
+              <div className="bg-white p-6 md:p-8 rounded-3xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 relative">
+                <button onClick={() => setShowLoginModal(false)} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full"><X size={20} /></button>
+                <h3 className="text-xl font-bold text-stone-800 mb-6 flex items-center gap-2 justify-center">
+                  {loginMode === 'admin' ? <Lock size={24} className="text-rose-600" /> : <UserIcon size={24} className="text-amber-600" />}
+                  {loginMode === 'admin' ? '管理員登入' : (isRegistering ? '註冊新會員' : '會員登入')}
+                </h3>
+                
+                {isRegistering && loginMode === 'customer' && (
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <input type="text" placeholder="真實姓名 (必填)" value={customerInfo.name} onChange={e => setCustomerInfo({...customerInfo, name: e.target.value})} className="col-span-2 w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 text-sm"/>
+                    <div className="col-span-2 flex gap-4 px-2 py-1">
+                       <span className="text-sm text-stone-500 font-bold">性別：</span>
+                       <label className="flex items-center gap-1 text-sm"><input type="radio" name="regGender" value="男" checked={customerInfo.gender==='男'} onChange={e=>setCustomerInfo({...customerInfo, gender:e.target.value})} className="accent-amber-500"/>男</label>
+                       <label className="flex items-center gap-1 text-sm"><input type="radio" name="regGender" value="女" checked={customerInfo.gender==='女'} onChange={e=>setCustomerInfo({...customerInfo, gender:e.target.value})} className="accent-amber-500"/>女</label>
+                    </div>
+                    <input type="tel" placeholder="手機號碼 (必填)" value={customerInfo.phone} onChange={e => setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 text-sm"/>
+                    <input type="text" placeholder="Line ID (選填)" value={customerInfo.lineId} onChange={e => setCustomerInfo({...customerInfo, lineId: e.target.value})} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 text-sm"/>
+                    <input type="text" placeholder="聯絡地址 (必填)" value={customerInfo.address} onChange={e => setCustomerInfo({...customerInfo, address: e.target.value})} className="col-span-2 w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 text-sm"/>
                   </div>
-               )}
-               <div className="text-sm text-stone-600 leading-relaxed whitespace-pre-wrap">{viewingAnnounce.content}</div>
-            </div>
-            <div className="p-4 bg-stone-50 border-t border-stone-100">
-               <button onClick={() => setShowAnnouncementModal(false)} className="w-full bg-stone-800 text-white font-bold py-3 rounded-xl shadow-md active:scale-95 transition-transform">我知道了</button>
-            </div>
-          </div>
-        </div>
-      )}
+                )}
 
-      {/* 商品分類管理彈窗 (管理員) */}
-      {showCategoryManager && isAdminMode && (
-         <div className="fixed inset-0 z-[70] flex justify-center items-center bg-black/50 backdrop-blur-sm px-4">
-          <div className="bg-white p-6 rounded-3xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 relative border border-stone-100">
-             <button onClick={() => setShowCategoryManager(false)} className="absolute top-4 right-4 text-stone-400 hover:text-stone-800"><X size={20} /></button>
-             <h2 className="text-lg font-bold text-stone-800 mb-4 border-b border-stone-100 pb-2">管理商品分類</h2>
-             <div className="flex gap-2 mb-4">
-                <input type="text" value={newCatName} onChange={e=>setNewCatName(e.target.value)} placeholder="新增分類名稱..." className="flex-1 bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-500" />
-                <button onClick={handleAddCategory} className="bg-stone-800 text-white px-4 rounded-lg font-bold text-sm hover:bg-stone-700 shadow-sm">新增</button>
-             </div>
-             <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                {categoriesList.map((cat, index) => (
-                   <div key={cat.name} className="flex justify-between items-center bg-stone-50 px-3 py-2 rounded-lg border border-stone-200">
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => toggleCategoryVisibility(index)} className={`hover:bg-stone-200 p-1 rounded-md transition-colors ${cat.isHidden ? 'text-stone-400' : 'text-blue-600'}`} title={cat.isHidden ? "點擊公開此分類" : "點擊隱藏此分類"}>
-                          {cat.isHidden ? <EyeOff size={18}/> : <Eye size={18}/>}
-                        </button>
-                        <span className={`font-bold text-sm ${cat.isHidden ? 'text-stone-400 line-through' : 'text-stone-700'}`}>{cat.name}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                         <button onClick={() => moveCategory(index, -1)} disabled={index === 0} className="p-1 text-stone-400 hover:text-stone-700 disabled:opacity-30"><ArrowUp size={16}/></button>
-                         <button onClick={() => moveCategory(index, 1)} disabled={index === categoriesList.length - 1} className="p-1 text-stone-400 hover:text-stone-700 disabled:opacity-30"><ArrowDown size={16}/></button>
-                         <button onClick={()=>handleDeleteCategory(index)} className="p-1 text-red-400 hover:text-red-600 ml-1"><Trash2 size={16}/></button>
-                      </div>
-                   </div>
-                ))}
-             </div>
-          </div>
-        </div>
-      )}
+                <input type="email" placeholder="Email 信箱" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 mb-3 outline-none focus:border-amber-500 text-sm"/>
+                <input type="password" placeholder="密碼" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAuthSubmit()} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 mb-5 outline-none focus:border-amber-500 text-sm"/>
+                
+                <div className="flex flex-col gap-3">
+                  <button onClick={handleAuthSubmit} className="w-full bg-amber-500 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform">{isRegistering ? '立即註冊' : '登入'}</button>
+                  <button onClick={() => { setShowLoginModal(false); setEmailInput(''); setPasswordInput(''); setIsRegistering(false); }} className="w-full bg-stone-100 text-stone-600 font-bold py-3 rounded-xl active:scale-95 transition-transform">取消</button>
+                </div>
 
-      {/* 聯絡我們 */}
-      {showContactModal && (
-        <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4">
-          <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 relative border border-stone-100">
-            <button onClick={() => setShowContactModal(false)} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full transition-colors"><X size={20} /></button>
-            <div className="flex flex-col items-center mb-6">
-              <div className="h-24 mb-2 flex items-center justify-center">{logo ? <img src={logo} alt="Logo" className="max-h-full max-w-[150px] object-contain" /> : <Store size={50} className="text-amber-700" />}</div>
-              <h2 className="text-xl font-bold text-stone-800">聯絡我們</h2>
+                <div className="mt-6 pt-4 border-t border-stone-100 flex justify-between items-center text-xs text-stone-500">
+                  {loginMode === 'customer' ? (
+                    <>
+                      <button onClick={() => setIsRegistering(!isRegistering)} className="hover:text-amber-600 font-bold">{isRegistering ? '已有帳號？返回登入' : '還沒有帳號？立即註冊'}</button>
+                      <button onClick={() => setLoginMode('admin')} className="hover:text-rose-600">管理員通道</button>
+                    </>
+                  ) : (
+                    <button onClick={() => setLoginMode('customer')} className="hover:text-amber-600 w-full text-center">返回會員登入</button>
+                  )}
+                </div>
+              </div>
             </div>
-            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-              <div className="flex items-start gap-3"><div className="bg-stone-100 p-2 rounded-full text-stone-500 shrink-0"><Clock size={18} /></div><div className="flex-1"><p className="text-xs font-bold text-stone-400 mb-1">營業時間</p>{isAdminMode && !adminOrderingFor ? <textarea value={contactData.businessHours} onChange={e => setContactData({...contactData, businessHours: e.target.value})} placeholder="例如：週一至週五 10:00~18:00" rows="2" className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-500"></textarea> : <p className="text-sm text-stone-700 font-medium whitespace-pre-wrap">{contactData.businessHours || '尚未設定'}</p>}</div></div>
-              <div className="flex items-start gap-3"><div className="bg-stone-100 p-2 rounded-full text-stone-500 shrink-0"><MapPin size={18} /></div><div className="flex-1"><p className="text-xs font-bold text-stone-400 mb-1">地點</p>{isAdminMode && !adminOrderingFor ? <input type="text" value={contactData.address} onChange={e => setContactData({...contactData, address: e.target.value})} placeholder="門市地址" className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-500" /> : <p className="text-sm text-stone-700 font-medium">{contactData.address || '尚未設定'}</p>}</div></div>
-              <div className="flex items-start gap-3"><div className="bg-stone-100 p-2 rounded-full text-stone-500 shrink-0"><Phone size={18} /></div><div className="flex-1"><p className="text-xs font-bold text-stone-400 mb-1">電話</p>{isAdminMode && !adminOrderingFor ? <input type="tel" value={contactData.phone} onChange={e => setContactData({...contactData, phone: e.target.value})} placeholder="聯絡電話" className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-500" /> : (contactData.phone ? <a href={`tel:${contactData.phone}`} className="text-sm font-bold text-amber-600 hover:underline">{contactData.phone}</a> : <p className="text-sm text-stone-700 font-medium">尚未設定</p>)}</div></div>
-              <div className="flex items-start gap-3"><div className="bg-[#06C755]/10 p-2 rounded-full text-[#06C755] shrink-0"><MessageCircle size={18} /></div><div className="flex-1"><p className="text-xs font-bold text-stone-400 mb-1">LINE 連結</p>{isAdminMode && !adminOrderingFor ? <input type="url" value={contactData.lineLink} onChange={e => setContactData({...contactData, lineLink: e.target.value})} placeholder="https://line.me/..." className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-500" /> : (contactData.lineLink ? <a href={contactData.lineLink} target="_blank" rel="noreferrer" className="text-sm font-bold text-[#06C755] hover:underline">點我加 LINE 聯繫</a> : <p className="text-sm text-stone-700 font-medium">尚未設定</p>)}</div></div>
-              <div className="flex items-start gap-3"><div className="bg-stone-100 p-2 rounded-full text-stone-500 shrink-0"><Mail size={18} /></div><div className="flex-1"><p className="text-xs font-bold text-stone-400 mb-1">Email</p>{isAdminMode && !adminOrderingFor ? <input type="email" value={contactData.email} onChange={e => setContactData({...contactData, email: e.target.value})} placeholder="Email" className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-500" /> : (contactData.email ? <a href={`mailto:${contactData.email}`} className="text-sm font-bold text-amber-600 hover:underline break-all">{contactData.email}</a> : <p className="text-sm text-stone-700 font-medium">尚未設定</p>)}</div></div>
-              <div className="flex items-start gap-3"><div className="bg-stone-100 p-2 rounded-full text-stone-500 shrink-0"><CreditCard size={18} /></div><div className="flex-1"><p className="text-xs font-bold text-stone-400 mb-1">匯款帳號</p>{isAdminMode && !adminOrderingFor ? <textarea value={contactData.bankAccount || ''} onChange={e => setContactData({...contactData, bankAccount: e.target.value})} placeholder="例如：某某銀行 (808) 1234-5678-9000" rows="2" className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-500"></textarea> : <p className="text-sm text-stone-700 font-medium whitespace-pre-wrap">{contactData.bankAccount || '尚未設定'}</p>}</div></div>
+          )}
+
+          {/* 系統設定彈窗 */}
+          {showConfigModal && (
+            <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4">
+              <div className="bg-white p-6 rounded-3xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 relative border border-stone-100">
+                <button onClick={() => setShowConfigModal(false)} className="absolute top-4 right-4 text-stone-400"><X size={20} /></button>
+                <h2 className="text-lg font-bold text-stone-800 mb-5 flex items-center gap-2 border-b border-stone-100 pb-3"><SettingsIcon size={20} className="text-amber-600"/> 系統規則設定</h2>
+                <div className="space-y-4">
+                  <div className="bg-stone-50 p-3 rounded-xl border border-stone-200">
+                    <p className="text-sm font-bold text-stone-700 mb-2 flex items-center gap-1"><Truck size={16}/> 運費與免運</p>
+                    <div className="flex items-center justify-between mb-2"><span className="text-xs text-stone-500">基本運費 ($)</span><input type="number" value={tempConfig.shippingFee} onChange={e => setTempConfig({...tempConfig, shippingFee: e.target.value})} className="w-20 bg-white border border-stone-300 rounded p-1 text-sm outline-none text-right font-bold focus:border-amber-500" /></div>
+                    <div className="flex items-center justify-between"><span className="text-xs text-stone-500">免運門檻 (滿X件)</span><input type="number" value={tempConfig.freeShippingThreshold} onChange={e => setTempConfig({...tempConfig, freeShippingThreshold: e.target.value})} className="w-20 bg-white border border-stone-300 rounded p-1 text-sm outline-none text-right font-bold focus:border-amber-500" /></div>
+                  </div>
+                  <div className="bg-rose-50 p-3 rounded-xl border border-rose-100">
+                    <p className="text-sm font-bold text-rose-700 mb-2 flex items-center gap-1"><Info size={16}/> 任選優惠活動</p>
+                    <div className="flex items-center gap-2"><span className="text-xs text-stone-600">任選</span><input type="number" value={tempConfig.promoQty} onChange={e => setTempConfig({...tempConfig, promoQty: e.target.value})} className="w-16 bg-white border border-rose-200 rounded p-1 text-sm text-center font-bold text-rose-600" /><span className="text-xs text-stone-600">件，優惠總價 $</span><input type="number" value={tempConfig.promoPrice} onChange={e => setTempConfig({...tempConfig, promoPrice: e.target.value})} className="w-20 bg-white border border-rose-200 rounded p-1 text-sm text-center font-bold text-rose-600" /></div>
+                  </div>
+                </div>
+                <button onClick={saveSystemConfig} className="mt-5 w-full bg-stone-800 text-white font-bold py-3 rounded-xl shadow-md active:scale-95 transition-transform">儲存設定</button>
+              </div>
             </div>
-            {isAdminMode && !adminOrderingFor && <button onClick={saveContactInfo} className="mt-6 w-full bg-amber-500 text-white font-bold py-3 rounded-xl shadow-md active:scale-95 transition-transform">儲存聯絡資訊</button>}
-          </div>
-        </div>
-      )}
+          )}
+
+          {/* 公告設定彈窗 (管理員) */}
+          {showAnnounceConfig && isAdminMode && (
+             <div className="fixed inset-0 z-[60] flex justify-center items-center bg-black/50 backdrop-blur-sm px-4">
+              <div className="bg-white p-6 rounded-3xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 relative border border-stone-100 max-h-[90vh] overflow-y-auto flex flex-col">
+                <button onClick={() => {setShowAnnounceConfig(false); setIsEditingAnnounce(false);}} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full"><X size={20} /></button>
+                <h2 className="text-lg font-bold text-stone-800 mb-4 flex items-center justify-between border-b border-stone-100 pb-3">
+                  <span className="flex items-center gap-2"><Megaphone size={20} className="text-purple-600"/> 系統公告設定</span>
+                  {!isEditingAnnounce && <button onClick={() => {setTempAnnounce({ title: '', content: '', image: '', isActive: false, showOnLoad: false, isPermanent: true, expireDate: '' }); setIsEditingAnnounce(true);}} className="bg-purple-100 text-purple-700 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-purple-200 flex items-center gap-1"><Plus size={14}/>新增公告</button>}
+                </h2>
+                
+                <div className="flex-1 overflow-y-auto min-h-[50vh]">
+                  {!isEditingAnnounce ? (
+                    <div className="space-y-3">
+                      {announcements.length === 0 ? <p className="text-center text-stone-400 py-10">目前沒有任何公告</p> : (
+                        announcements.map((ann, index) => (
+                          <div key={ann.id} className="bg-stone-50 border border-stone-200 rounded-xl p-4 flex gap-3 relative">
+                             <div className="flex flex-col gap-1 items-center justify-center border-r border-stone-200 pr-3 shrink-0">
+                               <button onClick={() => moveAnnounce(index, -1)} disabled={index === 0} className={`p-1 rounded transition-colors ${index === 0 ? 'text-stone-300' : 'text-stone-500 hover:bg-stone-200 hover:text-stone-700'}`} title="往上移"><ArrowUp size={16}/></button>
+                               <button onClick={() => moveAnnounce(index, 1)} disabled={index === announcements.length - 1} className={`p-1 rounded transition-colors ${index === announcements.length - 1 ? 'text-stone-300' : 'text-stone-500 hover:bg-stone-200 hover:text-stone-700'}`} title="往下移"><ArrowDown size={16}/></button>
+                             </div>
+                             
+                             <div className="flex-1 flex flex-col relative pr-16">
+                               <div className="flex justify-between items-start mb-1">
+                                 <h3 className="font-bold text-stone-800">{ann.title}</h3>
+                                 <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${ann.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-200 text-stone-500'}`}>{ann.isActive ? '啟用中' : '未啟用'}</span>
+                               </div>
+                               <p className="text-xs text-stone-500 truncate mb-1">{ann.content}</p>
+                               <div className="text-[10px] text-stone-400 mt-auto">
+                                 {ann.isPermanent ? '永久顯示' : (ann.expireDate ? `顯示至 ${ann.expireDate}` : '未設定期限')} | {ann.showOnLoad ? '進站主動彈出' : '僅顯示標題列'}
+                               </div>
+                             </div>
+                             
+                             <div className="absolute top-3 right-3 flex gap-1">
+                               <button onClick={() => {setTempAnnounce(ann); setIsEditingAnnounce(true);}} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-md bg-white border border-blue-100 shadow-sm"><EditIcon size={16}/></button>
+                               <button onClick={() => deleteAnnouncement(ann.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-md bg-white border border-red-100 shadow-sm"><Trash2 size={16}/></button>
+                             </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                       <label className="flex items-center gap-2 bg-purple-50 p-3 rounded-xl border border-purple-200 cursor-pointer">
+                          <input type="checkbox" checked={tempAnnounce.isActive} onChange={e=>setTempAnnounce({...tempAnnounce, isActive: e.target.checked})} className="accent-purple-600 w-5 h-5"/>
+                          <span className="font-bold text-purple-800">啟用此公告</span>
+                       </label>
+
+                       <div className="space-y-1">
+                          <label className="text-xs font-bold text-stone-500">公告標題</label>
+                          <input type="text" value={tempAnnounce.title||''} onChange={e=>setTempAnnounce({...tempAnnounce, title: e.target.value})} className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-500" placeholder="例如：春節連假出貨公告" />
+                       </div>
+
+                       <div className="space-y-1">
+                          <label className="text-xs font-bold text-stone-500">公告內容</label>
+                          <textarea value={tempAnnounce.content||''} onChange={e=>setTempAnnounce({...tempAnnounce, content: e.target.value})} rows="4" className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-500"></textarea>
+                       </div>
+
+                       <div className="space-y-1">
+                          <label className="text-xs font-bold text-stone-500">公告圖片 (選填)</label>
+                          <div className="relative">
+                             <div className="h-32 bg-stone-100 rounded-xl border-2 border-dashed border-stone-300 flex items-center justify-center relative overflow-hidden group">
+                                {tempAnnounce.image ? <img src={tempAnnounce.image} className="w-full h-full object-contain" /> : <div className="text-stone-400 flex flex-col items-center"><ImagePlus size={24}/></div>}
+                                <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity"><Camera size={24} className="text-white"/><input type="file" accept="image/*" className="hidden" onChange={(e)=>handleImageUpload(e.target.files[0], img=>setTempAnnounce({...tempAnnounce, image:img}))} /></label>
+                             </div>
+                             {tempAnnounce.image && (
+                                <button onClick={() => setTempAnnounce({...tempAnnounce, image: ''})} className="absolute -top-2 -right-2 bg-rose-500 text-white rounded-full p-1.5 shadow-lg hover:bg-rose-600 z-10 hover:scale-110 transition-transform">
+                                   <X size={14}/>
+                                </button>
+                             )}
+                          </div>
+                       </div>
+
+                       <div className="bg-stone-50 p-3 rounded-xl border border-stone-200 space-y-3">
+                          <label className="flex items-center gap-2 text-sm font-bold text-stone-700 cursor-pointer">
+                             <input type="checkbox" checked={tempAnnounce.showOnLoad} onChange={e=>setTempAnnounce({...tempAnnounce, showOnLoad: e.target.checked})} className="accent-purple-600 w-4 h-4"/> 首頁載入時主動跳出大視窗 (每個用戶只跳一次)
+                          </label>
+                          <div className="border-t border-stone-200 pt-3">
+                             <label className="flex items-center gap-2 text-sm font-bold text-stone-700 cursor-pointer mb-2">
+                                <input type="checkbox" checked={tempAnnounce.isPermanent} onChange={e=>setTempAnnounce({...tempAnnounce, isPermanent: e.target.checked})} className="accent-purple-600 w-4 h-4"/> 永久顯示 (不設定期限)
+                             </label>
+                             {!tempAnnounce.isPermanent && (
+                                <div className="flex items-center gap-2 text-sm">
+                                   <span className="text-stone-500 font-bold">下架日期：</span>
+                                   <input type="date" value={tempAnnounce.expireDate||''} onChange={e=>setTempAnnounce({...tempAnnounce, expireDate: e.target.value})} className="bg-white border border-stone-300 rounded px-2 py-1 outline-none focus:border-purple-400" />
+                                </div>
+                             )}
+                          </div>
+                       </div>
+                    </div>
+                  )}
+                </div>
+
+                {isEditingAnnounce && (
+                  <div className="mt-4 pt-4 border-t border-stone-100 flex gap-2">
+                    <button onClick={() => setIsEditingAnnounce(false)} className="flex-1 bg-stone-100 text-stone-600 font-bold py-2.5 rounded-xl hover:bg-stone-200 transition-colors">取消</button>
+                    <button onClick={saveAnnouncement} className="flex-[2] bg-purple-600 text-white font-bold py-2.5 rounded-xl shadow-md active:scale-95 transition-transform">儲存公告</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* 前台大公告視窗 */}
+          {showAnnouncementModal && viewingAnnounce && (
+             <div className="fixed inset-0 z-[60] flex justify-center items-center bg-black/60 backdrop-blur-sm px-4">
+              <div className="bg-white p-1 rounded-3xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 relative border border-stone-100 overflow-hidden flex flex-col max-h-[85vh]">
+                <button onClick={() => setShowAnnouncementModal(false)} className="absolute top-3 right-3 text-stone-400 hover:bg-stone-100 p-1.5 rounded-full z-10 bg-white/80 backdrop-blur"><X size={20} /></button>
+                <div className="flex-1 overflow-y-auto p-5">
+                   <h2 className="text-xl font-black text-stone-800 mb-4 flex items-center gap-2 border-b border-stone-100 pb-3"><Megaphone size={24} className="text-amber-500"/> {viewingAnnounce.title}</h2>
+                   {viewingAnnounce.image && (
+                      <div className="w-full bg-stone-50 rounded-xl overflow-hidden mb-4 border border-stone-100">
+                         <img src={viewingAnnounce.image} className="w-full object-contain" />
+                      </div>
+                   )}
+                   <div className="text-sm text-stone-600 leading-relaxed whitespace-pre-wrap">{viewingAnnounce.content}</div>
+                </div>
+                <div className="p-4 bg-stone-50 border-t border-stone-100">
+                   <button onClick={() => setShowAnnouncementModal(false)} className="w-full bg-stone-800 text-white font-bold py-3 rounded-xl shadow-md active:scale-95 transition-transform">我知道了</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 商品分類管理彈窗 (管理員) */}
+          {showCategoryManager && isAdminMode && (
+             <div className="fixed inset-0 z-[70] flex justify-center items-center bg-black/50 backdrop-blur-sm px-4">
+              <div className="bg-white p-6 rounded-3xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 relative border border-stone-100">
+                 <button onClick={() => setShowCategoryManager(false)} className="absolute top-4 right-4 text-stone-400 hover:text-stone-800"><X size={20} /></button>
+                 <h2 className="text-lg font-bold text-stone-800 mb-4 border-b border-stone-100 pb-2">管理商品分類</h2>
+                 <div className="flex gap-2 mb-4">
+                    <input type="text" value={newCatName} onChange={e=>setNewCatName(e.target.value)} placeholder="新增分類名稱..." className="flex-1 bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-500" />
+                    <button onClick={handleAddCategory} className="bg-stone-800 text-white px-4 rounded-lg font-bold text-sm hover:bg-stone-700 shadow-sm">新增</button>
+                 </div>
+                 <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                    {categoriesList.map((cat, index) => (
+                       <div key={cat.name} className="flex justify-between items-center bg-stone-50 px-3 py-2 rounded-lg border border-stone-200">
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => toggleCategoryVisibility(index)} className={`hover:bg-stone-200 p-1 rounded-md transition-colors ${cat.isHidden ? 'text-stone-400' : 'text-blue-600'}`} title={cat.isHidden ? "點擊公開此分類" : "點擊隱藏此分類"}>
+                              {cat.isHidden ? <EyeOff size={18}/> : <Eye size={18}/>}
+                            </button>
+                            <span className={`font-bold text-sm ${cat.isHidden ? 'text-stone-400 line-through' : 'text-stone-700'}`}>{cat.name}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                             <button onClick={() => moveCategory(index, -1)} disabled={index === 0} className="p-1 text-stone-400 hover:text-stone-700 disabled:opacity-30"><ArrowUp size={16}/></button>
+                             <button onClick={() => moveCategory(index, 1)} disabled={index === categoriesList.length - 1} className="p-1 text-stone-400 hover:text-stone-700 disabled:opacity-30"><ArrowDown size={16}/></button>
+                             <button onClick={()=>handleDeleteCategory(index)} className="p-1 text-red-400 hover:text-red-600 ml-1"><Trash2 size={16}/></button>
+                          </div>
+                       </div>
+                    ))}
+                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* 聯絡我們 */}
+          {showContactModal && (
+            <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4">
+              <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 relative border border-stone-100">
+                <button onClick={() => setShowContactModal(false)} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full transition-colors"><X size={20} /></button>
+                <div className="flex flex-col items-center mb-6">
+                  <div className="h-24 mb-2 flex items-center justify-center">{logo ? <img src={logo} alt="Logo" className="max-h-full max-w-[150px] object-contain" /> : <Store size={50} className="text-amber-700" />}</div>
+                  <h2 className="text-xl font-bold text-stone-800">聯絡我們</h2>
+                </div>
+                <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                  <div className="flex items-start gap-3"><div className="bg-stone-100 p-2 rounded-full text-stone-500 shrink-0"><Clock size={18} /></div><div className="flex-1"><p className="text-xs font-bold text-stone-400 mb-1">營業時間</p>{isAdminMode && !adminOrderingFor ? <textarea value={contactData.businessHours} onChange={e => setContactData({...contactData, businessHours: e.target.value})} placeholder="例如：週一至週五 10:00~18:00" rows="2" className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-500"></textarea> : <p className="text-sm text-stone-700 font-medium whitespace-pre-wrap">{contactData.businessHours || '尚未設定'}</p>}</div></div>
+                  <div className="flex items-start gap-3"><div className="bg-stone-100 p-2 rounded-full text-stone-500 shrink-0"><MapPin size={18} /></div><div className="flex-1"><p className="text-xs font-bold text-stone-400 mb-1">地點</p>{isAdminMode && !adminOrderingFor ? <input type="text" value={contactData.address} onChange={e => setContactData({...contactData, address: e.target.value})} placeholder="門市地址" className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-500" /> : <p className="text-sm text-stone-700 font-medium">{contactData.address || '尚未設定'}</p>}</div></div>
+                  <div className="flex items-start gap-3"><div className="bg-stone-100 p-2 rounded-full text-stone-500 shrink-0"><Phone size={18} /></div><div className="flex-1"><p className="text-xs font-bold text-stone-400 mb-1">電話</p>{isAdminMode && !adminOrderingFor ? <input type="tel" value={contactData.phone} onChange={e => setContactData({...contactData, phone: e.target.value})} placeholder="聯絡電話" className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-500" /> : (contactData.phone ? <a href={`tel:${contactData.phone}`} className="text-sm font-bold text-amber-600 hover:underline">{contactData.phone}</a> : <p className="text-sm text-stone-700 font-medium">尚未設定</p>)}</div></div>
+                  <div className="flex items-start gap-3"><div className="bg-[#06C755]/10 p-2 rounded-full text-[#06C755] shrink-0"><MessageCircle size={18} /></div><div className="flex-1"><p className="text-xs font-bold text-stone-400 mb-1">LINE 連結</p>{isAdminMode && !adminOrderingFor ? <input type="url" value={contactData.lineLink} onChange={e => setContactData({...contactData, lineLink: e.target.value})} placeholder="https://line.me/..." className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-500" /> : (contactData.lineLink ? <a href={contactData.lineLink} target="_blank" rel="noreferrer" className="text-sm font-bold text-[#06C755] hover:underline">點我加 LINE 聯繫</a> : <p className="text-sm text-stone-700 font-medium">尚未設定</p>)}</div></div>
+                  <div className="flex items-start gap-3"><div className="bg-stone-100 p-2 rounded-full text-stone-500 shrink-0"><Mail size={18} /></div><div className="flex-1"><p className="text-xs font-bold text-stone-400 mb-1">Email</p>{isAdminMode && !adminOrderingFor ? <input type="email" value={contactData.email} onChange={e => setContactData({...contactData, email: e.target.value})} placeholder="Email" className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-500" /> : (contactData.email ? <a href={`mailto:${contactData.email}`} className="text-sm font-bold text-amber-600 hover:underline break-all">{contactData.email}</a> : <p className="text-sm text-stone-700 font-medium">尚未設定</p>)}</div></div>
+                  <div className="flex items-start gap-3"><div className="bg-stone-100 p-2 rounded-full text-stone-500 shrink-0"><CreditCard size={18} /></div><div className="flex-1"><p className="text-xs font-bold text-stone-400 mb-1">匯款帳號</p>{isAdminMode && !adminOrderingFor ? <textarea value={contactData.bankAccount || ''} onChange={e => setContactData({...contactData, bankAccount: e.target.value})} placeholder="例如：某某銀行 (808) 1234-5678-9000" rows="2" className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-500"></textarea> : <p className="text-sm text-stone-700 font-medium whitespace-pre-wrap">{contactData.bankAccount || '尚未設定'}</p>}</div></div>
+                </div>
+                {isAdminMode && !adminOrderingFor && <button onClick={saveContactInfo} className="mt-6 w-full bg-amber-500 text-white font-bold py-3 rounded-xl shadow-md active:scale-95 transition-transform">儲存聯絡資訊</button>}
+              </div>
+            </div>
+          )}
 
           {/* 關於我們 */}
           {showAboutModal && (
@@ -1902,4 +1913,4 @@ function App() {
 
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
-
+  </script>
