@@ -113,6 +113,7 @@
       const [showMemberProfile, setShowMemberProfile] = useState(false);
       const [showAdminOrders, setShowAdminOrders] = useState(false);
       const [showAdminCustomers, setShowAdminCustomers] = useState(false);
+      const [showDeletedCustomers, setShowDeletedCustomers] = useState(false); // 🌟 新增：停用名單開關
       const [showAboutModal, setShowAboutModal] = useState(false);
       const [isEditingAbout, setIsEditingAbout] = useState(false);
       const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
@@ -187,8 +188,20 @@
         const unsubscribeAuth = auth.onAuthStateChanged(async user => {
           if (user) {
             const userDoc = await db.collection('users').doc(user.uid).get();
-            if (userDoc.exists && userDoc.data().role === 'customer') {
-              setIsAdminMode(false);
+            if (userDoc.exists) {
+              const userData = userDoc.data();
+              // 🛡️ 防護機制：阻擋被軟刪除的客戶登入
+              if (userData.role === 'deleted') {
+                alert("此帳號已被管理員停用或刪除！");
+                auth.signOut();
+                return;
+              }
+              
+              if (userData.role === 'customer') {
+                setIsAdminMode(false);
+              } else {
+                setIsAdminMode(true);
+              }
             } else {
               setIsAdminMode(true);
             }
@@ -231,10 +244,8 @@
           };
 
           if (doc.exists && Array.isArray(doc.data().list)) {
-            // 讀取新的多筆公告結構
             handleAnnouncementsUpdate(doc.data().list);
           } else {
-            // 向下相容：如果新的清單還不存在，自動去抓取舊版的單一公告資料
             db.collection('settings').doc('announcement').get().then(oldDoc => {
               if (oldDoc.exists && oldDoc.data().title) {
                 handleAnnouncementsUpdate([{ ...oldDoc.data(), id: 'legacy-1' }]);
@@ -270,7 +281,8 @@
           setAdminDiscountInputs(prev => ({...newDiscountInputs, ...prev}));
         });
 
-        const unsubscribeUsers = db.collection('users').where('role', '==', 'customer').onSnapshot(snapshot => {
+        // 🌟 變更：改為抓取 'customer' 和 'deleted' 兩種角色的客戶
+        const unsubscribeUsers = db.collection('users').where('role', 'in', ['customer', 'deleted']).onSnapshot(snapshot => {
           const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           setAllUsers(users);
         });
@@ -434,12 +446,22 @@
       };
 
       const handleDeleteCustomer = async () => {
-        if(!window.confirm('確定徹底刪除此客戶資料嗎？(歷史訂單將保留但失去連結)')) return;
+        if(!window.confirm('確定徹底刪除此客戶資料嗎？(該帳號將被停用且無法再次登入)')) return;
         if (db) {
-          await db.collection('users').doc(selectedCustomer.id).delete();
-          alert("客戶已刪除！");
+          await db.collection('users').doc(selectedCustomer.id).update({ role: 'deleted' });
+          alert("客戶帳號已刪除並停用！");
           setSelectedCustomer(null);
           setIsEditingAdminCustomer(false);
+        }
+      };
+
+      // 🌟 新增：恢復客戶帳號功能
+      const handleRestoreCustomer = async () => {
+        if(!window.confirm('確定要恢復此客戶的登入與購物權限嗎？')) return;
+        if (db) {
+          await db.collection('users').doc(selectedCustomer.id).update({ role: 'customer' });
+          alert("帳號已恢復成功！客戶可以正常登入了。");
+          setSelectedCustomer(null);
         }
       };
 
@@ -637,13 +659,18 @@
         const printWindow = window.open('', '', 'width=800,height=600'); printWindow.document.write(html); printWindow.document.close(); setTimeout(() => { printWindow.print(); }, 500);
       };
 
+      // 🌟 修改：加入停用帳號的篩選邏輯
       const filteredUsers = useMemo(() => {
         return allUsers.filter(user => {
+           // 根據 toggle 按鈕決定要看正常客戶還是被停用的客戶
+           if (showDeletedCustomers && user.role !== 'deleted') return false;
+           if (!showDeletedCustomers && user.role === 'deleted') return false;
+
            const matchName = customerSearchName ? user.name?.toLowerCase().includes(customerSearchName.toLowerCase()) : true;
            const matchPhone = customerSearchName ? user.phone?.includes(customerSearchName) : true;
            return customerSearchName ? (matchName || matchPhone) : true;
         });
-      }, [allUsers, customerSearchName]);
+      }, [allUsers, customerSearchName, showDeletedCustomers]);
 
       const handleImageUpload = (file, callback, preserveTransparency = false) => {
         if (!file) return;
@@ -1295,16 +1322,19 @@
           {showAdminCustomers && isAdminMode && (
             <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4 md:px-10 py-6">
               <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-6xl h-full flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
-                <button onClick={() => {setShowAdminCustomers(false); setSelectedCustomer(null); setIsEditingAdminCustomer(false); setIsMergeMode(false); setMergeSelection([]); setIsNewCustomer(false);}} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full"><X size={24} /></button>
+                <button onClick={() => {setShowAdminCustomers(false); setSelectedCustomer(null); setIsEditingAdminCustomer(false); setIsMergeMode(false); setMergeSelection([]); setIsNewCustomer(false); setShowDeletedCustomers(false);}} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full"><X size={24} /></button>
                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 border-b border-stone-200 pb-3 gap-4">
                   <h2 className="text-xl md:text-2xl font-bold text-stone-800 flex items-center gap-2"><UsersIcon size={24} className="text-blue-600"/> 客戶管理中心</h2>
                   {!selectedCustomer && (
-                    <div className="flex flex-wrap items-center gap-3">
-                      <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-stone-200 flex-1 min-w-[250px]">
+                    <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                      <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-stone-200 flex-1 min-w-[200px]">
                         <SearchIcon size={16} className="text-stone-400" />
                         <input type="text" placeholder="搜尋客戶姓名或電話..." value={customerSearchName} onChange={e => setCustomerSearchName(e.target.value)} className="w-full text-sm outline-none font-bold" />
                       </div>
-                      <button onClick={handleAddCustomerBtn} className="bg-blue-600 text-white text-sm font-bold px-4 py-2 rounded-lg shadow-sm hover:bg-blue-700 transition-colors flex items-center gap-1"><Plus size={16}/> 新增客戶</button>
+                      <button onClick={() => setShowDeletedCustomers(!showDeletedCustomers)} className={`text-sm font-bold px-3 py-2 rounded-lg shadow-sm transition-colors border ${showDeletedCustomers ? 'bg-rose-100 text-rose-700 border-rose-200 hover:bg-rose-200' : 'bg-stone-100 text-stone-600 border-stone-200 hover:bg-stone-200'}`}>
+                        {showDeletedCustomers ? '返回正常名單' : '查看停用名單'}
+                      </button>
+                      {!showDeletedCustomers && <button onClick={handleAddCustomerBtn} className="bg-blue-600 text-white text-sm font-bold px-3 py-2 rounded-lg shadow-sm hover:bg-blue-700 transition-colors flex items-center gap-1 whitespace-nowrap"><Plus size={16}/> 新增客戶</button>}
                     </div>
                   )}
                 </div>
@@ -1314,10 +1344,11 @@
                     filteredUsers.length === 0 ? <p className="text-center text-stone-400 mt-10">找不到客戶資料</p> : (
                       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         {filteredUsers.map(user => (
-                          <div key={user.id} onClick={() => setSelectedCustomer({...user})} className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm cursor-pointer hover:border-blue-400 hover:shadow-md transition-all flex flex-col items-center text-center relative overflow-hidden">
+                          <div key={user.id} onClick={() => setSelectedCustomer({...user})} className={`bg-white p-5 rounded-2xl border shadow-sm cursor-pointer hover:shadow-md transition-all flex flex-col items-center text-center relative overflow-hidden ${user.role === 'deleted' ? 'border-rose-200 opacity-80' : 'border-stone-200 hover:border-blue-400'}`}>
                             <div className="absolute top-0 right-0 bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-1 rounded-bl-lg">點數: {user.points||0}</div>
-                            <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-3 mt-2"><UserIcon size={32} /></div>
+                            <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-3 mt-2 ${user.role === 'deleted' ? 'bg-rose-100 text-rose-600' : 'bg-blue-100 text-blue-600'}`}><UserIcon size={32} /></div>
                             <h3 className="font-black text-stone-800 text-lg">{user.name} <span className="text-sm font-normal text-stone-500">({user.gender||'-'})</span></h3>
+                            {user.role === 'deleted' && <div className="bg-rose-100 text-rose-600 text-[10px] font-bold px-2 py-0.5 rounded-md mt-1">已停用</div>}
                             <p className="text-sm text-stone-500 font-bold mt-1">{user.phone}</p>
                             <span className="mt-3 text-[10px] bg-stone-100 text-stone-500 px-3 py-1 rounded-full font-bold">點擊查看詳細資料與訂單</span>
                           </div>
@@ -1329,13 +1360,15 @@
                       <div className="md:w-1/3">
                         <div className="bg-white p-6 rounded-2xl border border-blue-200 shadow-sm sticky top-0 relative">
                           <button onClick={() => {setSelectedCustomer(null); setIsEditingAdminCustomer(false); setIsMergeMode(false); setMergeSelection([]);}} className="absolute top-4 right-4 text-stone-400 hover:text-stone-700 font-bold text-xs flex items-center gap-1 bg-stone-100 px-2 py-1 rounded-md"><ChevronRight size={14} className="rotate-180"/> 返回</button>
-                          <div className="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4 mt-4"><UserIcon size={40} /></div>
+                          <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-4 mt-4 ${selectedCustomer.role === 'deleted' ? 'bg-rose-100 text-rose-600' : 'bg-blue-100 text-blue-600'}`}><UserIcon size={40} /></div>
                           <div className="flex justify-between items-center mb-2">
                             <h3 className="font-black text-stone-800 text-2xl">{selectedCustomer.name}</h3>
-                            {!isEditingAdminCustomer ? (
-                              <button onClick={() => setIsEditingAdminCustomer(true)} className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-md flex items-center gap-1 hover:bg-blue-100"><EditIcon size={14}/> 編輯</button>
-                            ) : (
-                              <button onClick={() => { setIsEditingAdminCustomer(false); setSelectedCustomer(allUsers.find(u => u.id === selectedCustomer.id)); }} className="text-xs font-bold text-stone-400 hover:text-stone-600">取消</button>
+                            {selectedCustomer.role !== 'deleted' && (
+                              !isEditingAdminCustomer ? (
+                                <button onClick={() => setIsEditingAdminCustomer(true)} className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-md flex items-center gap-1 hover:bg-blue-100"><EditIcon size={14}/> 編輯</button>
+                              ) : (
+                                <button onClick={() => { setIsEditingAdminCustomer(false); setSelectedCustomer(allUsers.find(u => u.id === selectedCustomer.id)); }} className="text-xs font-bold text-stone-400 hover:text-stone-600">取消</button>
+                              )
                             )}
                           </div>
                           
@@ -1365,6 +1398,16 @@
                               <div><span className="text-xs font-bold text-stone-400 block mb-1">Line ID</span><span className="font-bold text-[#06C755]">{selectedCustomer.lineId || '未提供'}</span></div>
                               <div><span className="text-xs font-bold text-stone-400 block mb-1">預設地址</span><span className="font-bold">{selectedCustomer.address || '未提供'}</span></div>
                               <div><span className="text-xs font-bold text-amber-600 block mb-1">累積點數</span><span className="font-black text-xl text-amber-600">{selectedCustomer.points || 0}</span></div>
+                              
+                              {/* 🌟 恢復帳號按鈕 */}
+                              {selectedCustomer.role === 'deleted' && (
+                                <div className="mt-4 pt-4 border-t border-stone-200">
+                                   <p className="text-xs text-rose-600 font-bold mb-3 text-center bg-rose-50 py-2 rounded-lg">⚠️ 此帳號目前為停用狀態</p>
+                                   <button onClick={handleRestoreCustomer} className="w-full bg-emerald-500 text-white font-bold py-2 rounded-md shadow-sm hover:bg-emerald-600 transition-colors flex justify-center items-center gap-1">
+                                     恢復帳號權限
+                                   </button>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
@@ -1375,7 +1418,9 @@
                           <h3 className="font-bold text-stone-800">歷史訂單</h3>
                           <div className="flex gap-2">
                             {isMergeMode && mergeSelection.length > 0 && <button onClick={handleConfirmMerge} className="bg-purple-600 text-white text-xs font-bold px-3 py-1.5 rounded shadow-md hover:bg-purple-700 transition-colors flex items-center gap-1"><LinkIcon size={14}/> 確認合併 ({mergeSelection.length})</button>}
-                            <button onClick={() => { setIsMergeMode(!isMergeMode); setMergeSelection([]); }} className={`text-xs font-bold px-3 py-1.5 rounded transition-colors flex items-center gap-1 ${isMergeMode ? 'bg-stone-200 text-stone-600' : 'bg-purple-100 text-purple-700 hover:bg-purple-200'}`}><LinkIcon size={14}/> {isMergeMode ? '取消合併模式' : '合併未處理訂單'}</button>
+                            {selectedCustomer.role !== 'deleted' && (
+                              <button onClick={() => { setIsMergeMode(!isMergeMode); setMergeSelection([]); }} className={`text-xs font-bold px-3 py-1.5 rounded transition-colors flex items-center gap-1 ${isMergeMode ? 'bg-stone-200 text-stone-600' : 'bg-purple-100 text-purple-700 hover:bg-purple-200'}`}><LinkIcon size={14}/> {isMergeMode ? '取消合併模式' : '合併未處理訂單'}</button>
+                            )}
                           </div>
                         </div>
 
