@@ -281,46 +281,80 @@
           setIsAppLoading(false);
         });
 
-        const unsubscribeOrders = db.collection('orders').orderBy('createdAt', 'desc').onSnapshot(snapshot => {
-          const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          setAllOrders(orders);
-          const newTrackingInputs = {};
-          const newDiscountInputs = {};
-          orders.forEach(o => { 
-            if(o.trackingNumber) newTrackingInputs[o.id] = o.trackingNumber; 
-            newDiscountInputs[o.id] = o.adminDiscount || 0;
-          });
-          setTrackingInputs(prev => ({...newTrackingInputs, ...prev}));
-          setAdminDiscountInputs(prev => ({...newDiscountInputs, ...prev}));
-        });
-
-        const unsubscribeUsers = db.collection('users').where('role', 'in', ['customer', 'deleted']).onSnapshot(snapshot => {
-          const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          setAllUsers(users);
-        });
-
         return () => {
           unsubscribeAuth(); unsubscribeLogo(); unsubscribeContact(); 
           unsubscribeConfig(); unsubscribeAbout(); unsubscribeProducts(); 
-          unsubscribeOrders(); unsubscribeUsers(); unsubscribeAnnounce(); unsubscribeCats();
+          unsubscribeAnnounce(); unsubscribeCats();
         };
       }, []);
 
+      // ======== 【區塊二】敏感資料防護機制 (根據權限拉取訂單與會員) ========
       useEffect(() => {
-        if (currentUser && !isAdminMode) {
-           const unsub = db.collection('users').doc(currentUser.uid).onSnapshot(doc => {
-              if (doc.exists) {
-                 const data = doc.data();
-                 setUserProfile(data);
-                 setCustomerInfo({
-                    name: data.name || '', phone: data.phone || '',
-                    address: data.address || '', email: data.email || currentUser.email || '',
-                    lineId: data.lineId || '', gender: data.gender || '女'
-                 });
-              }
-           });
-           return () => unsub();
+        if (!db) return;
+
+        let unsubscribeOrders = () => {};
+        let unsubscribeUsers = () => {};
+        let unsubscribeProfile = () => {};
+
+        // 判斷 1：如果是老闆 (管理員)，拉取全站資料
+        if (isAdminMode) {
+          unsubscribeOrders = db.collection('orders').orderBy('createdAt', 'desc').onSnapshot(snapshot => {
+            const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setAllOrders(orders);
+            const newTrackingInputs = {};
+            const newDiscountInputs = {};
+            orders.forEach(o => { 
+              if(o.trackingNumber) newTrackingInputs[o.id] = o.trackingNumber; 
+              newDiscountInputs[o.id] = o.adminDiscount || 0;
+            });
+            setTrackingInputs(prev => ({...newTrackingInputs, ...prev}));
+            setAdminDiscountInputs(prev => ({...newDiscountInputs, ...prev}));
+          });
+
+          unsubscribeUsers = db.collection('users').where('role', 'in', ['customer', 'deleted']).onSnapshot(snapshot => {
+            const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setAllUsers(users);
+          });
+        } 
+        // 判斷 2：如果是一般客戶登入，只拉取他「自己的訂單」與「自己的個資」
+        else if (currentUser) {
+          unsubscribeProfile = db.collection('users').doc(currentUser.uid).onSnapshot(doc => {
+            if (doc.exists) {
+               const data = doc.data();
+               setUserProfile(data);
+               setCustomerInfo({
+                  name: data.name || '', phone: data.phone || '',
+                  address: data.address || '', email: data.email || currentUser.email || '',
+                  lineId: data.lineId || '', gender: data.gender || '女'
+               });
+            }
+          });
+
+          unsubscribeOrders = db.collection('orders')
+            .where('userId', '==', currentUser.uid) // <- 安全鎖：只抓自己的訂單
+            .orderBy('createdAt', 'desc')
+            .onSnapshot(snapshot => {
+              const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+              setAllOrders(orders);
+              const newTrackingInputs = {};
+              const newDiscountInputs = {};
+              orders.forEach(o => { 
+                if(o.trackingNumber) newTrackingInputs[o.id] = o.trackingNumber; 
+                newDiscountInputs[o.id] = o.adminDiscount || 0;
+              });
+              setTrackingInputs(prev => ({...newTrackingInputs, ...prev}));
+              setAdminDiscountInputs(prev => ({...newDiscountInputs, ...prev}));
+            }, error => {
+               console.error("讀取訂單失敗", error);
+            });
         }
+
+        // 清理機制：切換帳號或登出時，關閉監聽
+        return () => {
+          unsubscribeOrders();
+          unsubscribeUsers();
+          unsubscribeProfile();
+        };
       }, [currentUser, isAdminMode]);
 
       useEffect(() => {
