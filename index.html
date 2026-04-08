@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>木子家MUZI MAISON線上訂單系統</title>
-  <meta property="og:title" content="木子家MUZI MAISON線上訂單系統">
-  <meta property="og:description" content="嚴選優質烘焙，提供最便利的線上訂購體驗。快來逛逛吧！">
+  <meta property="og:title" content="木子家MUZI MAISON｜職人手作，純粹養生">
+  <meta property="og:description" content="嚴選優質堅果、牛軋糖、核桃糕...手作，提供最便利的線上訂購體驗。快來逛逛吧！">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://xu3qo6540981812728-byte.github.io/muzi-maison/">
   <meta property="og:image" content="https://raw.githubusercontent.com/xu3qo6540981812728-byte/muzi-maison/refs/heads/main/logo.png">
@@ -461,7 +461,7 @@
       };
 
       const handleShareWebsite = async () => {
-        const shareData = { title: '木子家 MUZI MAISON', text: '推薦給你！木子家MUZI MAISON線上訂單系統，快來逛逛吧～', url: window.location.href };
+        const shareData = { title: '木子家MUZI MAISON｜職人手作，純粹養生', text: '嚴選優質堅果、牛軋糖、核桃糕...手作，提供最便利的線上訂購體驗。快來逛逛吧！', url: window.location.href };
         if (navigator.share) { try { await navigator.share(shareData); } catch (err) {} } else {
           const fallbackCopy = () => {
             const ta = document.createElement("textarea"); ta.value = shareData.url; ta.style.position = "fixed"; ta.style.left = "-999999px";
