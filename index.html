@@ -1093,7 +1093,7 @@
                       <div className="relative block w-24 h-24 rounded-xl shrink-0 overflow-hidden cursor-pointer hover:ring-2 hover:ring-amber-400 transition-all" onClick={() => openProductDetail(product)}>
                         <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
                         <div className="absolute inset-0 bg-black/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><span className="bg-white/90 text-stone-800 text-[10px] font-bold px-2 py-1 rounded-full">{isAdminMode && !adminOrderingFor ? '編輯' : '詳情'}</span></div>
-                        {product.isPromo && <div className="absolute top-0 left-0 bg-rose-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-br-lg z-10 shadow-sm">活動</div>}
+                        {product.isPromo && <div className="absolute top-0 left-0 bg-rose-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-br-lg z-10 shadow-sm">指定商品活動</div>}
                         {product.isAddon && <div className="absolute bottom-0 left-0 right-0 bg-purple-500/90 text-white text-[9px] font-bold text-center py-0.5 z-10 shadow-sm">加購商品</div>}
                       </div>
                       <div className="flex-1 flex flex-col justify-between py-0.5">
@@ -1251,7 +1251,7 @@
                     <h3 className="hidden md:block font-bold text-stone-800 mb-4 border-b border-stone-200 pb-2">已選商品</h3>
                     {cartData.items.map((item, idx) => (
                       <div key={item.id + idx} className="flex items-center justify-between py-3 border-b border-stone-100 last:border-0">
-                        <div className="flex-1"><h4 className="font-bold text-stone-800 flex items-center gap-1">{item.name}{item.isPromo && <span className="text-[9px] bg-rose-100 text-rose-600 px-1 py-0.5 rounded">活動</span>}{item.isReward && <span className="text-[9px] bg-purple-100 text-purple-600 px-1 py-0.5 rounded">兌換</span>}{item.isAddon && !item.isReward && <span className="text-[9px] bg-purple-100 text-purple-600 px-1 py-0.5 rounded">加購</span>}</h4><p className="text-xs text-stone-500">${item.price} {item.unit ? `/${item.unit}` : ''}</p></div>
+                        <div className="flex-1"><h4 className="font-bold text-stone-800 flex items-center gap-1">{item.name}{item.isPromo && <span className="text-[9px] bg-rose-100 text-rose-600 px-1 py-0.5 rounded">指定商品活動</span>}{item.isReward && <span className="text-[9px] bg-purple-100 text-purple-600 px-1 py-0.5 rounded">兌換</span>}{item.isAddon && !item.isReward && <span className="text-[9px] bg-purple-100 text-purple-600 px-1 py-0.5 rounded">加購</span>}</h4><p className="text-xs text-stone-500">${item.price} {item.unit ? `/${item.unit}` : ''}</p></div>
                         <div className="flex items-center gap-4">
                           {!item.isReward ? (
                              <div className="flex items-center gap-3 bg-white rounded-full px-2 py-1 border border-stone-200"><button onClick={() => updateCart(item.id, -1)} className="p-1 text-stone-500"><Minus size={14} /></button><span className="w-4 text-center text-sm font-bold">{item.qty}</span><button onClick={() => updateCart(item.id, 1)} className="p-1 text-stone-800"><Plus size={14} /></button></div>
