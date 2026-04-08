@@ -461,7 +461,7 @@
       };
 
       const handleShareWebsite = async () => {
-        const shareData = { title: '木子家MUZI MAISON｜職人手作，純粹養生', text: '嚴選優質堅果、牛軋糖、核桃糕...手作，提供最便利的線上訂購體驗。快來逛逛吧！', url: window.location.href };
+        const shareData = { title: '木子家MUZI MAISON｜職人手作，純粹養生', text: '嚴選優質堅果、牛軋糖、核桃糕...手作，提供最便利的線上訂購體驗。快來逛逛吧！', url: https://muzi-maison.netlify.app/?= };
         if (navigator.share) { try { await navigator.share(shareData); } catch (err) {} } else {
           const fallbackCopy = () => {
             const ta = document.createElement("textarea"); ta.value = shareData.url; ta.style.position = "fixed"; ta.style.left = "-999999px";
