@@ -149,6 +149,7 @@
       const [mergeSelection, setMergeSelection] = useState([]);
 
       const [logo, setLogo] = useState('./logo.png');
+      const [storeSlogan, setStoreSlogan] = useState('堅果、牛軋糖、核桃糕嚴選烘焙');
       const [products, setProducts] = useState(defaultProducts);
       const [storeConfig, setStoreConfig] = useState(defaultStoreConfig);
       const [cart, setCart] = useState({});
@@ -197,7 +198,10 @@
         });
 
         const unsubscribeLogo = db.collection('settings').doc('store').onSnapshot(doc => {
-          if (doc.exists && doc.data().logo) setLogo(doc.data().logo);
+          if (doc.exists) {
+            if (doc.data().logo) setLogo(doc.data().logo);
+            if (doc.data().slogan !== undefined) setStoreSlogan(doc.data().slogan);
+          }
         });
 
         const unsubscribeContact = db.collection('settings').doc('contact').onSnapshot(doc => {
@@ -291,8 +295,9 @@
         }
       }, [allUsers, isEditingAdminCustomer]);
 
-      const categories = ['全部', ...categoriesList];
-      const displayedCategories = activeCategory === '全部' ? categoriesList : [activeCategory];
+      const allCategoriesSet = useMemo(() => new Set([...categoriesList, ...products.map(p => p.category)]), [categoriesList, products]);
+      const categories = ['全部', ...Array.from(allCategoriesSet)];
+      const displayedCategories = activeCategory === '全部' ? Array.from(allCategoriesSet) : [activeCategory];
       const candyProducts = products.filter(p => p.category.includes('糖果') || p.category.includes('軟糕'));
 
       const updateCart = (id, delta) => {
@@ -723,14 +728,21 @@
             <header className="px-4 py-3 flex items-center justify-between">
               <div className="flex items-center gap-3 relative">
                 <button onClick={() => setSidebarOpen(true)} className="p-2 -ml-2 text-stone-600 hover:bg-stone-100 rounded-full transition-colors"><Menu size={24} /></button>
-                <label className={`relative block h-14 min-w-[3rem] max-w-[150px] flex items-center justify-center ${isAdminMode ? 'cursor-pointer hover:ring-2 hover:ring-amber-400 p-1 rounded-lg border border-dashed border-stone-300' : ''}`}>
+                <label className={`relative block h-28 min-w-[6rem] max-w-[300px] flex items-center justify-center ${isAdminMode ? 'cursor-pointer hover:ring-2 hover:ring-amber-400 p-1 rounded-lg border border-dashed border-stone-300' : ''}`}>
                   {logo ? <img src={logo} alt="Logo" className="max-w-full max-h-full object-contain" /> : <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center"><Store size={20} className="text-amber-700" /></div>}
                   {isAdminMode && <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-lg"><Camera size={18} className="text-white" /></div>}
                   {isAdminMode && <input type="file" accept="image/*" className="hidden" onChange={onLogoChange} />}
                 </label>
                 <div>
-                  <h1 className="text-xl font-bold tracking-wider text-stone-700">木子家</h1>
-                  <p className="text-[10px] text-stone-400 font-semibold tracking-widest uppercase">Muzi Maison</p>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                    <h1 className="text-xl font-bold tracking-wider text-stone-700">木子家</h1>
+                    {isAdminMode ? (
+                      <input type="text" value={storeSlogan} onChange={e => { setStoreSlogan(e.target.value); if(db) db.collection('settings').doc('store').set({slogan: e.target.value}, {merge:true}); }} className="text-xs text-stone-500 bg-stone-100 border border-stone-200 rounded px-1 py-0.5 outline-none focus:border-amber-400 w-48" placeholder="輸入品牌標語..." />
+                    ) : (
+                      <span className="text-xs text-stone-500 font-medium">{storeSlogan}</span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-stone-400 font-semibold tracking-widest uppercase mt-0.5">Muzi Maison</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -842,14 +854,14 @@
                         </h3>
                         <div className="flex gap-3"><input type="text" value={editingProduct.id} onChange={e => setEditingProduct({...editingProduct, id: e.target.value.toUpperCase()})} disabled={!editingProduct.isNew} placeholder="品號 (如D01)" className="w-1/3 bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500 disabled:bg-stone-100" /><input type="text" value={editingProduct.name} onChange={e => setEditingProduct({...editingProduct, name: e.target.value})} placeholder="商品名稱" className="w-2/3 bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500" /></div>
                         <div className="flex gap-3">
-                           <div className="w-1/2 flex gap-1">
-                              <select value={editingProduct.category} onChange={e => setEditingProduct({...editingProduct, category: e.target.value})} className="flex-1 bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500">
-                                 {categoriesList.map(c => <option key={c} value={c}>{c}</option>)}
+                           <div className="flex-[1.5] flex gap-1">
+                              <select value={editingProduct.category} onChange={e => setEditingProduct({...editingProduct, category: e.target.value})} className="flex-1 w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500">
+                                 {Array.from(allCategoriesSet).map(c => <option key={c} value={c}>{c}</option>)}
                               </select>
-                              <button onClick={() => setShowCategoryManager(true)} className="bg-stone-200 text-stone-600 px-2 rounded hover:bg-stone-300 text-xs font-bold shrink-0">管理<br/>分類</button>
+                              <button onClick={() => setShowCategoryManager(true)} className="bg-stone-200 text-stone-600 px-3 rounded hover:bg-stone-300 text-xs font-bold shrink-0 whitespace-nowrap">管理分類</button>
                            </div>
-                           <input type="number" value={editingProduct.price} onChange={e => setEditingProduct({...editingProduct, price: e.target.value})} placeholder="售價" className="w-1/4 bg-white border border-stone-300 rounded p-2 text-sm outline-none text-amber-600 font-bold focus:border-amber-500" />
-                           <input type="number" value={editingProduct.cost || ''} onChange={e => setEditingProduct({...editingProduct, cost: e.target.value})} placeholder="成本" className="w-1/4 bg-stone-200 border border-stone-300 rounded p-2 text-sm outline-none text-purple-600 font-bold focus:border-purple-500" title="僅管理員可見之成本" />
+                           <input type="number" value={editingProduct.price} onChange={e => setEditingProduct({...editingProduct, price: e.target.value})} placeholder="售價" className="flex-1 w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none text-amber-600 font-bold focus:border-amber-500" />
+                           <input type="number" value={editingProduct.cost || ''} onChange={e => setEditingProduct({...editingProduct, cost: e.target.value})} placeholder="成本" className="flex-1 w-full bg-stone-200 border border-stone-300 rounded p-2 text-sm outline-none text-purple-600 font-bold focus:border-purple-500" title="僅管理員可見之成本" />
                         </div>
                         <input type="text" value={editingProduct.desc} onChange={e => setEditingProduct({...editingProduct, desc: e.target.value})} placeholder="簡介 (顯示於列表)" className="w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500" />
                       </div>
@@ -935,6 +947,12 @@
                       <div className="flex justify-between text-sm text-stone-600"><span>運費</span><span className={cartData.shippingFee === 0 && deliveryMethod === 'delivery' ? 'text-emerald-500 font-bold' : ''}>{cartData.shippingFee === 0 ? (deliveryMethod==='pickup' ? '$0' : '免運費') : `$${cartData.shippingFee}`}</span></div>
                       <div className="pt-2 mt-2 border-t border-stone-200 flex justify-between items-center"><span className="font-bold text-stone-800">總計金額</span><span className="text-2xl font-black text-stone-800">${cartData.finalPrice}</span></div>
                     </div>
+                    {cartData.finalPrice >= 1000 && (
+                      <div className="mt-3 bg-purple-50 border border-purple-100 text-purple-700 text-xs p-3 rounded-xl flex items-start gap-2 shadow-sm">
+                        <Gift size={16} className="shrink-0 mt-0.5" />
+                        <span><strong className="font-bold">滿 $1000 集點活動：</strong>此訂單符合集點資格，點數將於「匯款完成確認訂單」後自動發放！</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="md:w-1/2 md:border-l border-stone-200 md:pl-8 flex flex-col mt-6 md:mt-0">
