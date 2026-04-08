@@ -1547,7 +1547,9 @@
                               <div className="bg-stone-50 p-2 rounded-lg text-right text-xs text-stone-500 mb-2 space-y-1">
                                  <div className="flex justify-between"><span>商品小計</span><span>${order.totals.itemsBaseTotal}</span></div>
                                  {order.totals.discountAmount > 0 && <div className="flex justify-between text-rose-500"><span>活動折抵</span><span>-${order.totals.discountAmount}</span></div>}
-                                 <div className="flex justify-between items-center">
+                                 <div className="flex justify-between"><span>運費</span><span>${order.totals.shippingFee}</span></div>
+                              </div>
+                              <div className="flex justify-between items-center">
                                 <span className="text-xs text-stone-500 font-bold">總金額</span>
                                 <span className="font-black text-amber-600 text-xl">${order.totals.finalPrice}</span>
                               </div>
@@ -1564,11 +1566,10 @@
                           </button>
                         </div>
                       )}
-                      {/* 👆👆👆 新增結束 👆👆👆 */}
-
+                      
                     </div>
                   )}
-              </div>
+                </div>
               </div>
             </div>
           )}
