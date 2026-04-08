@@ -52,16 +52,16 @@
 
     // --- 圖示元件 ---
     const ShoppingCart = ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>;
-    const Plus = ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>;
+    const Plus = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>;
     const Minus = ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/></svg>;
-    const X = ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>;
+    const X = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>;
     const Info = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>;
     const Store = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m2 7 4.41-2.205a2 2 0 0 1 1.79 0L12 7l3.8-1.9a2 2 0 0 1 1.8 0L22 7v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7Z"/><path d="M16 14v-2"/><path d="M8 14v-2"/><path d="M12 14v-2"/></svg>;
     const MessageCircle = ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>;
     const SettingsIcon = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>;
     const Camera = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>;
     const ImageIcon = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>;
-    const Lock = ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>;
+    const Lock = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>;
     const LogOut = ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>;
     const ImagePlus = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/><line x1="16" y1="5" x2="22" y2="5"/><line x1="19" y1="2" x2="19" y2="8"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>;
     const Trash2 = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>;
@@ -86,6 +86,8 @@
     const Megaphone = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>;
     const Gift = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"/></svg>;
     const Clock = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
+    const ArrowUp = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>;
+    const ArrowDown = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>;
 
     const STATUS_MAP = {
       'pending': { label: '未處理', color: 'bg-rose-100 text-rose-700' },
@@ -329,6 +331,7 @@
       const categories = ['全部', ...Array.from(allCategoriesSet)];
       const displayedCategories = activeCategory === '全部' ? Array.from(allCategoriesSet) : [activeCategory];
       const candyProducts = products.filter(p => p.category.includes('糖果') || p.category.includes('軟糕'));
+      const addonProducts = products.filter(p => p.isAddon);
 
       const updateCart = (id, delta) => {
         setCart(prev => {
@@ -727,8 +730,8 @@
       };
       
       const onLogoChange = (e) => handleImageUpload(e.target.files[0], (img) => db ? db.collection('settings').doc('store').set({ logo: img }, { merge: true }) : setLogo(img), true);
-      const openProductDetail = (product) => { setEditingProduct({ intro: '', ingredients: '', notices: '', extraImages: [], isPromo: false, isNew: false, cost: 0, ...product }); setMainDisplayImg(product.image || ''); };
-      const handleAddProduct = () => { setEditingProduct({ id: '', name: '', desc: '', weight: '', price: 0, cost: 0, category: categoriesList[0] || '精選商品', image: '', intro: '', ingredients: '', notices: '', extraImages: [], isPromo: false, isNew: true }); setMainDisplayImg(''); };
+      const openProductDetail = (product) => { setEditingProduct({ intro: '', ingredients: '', notices: '', extraImages: [], isPromo: false, isAddon: false, isNew: false, cost: 0, ...product }); setMainDisplayImg(product.image || ''); };
+      const handleAddProduct = () => { setEditingProduct({ id: '', name: '', desc: '', weight: '', price: 0, cost: 0, category: categoriesList[0] || '精選商品', image: '', intro: '', ingredients: '', notices: '', extraImages: [], isPromo: false, isAddon: false, isNew: true }); setMainDisplayImg(''); };
       
       const saveProductDetail = async () => {
         if (editingProduct.isNew && !editingProduct.id.trim()) return alert("請輸入「商品品號」！");
@@ -789,6 +792,17 @@
       const deleteAnnouncement = async (id) => {
          if(!window.confirm('確定刪除此公告？')) return;
          const newList = announcements.filter(a => a.id !== id);
+         if (db) await db.collection('settings').doc('announcements').set({ list: newList });
+      };
+
+      const moveAnnounce = async (index, direction) => {
+         if (direction === -1 && index === 0) return;
+         if (direction === 1 && index === announcements.length - 1) return;
+         const newList = [...announcements];
+         const temp = newList[index];
+         newList[index] = newList[index + direction];
+         newList[index + direction] = temp;
+         setAnnouncements(newList); // 優先更新本地畫面順序
          if (db) await db.collection('settings').doc('announcements').set({ list: newList });
       };
 
@@ -923,6 +937,7 @@
                         <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
                         <div className="absolute inset-0 bg-black/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><span className="bg-white/90 text-stone-800 text-[10px] font-bold px-2 py-1 rounded-full">{isAdminMode && !adminOrderingFor ? '編輯' : '詳情'}</span></div>
                         {product.isPromo && <div className="absolute top-0 left-0 bg-rose-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-br-lg z-10 shadow-sm">活動</div>}
+                        {product.isAddon && <div className="absolute bottom-0 left-0 right-0 bg-purple-500/90 text-white text-[9px] font-bold text-center py-0.5 z-10 shadow-sm">加購商品</div>}
                       </div>
                       <div className="flex-1 flex flex-col justify-between py-0.5">
                         <div onClick={() => openProductDetail(product)} className="cursor-pointer">
@@ -981,7 +996,11 @@
                     {isAdminMode && !adminOrderingFor ? (
                       <div className="bg-stone-50 p-4 rounded-2xl border border-stone-200 space-y-3">
                         <h3 className="font-bold text-stone-800 border-b border-stone-200 pb-2 flex justify-between items-center">
-                          基礎設定 <label className="flex items-center gap-1.5 text-xs bg-rose-100 text-rose-700 px-2 py-1 rounded-md cursor-pointer"><input type="checkbox" checked={editingProduct.isPromo} onChange={e => setEditingProduct({...editingProduct, isPromo: e.target.checked})} className="accent-rose-500 w-3 h-3" />參與優惠</label>
+                          基礎設定 
+                          <div className="flex gap-2">
+                             <label className="flex items-center gap-1.5 text-xs bg-rose-100 text-rose-700 px-2 py-1 rounded-md cursor-pointer"><input type="checkbox" checked={editingProduct.isPromo} onChange={e => setEditingProduct({...editingProduct, isPromo: e.target.checked})} className="accent-rose-500 w-3 h-3" />參與優惠</label>
+                             <label className="flex items-center gap-1.5 text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-md cursor-pointer"><input type="checkbox" checked={editingProduct.isAddon} onChange={e => setEditingProduct({...editingProduct, isAddon: e.target.checked})} className="accent-purple-500 w-3 h-3" />設為加購</label>
+                          </div>
                         </h3>
                         <div className="flex gap-3"><input type="text" value={editingProduct.id} onChange={e => setEditingProduct({...editingProduct, id: e.target.value.toUpperCase()})} disabled={!editingProduct.isNew} placeholder="品號 (如D01)" className="w-1/3 bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500 disabled:bg-stone-100" /><input type="text" value={editingProduct.name} onChange={e => setEditingProduct({...editingProduct, name: e.target.value})} placeholder="商品名稱" className="w-2/3 bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500" /></div>
                         <div className="flex gap-3">
@@ -998,7 +1017,8 @@
                       </div>
                     ) : (
                       <div>
-                        {editingProduct.isPromo && <span className="inline-block bg-rose-100 text-rose-600 text-[10px] font-bold px-2 py-0.5 rounded-md mb-2 border border-rose-200">享任選優惠活動</span>}
+                        {editingProduct.isPromo && <span className="inline-block bg-rose-100 text-rose-600 text-[10px] font-bold px-2 py-0.5 rounded-md mb-2 mr-2 border border-rose-200">享任選優惠活動</span>}
+                        {editingProduct.isAddon && <span className="inline-block bg-purple-100 text-purple-600 text-[10px] font-bold px-2 py-0.5 rounded-md mb-2 border border-purple-200">可做為加購商品</span>}
                         <div className="text-3xl font-bold text-amber-600 mb-1">${editingProduct.price}</div>
                         <h1 className="text-2xl font-bold text-stone-800">{editingProduct.name}</h1>
                         <p className="text-sm text-stone-500 mt-1">{editingProduct.desc}</p>
@@ -1052,7 +1072,7 @@
                     <h3 className="hidden md:block font-bold text-stone-800 mb-4 border-b border-stone-200 pb-2">已選商品</h3>
                     {cartData.items.map((item, idx) => (
                       <div key={item.id + idx} className="flex items-center justify-between py-3 border-b border-stone-100 last:border-0">
-                        <div className="flex-1"><h4 className="font-bold text-stone-800 flex items-center gap-1">{item.name}{item.isPromo && <span className="text-[9px] bg-rose-100 text-rose-600 px-1 py-0.5 rounded">活動</span>}{item.isReward && <span className="text-[9px] bg-purple-100 text-purple-600 px-1 py-0.5 rounded">兌換</span>}</h4><p className="text-xs text-stone-500">${item.price} /包</p></div>
+                        <div className="flex-1"><h4 className="font-bold text-stone-800 flex items-center gap-1">{item.name}{item.isPromo && <span className="text-[9px] bg-rose-100 text-rose-600 px-1 py-0.5 rounded">活動</span>}{item.isReward && <span className="text-[9px] bg-purple-100 text-purple-600 px-1 py-0.5 rounded">兌換</span>}{item.isAddon && !item.isReward && <span className="text-[9px] bg-purple-100 text-purple-600 px-1 py-0.5 rounded">加購</span>}</h4><p className="text-xs text-stone-500">${item.price} /包</p></div>
                         <div className="flex items-center gap-4">
                           {!item.isReward ? (
                              <div className="flex items-center gap-3 bg-white rounded-full px-2 py-1 border border-stone-200"><button onClick={() => updateCart(item.id, -1)} className="p-1 text-stone-500"><Minus size={14} /></button><span className="w-4 text-center text-sm font-bold">{item.qty}</span><button onClick={() => updateCart(item.id, 1)} className="p-1 text-stone-800"><Plus size={14} /></button></div>
@@ -1063,6 +1083,35 @@
                         </div>
                       </div>
                     ))}
+                    
+                    {/* 加購專區 */}
+                    {addonProducts.length > 0 && (
+                      <div className="mt-6 pt-4 border-t border-stone-100">
+                        <h3 className="font-bold text-stone-800 mb-3 flex items-center gap-2"><Plus size={18} className="text-amber-500"/> 超值加購專區</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {addonProducts.map(addon => (
+                            <div key={addon.id} className="bg-white border border-stone-200 rounded-xl p-2.5 flex gap-3 shadow-sm relative overflow-hidden">
+                              <img src={addon.image || 'https://via.placeholder.com/150?text=Empty'} className="w-14 h-14 object-cover rounded-lg shrink-0" />
+                              <div className="flex-1 flex flex-col justify-between py-0.5">
+                                <h4 className="font-bold text-stone-800 text-xs truncate" title={addon.name}>{addon.name}</h4>
+                                <div className="flex justify-between items-end mt-1">
+                                  <span className="text-amber-600 font-bold text-sm">${addon.price}</span>
+                                  {cart[addon.id] ? (
+                                    <div className="flex items-center gap-2 bg-stone-50 rounded-full px-1.5 py-0.5 border border-stone-200">
+                                      <button onClick={() => updateCart(addon.id, -1)} className="text-stone-500 p-0.5"><Minus size={10} /></button>
+                                      <span className="text-xs font-bold w-3 text-center">{cart[addon.id]}</span>
+                                      <button onClick={() => updateCart(addon.id, 1)} className="text-amber-600 p-0.5"><Plus size={10} /></button>
+                                    </div>
+                                  ) : (
+                                    <button onClick={() => updateCart(addon.id, 1)} className="text-[10px] bg-stone-800 text-white px-3 py-1.5 rounded-full font-bold hover:bg-stone-700 shadow-sm active:scale-95 transition-transform">加入</button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     
                     <div className="mt-6 pt-4 border-t border-stone-100">
                       <h3 className="font-bold text-stone-800 mb-3">取貨方式</h3>
@@ -1249,7 +1298,7 @@
                               <div className="text-stone-600 text-xs space-y-1.5 mb-4 bg-stone-50 p-3 rounded-lg">
                                 {order.items.map((item, i) => (
                                   <div key={i} className="flex justify-between items-center">
-                                    <span>{item.name} {item.weight && <span className="text-[10px] text-stone-500 font-normal ml-1">({item.weight})</span>} {item.isReward && <span className="text-[10px] bg-purple-100 text-purple-600 px-1 rounded">兌換</span>} <span className="text-stone-400 text-[10px]">(${item.price})</span></span>
+                                    <span>{item.name} {item.weight && <span className="text-[10px] text-stone-500 font-normal ml-1">({item.weight})</span>} {item.isReward && <span className="text-[10px] bg-purple-100 text-purple-600 px-1 rounded">兌換</span>} {item.isAddon && !item.isReward && <span className="text-[10px] bg-purple-100 text-purple-600 px-1 rounded">加購</span>} <span className="text-stone-400 text-[10px]">(${item.price})</span></span>
                                     <span className="font-bold">x{item.qty}</span>
                                   </div>
                                 ))}
@@ -1352,7 +1401,7 @@
                               <p className="font-bold text-stone-500 mb-1 border-b border-stone-200 pb-1">購買明細：</p>
                               {order.items.map((item, i) => (
                                 <div key={i} className="flex justify-between items-center mb-1">
-                                  <span>{item.name} {item.weight && <span className="text-[10px] text-stone-500 font-normal ml-1">({item.weight})</span>} {item.isReward && <span className="text-[10px] bg-purple-100 text-purple-600 px-1 rounded">兌換</span>} <span className="text-stone-400 text-[10px]">(${item.price})</span></span>
+                                  <span>{item.name} {item.weight && <span className="text-[10px] text-stone-500 font-normal ml-1">({item.weight})</span>} {item.isReward && <span className="text-[10px] bg-purple-100 text-purple-600 px-1 rounded">兌換</span>} {item.isAddon && !item.isReward && <span className="text-[10px] bg-purple-100 text-purple-600 px-1 rounded">加購</span>} <span className="text-stone-400 text-[10px]">(${item.price})</span></span>
                                   <span className="font-bold">x{item.qty}</span>
                                 </div>
                               ))}
@@ -1622,19 +1671,28 @@
                   {!isEditingAnnounce ? (
                     <div className="space-y-3">
                       {announcements.length === 0 ? <p className="text-center text-stone-400 py-10">目前沒有任何公告</p> : (
-                        announcements.map(ann => (
-                          <div key={ann.id} className="bg-stone-50 border border-stone-200 rounded-xl p-4 flex flex-col gap-2 relative">
-                             <div className="flex justify-between items-start pr-12">
-                               <h3 className="font-bold text-stone-800">{ann.title}</h3>
-                               <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${ann.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-200 text-stone-500'}`}>{ann.isActive ? '啟用中' : '未啟用'}</span>
+                        announcements.map((ann, index) => (
+                          <div key={ann.id} className="bg-stone-50 border border-stone-200 rounded-xl p-4 flex gap-3 relative">
+                             {/* 🌟 新增公告排序按鈕 */}
+                             <div className="flex flex-col gap-1 items-center justify-center border-r border-stone-200 pr-3 shrink-0">
+                               <button onClick={() => moveAnnounce(index, -1)} disabled={index === 0} className={`p-1 rounded transition-colors ${index === 0 ? 'text-stone-300' : 'text-stone-500 hover:bg-stone-200 hover:text-stone-700'}`} title="往上移"><ArrowUp size={16}/></button>
+                               <button onClick={() => moveAnnounce(index, 1)} disabled={index === announcements.length - 1} className={`p-1 rounded transition-colors ${index === announcements.length - 1 ? 'text-stone-300' : 'text-stone-500 hover:bg-stone-200 hover:text-stone-700'}`} title="往下移"><ArrowDown size={16}/></button>
                              </div>
-                             <p className="text-xs text-stone-500 truncate">{ann.content}</p>
-                             <div className="text-[10px] text-stone-400 mt-1">
-                               {ann.isPermanent ? '永久顯示' : (ann.expireDate ? `顯示至 ${ann.expireDate}` : '未設定期限')} | {ann.showOnLoad ? '進站主動彈出' : '僅顯示標題列'}
-                             </div>
-                             <div className="absolute top-3 right-3 flex gap-1">
-                               <button onClick={() => {setTempAnnounce(ann); setIsEditingAnnounce(true);}} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-md"><EditIcon size={16}/></button>
-                               <button onClick={() => deleteAnnouncement(ann.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-md"><Trash2 size={16}/></button>
+                             
+                             <div className="flex-1 flex flex-col relative pr-10">
+                               <div className="flex justify-between items-start mb-1">
+                                 <h3 className="font-bold text-stone-800">{ann.title}</h3>
+                                 <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${ann.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-200 text-stone-500'}`}>{ann.isActive ? '啟用中' : '未啟用'}</span>
+                               </div>
+                               <p className="text-xs text-stone-500 truncate mb-1">{ann.content}</p>
+                               <div className="text-[10px] text-stone-400 mt-auto">
+                                 {ann.isPermanent ? '永久顯示' : (ann.expireDate ? `顯示至 ${ann.expireDate}` : '未設定期限')} | {ann.showOnLoad ? '進站主動彈出' : '僅顯示標題列'}
+                               </div>
+                               
+                               <div className="absolute top-0 right-[-32px] flex flex-col gap-2">
+                                 <button onClick={() => {setTempAnnounce(ann); setIsEditingAnnounce(true);}} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-md"><EditIcon size={16}/></button>
+                                 <button onClick={() => deleteAnnouncement(ann.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-md"><Trash2 size={16}/></button>
+                               </div>
                              </div>
                           </div>
                         ))
@@ -1659,9 +1717,17 @@
 
                        <div className="space-y-1">
                           <label className="text-xs font-bold text-stone-500">公告圖片 (選填)</label>
-                          <div className="h-32 bg-stone-100 rounded-xl border-2 border-dashed border-stone-300 flex items-center justify-center relative overflow-hidden group">
-                             {tempAnnounce.image ? <img src={tempAnnounce.image} className="w-full h-full object-contain" /> : <div className="text-stone-400 flex flex-col items-center"><ImagePlus size={24}/></div>}
-                             <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity"><Camera size={24} className="text-white"/><input type="file" accept="image/*" className="hidden" onChange={(e)=>handleImageUpload(e.target.files[0], img=>setTempAnnounce({...tempAnnounce, image:img}))} /></label>
+                          <div className="relative">
+                             <div className="h-32 bg-stone-100 rounded-xl border-2 border-dashed border-stone-300 flex items-center justify-center relative overflow-hidden group">
+                                {tempAnnounce.image ? <img src={tempAnnounce.image} className="w-full h-full object-contain" /> : <div className="text-stone-400 flex flex-col items-center"><ImagePlus size={24}/></div>}
+                                <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity"><Camera size={24} className="text-white"/><input type="file" accept="image/*" className="hidden" onChange={(e)=>handleImageUpload(e.target.files[0], img=>setTempAnnounce({...tempAnnounce, image:img}))} /></label>
+                             </div>
+                             {/* 🌟 圖片刪除按鈕 */}
+                             {tempAnnounce.image && (
+                                <button onClick={() => setTempAnnounce({...tempAnnounce, image: ''})} className="absolute -top-2 -right-2 bg-rose-500 text-white rounded-full p-1.5 shadow-lg hover:bg-rose-600 z-10 hover:scale-110 transition-transform">
+                                   <X size={14}/>
+                                </button>
+                             )}
                           </div>
                        </div>
 
