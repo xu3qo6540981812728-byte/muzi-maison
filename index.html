@@ -622,7 +622,7 @@ const [tableProducts, setTableProducts] = useState([]);
       
 
         let finalUserId = adminOrderingFor ? adminOrderingFor.id : (currentUser ? currentUser.uid : 'guest');
-        const orderId = `MZ${Date.now().toString().slice(-6)}`;
+        const orderId = `MZ${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 900 + 100)}`;
         const initialStatus = (checkoutBankCode && checkoutBankCode.length === 5) ? 'confirming' : 'pending';
 
         if (db) {
@@ -742,7 +742,7 @@ const [tableProducts, setTableProducts] = useState([]);
         const baseOrder = ordersToMerge[0]; 
         const newTotals = calculateTotals(newItems, baseOrder.deliveryMethod);
         newTotals.finalPrice -= totalAdminDiscount;
-        const newOrderId = `MZ${Date.now().toString().slice(-6)}`;
+        const newOrderId = `MZ${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 900 + 100)}`;
 
         try {
           const batch = db.batch();
