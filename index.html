@@ -999,6 +999,70 @@ const [tableProducts, setTableProducts] = useState([]);
       const addNewTableRow = () => {
         setTableProducts([{ id: '', name: '', desc: '', weight: '', price: 0, cost: 0, category: adminCategoryNames[0] || '精選商品', image: '', intro: '', ingredients: '', notices: '', extraImages: [], isPromo: false, isAddon: false, isNew: true, isFreeShipping: true, isRewardEligible: true, unit: '' }, ...tableProducts]);
       };
+      // --- 批次匯入 CSV 功能 (方案 A：覆蓋更新) ---
+      const handleCSVImport = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+          const text = event.target.result;
+          // 支援不同作業系統的換行符號
+          const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+          if (lines.length < 2) return alert('檔案內容格式錯誤或沒有資料！');
+
+          if (!window.confirm(`即將匯入 ${lines.length - 1} 筆資料。\n\n⚠️ 如果品號已存在，將會「覆蓋」現有表格資料（原本的商品照片與進階介紹會安全保留）。\n確定要執行嗎？`)) {
+             e.target.value = ''; // 取消的話清空選擇的檔案
+             return;
+          }
+
+          const batch = db.batch();
+          let importCount = 0;
+
+          // 從 i = 1 開始迴圈，因為第 0 行是標題列
+          for (let i = 1; i < lines.length; i++) {
+            const cols = lines[i].split(',');
+            if (cols.length < 12) continue; // 略過格式不符或殘缺的行
+
+            const id = cols[0].trim();
+            if (!id) continue;
+
+            // 自動將中文的「是」轉換為系統需要的 true，不是的話就是 false
+            // 若數字欄位(單價/成本)為空，自動補上 0
+            const prodData = {
+              id: id,
+              name: cols[1].trim(),
+              category: cols[2].trim(),
+              desc: cols[3].trim(),
+              unit: cols[4].trim(),
+              price: Number(cols[5]) || 0,
+              cost: Number(cols[6]) || 0,
+              weight: cols[7].trim(),
+              isFreeShipping: cols[8].trim() === '是',
+              isRewardEligible: cols[9].trim() === '是',
+              isPromo: cols[10].trim() === '是',
+              isAddon: cols[11].trim() === '是',
+            };
+
+            const docRef = db.collection('products').doc(id);
+            // 方案A的核心：{ merge: true } 確保只更新上面有的欄位，不會洗掉圖片
+            batch.set(docRef, prodData, { merge: true });
+            importCount++;
+          }
+
+          try {
+            await batch.commit();
+            alert(`✅ 成功匯入/更新了 ${importCount} 筆商品資料！\n\n為了確保資料正確，系統將關閉表單以重新載入最新資料。`);
+            setShowProductTable(false); // 關閉表格，強迫下次打開時去資料庫抓最新資料
+          } catch (error) {
+            alert(`匯入失敗！\n錯誤代碼：${error.code}\n錯誤訊息：${error.message}`);
+          }
+        };
+        // 使用 UTF-8 讀取檔案，避免中文變亂碼
+        reader.readAsText(file, 'UTF-8');
+        e.target.value = ''; 
+      };
+      // ------------------------------------------
 
       const saveSystemConfig = async () => {
         const configToSave = { shippingFee: Number(tempConfig.shippingFee)||0, freeShippingThreshold: Number(tempConfig.freeShippingThreshold)||0, promoQty: Number(tempConfig.promoQty)||1, promoPrice: Number(tempConfig.promoPrice)||0, wholesaleThreshold: Number(tempConfig.wholesaleThreshold)||0 };
@@ -1879,7 +1943,15 @@ const [tableProducts, setTableProducts] = useState([]);
                 
                 <div className="flex justify-between items-center mb-4 border-b border-stone-200 pb-3">
                   <h2 className="text-xl md:text-2xl font-bold text-stone-800 flex items-center gap-2"><ClipboardList size={24} className="text-emerald-600"/> 商品總覽編輯 (表單模式)</h2>
-                  <button onClick={addNewTableRow} className="bg-emerald-600 text-white text-sm font-bold px-4 py-2 rounded-lg shadow-sm hover:bg-emerald-700 flex items-center gap-1 mr-10"><Plus size={16}/> 新增一行</button>
+                 <div className="flex gap-3 mr-4 md:mr-10">
+                    <label className="bg-blue-600 text-white text-sm font-bold px-4 py-2 rounded-lg shadow-sm hover:bg-blue-700 flex items-center gap-1 cursor-pointer transition-colors">
+                      <ArrowUp size={16}/> 批次匯入CSV
+                      <input type="file" accept=".csv" className="hidden" onChange={handleCSVImport} />
+                    </label>
+                    <button onClick={addNewTableRow} className="bg-emerald-600 text-white text-sm font-bold px-4 py-2 rounded-lg shadow-sm hover:bg-emerald-700 flex items-center gap-1 transition-colors">
+                      <Plus size={16}/> 新增一行
+                    </button>
+                  </div>
                 </div>
 
                 <div className="flex-1 overflow-auto border border-stone-200 rounded-xl bg-white shadow-inner">
@@ -1890,11 +1962,11 @@ const [tableProducts, setTableProducts] = useState([]);
                         <th className="p-2 border-b border-stone-200 text-stone-600 font-bold text-sm w-24">品號</th>
                         <th className="p-2 border-b border-stone-200 text-stone-600 font-bold text-sm w-48">商品名稱 (點擊改圖文)</th>
                         <th className="p-2 border-b border-stone-200 text-stone-600 font-bold text-sm w-32">分類</th>
+                        <th className="p-2 border-b border-stone-200 text-stone-600 font-bold text-sm w-48">簡介</th>
                         <th className="p-2 border-b border-stone-200 text-stone-600 font-bold text-sm w-20">單位</th>
                         <th className="p-2 border-b border-stone-200 text-stone-600 font-bold text-sm w-20">單價</th>
                         <th className="p-2 border-b border-stone-200 text-stone-600 font-bold text-sm w-20">成本</th>
                         <th className="p-2 border-b border-stone-200 text-stone-600 font-bold text-sm w-24">重量</th>
-                        <th className="p-2 border-b border-stone-200 text-stone-600 font-bold text-sm w-48">簡介</th>
                         <th className="p-2 border-b border-stone-200 text-stone-600 font-bold text-sm text-center w-16">免運</th>
                         <th className="p-2 border-b border-stone-200 text-stone-600 font-bold text-sm text-center w-16">集點</th>
                         <th className="p-2 border-b border-stone-200 text-stone-600 font-bold text-sm text-center w-16">優惠</th>
@@ -1923,6 +1995,9 @@ const [tableProducts, setTableProducts] = useState([]);
                             </select>
                           </td>
                           <td className="p-2 border-b border-stone-200">
+                            <input type="text" value={item.desc || ''} onChange={e => handleTableFieldChange(index, 'desc', e.target.value)} className="w-full bg-transparent border border-transparent hover:border-stone-300 focus:border-amber-500 focus:bg-white rounded px-1 py-0.5 text-sm outline-none" placeholder="簡介" />
+                          </td>
+                          <td className="p-2 border-b border-stone-200">
                             <input type="text" value={item.unit || ''} onChange={e => handleTableFieldChange(index, 'unit', e.target.value)} className="w-full bg-transparent border border-transparent hover:border-stone-300 focus:border-amber-500 focus:bg-white rounded px-1 py-0.5 text-sm outline-none" placeholder="單位" />
                           </td>
                           <td className="p-2 border-b border-stone-200">
@@ -1933,9 +2008,6 @@ const [tableProducts, setTableProducts] = useState([]);
                           </td>
                           <td className="p-2 border-b border-stone-200">
                             <input type="text" value={item.weight || ''} onChange={e => handleTableFieldChange(index, 'weight', e.target.value)} className="w-full bg-transparent border border-transparent hover:border-stone-300 focus:border-amber-500 focus:bg-white rounded px-1 py-0.5 text-sm outline-none" placeholder="重量" />
-                          </td>
-                          <td className="p-2 border-b border-stone-200">
-                            <input type="text" value={item.desc || ''} onChange={e => handleTableFieldChange(index, 'desc', e.target.value)} className="w-full bg-transparent border border-transparent hover:border-stone-300 focus:border-amber-500 focus:bg-white rounded px-1 py-0.5 text-sm outline-none" placeholder="簡介" />
                           </td>
                           <td className="p-2 border-b border-stone-200 text-center"><input type="checkbox" checked={item.isFreeShipping !== false} onChange={e => handleTableFieldChange(index, 'isFreeShipping', e.target.checked)} className="w-4 h-4 accent-emerald-500 cursor-pointer" /></td>
                           <td className="p-2 border-b border-stone-200 text-center"><input type="checkbox" checked={item.isRewardEligible !== false} onChange={e => handleTableFieldChange(index, 'isRewardEligible', e.target.checked)} className="w-4 h-4 accent-blue-500 cursor-pointer" /></td>
