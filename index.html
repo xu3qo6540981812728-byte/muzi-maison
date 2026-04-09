@@ -999,7 +999,7 @@ const [tableProducts, setTableProducts] = useState([]);
       const addNewTableRow = () => {
         setTableProducts([{ id: '', name: '', desc: '', weight: '', price: 0, cost: 0, category: adminCategoryNames[0] || '精選商品', image: '', intro: '', ingredients: '', notices: '', extraImages: [], isPromo: false, isAddon: false, isNew: true, isFreeShipping: true, isRewardEligible: true, unit: '' }, ...tableProducts]);
       };
-      // --- 批次匯入 CSV 功能 (方案 A：覆蓋更新) ---
+      // --- 批次匯入 CSV 功能 (方案 A：覆蓋更新 + 自動註冊分類) ---
       const handleCSVImport = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -1007,32 +1007,32 @@ const [tableProducts, setTableProducts] = useState([]);
         const reader = new FileReader();
         reader.onload = async (event) => {
           const text = event.target.result;
-          // 支援不同作業系統的換行符號
           const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
           if (lines.length < 2) return alert('檔案內容格式錯誤或沒有資料！');
 
-          if (!window.confirm(`即將匯入 ${lines.length - 1} 筆資料。\n\n⚠️ 如果品號已存在，將會「覆蓋」現有表格資料（原本的商品照片與進階介紹會安全保留）。\n確定要執行嗎？`)) {
-             e.target.value = ''; // 取消的話清空選擇的檔案
+          if (!window.confirm(`即將匯入 ${lines.length - 1} 筆資料。\n\n⚠️ 如果品號已存在，將會「覆蓋」現有表格資料。\n確定要執行嗎？`)) {
+             e.target.value = ''; 
              return;
           }
 
           const batch = db.batch();
           let importCount = 0;
+          const importedCategoryNames = new Set(); // 用來收集 Excel 裡出現的所有分類
 
-          // 從 i = 1 開始迴圈，因為第 0 行是標題列
           for (let i = 1; i < lines.length; i++) {
             const cols = lines[i].split(',');
-            if (cols.length < 12) continue; // 略過格式不符或殘缺的行
+            if (cols.length < 12) continue; 
 
             const id = cols[0].trim();
             if (!id) continue;
 
-            // 自動將中文的「是」轉換為系統需要的 true，不是的話就是 false
-            // 若數字欄位(單價/成本)為空，自動補上 0
+            const categoryName = cols[2].trim();
+            if (categoryName) importedCategoryNames.add(categoryName); // 把分類名稱存起來
+
             const prodData = {
               id: id,
               name: cols[1].trim(),
-              category: cols[2].trim(),
+              category: categoryName,
               desc: cols[3].trim(),
               unit: cols[4].trim(),
               price: Number(cols[5]) || 0,
@@ -1045,20 +1045,29 @@ const [tableProducts, setTableProducts] = useState([]);
             };
 
             const docRef = db.collection('products').doc(id);
-            // 方案A的核心：{ merge: true } 確保只更新上面有的欄位，不會洗掉圖片
             batch.set(docRef, prodData, { merge: true });
             importCount++;
           }
 
+          // 檢查 Excel 裡的分類，有沒有哪些是「分類總表」裡面還沒有的？
+          const existingCatNames = categoriesList.map(c => c.name);
+          const newCatsToAdd = Array.from(importedCategoryNames).filter(c => !existingCatNames.includes(c));
+
           try {
-            await batch.commit();
-            alert(`✅ 成功匯入/更新了 ${importCount} 筆商品資料！\n\n為了確保資料正確，系統將關閉表單以重新載入最新資料。`);
-            setShowProductTable(false); // 關閉表格，強迫下次打開時去資料庫抓最新資料
+            await batch.commit(); // 儲存所有商品
+            
+            // 如果有發現新分類，自動把它們加進分類總表資料庫
+            if (newCatsToAdd.length > 0 && db) {
+               const updatedCats = [...categoriesList, ...newCatsToAdd.map(name => ({ name, isHidden: false }))];
+               await db.collection('settings').doc('categories').set({ list: updatedCats });
+            }
+
+            alert(`✅ 成功匯入/更新了 ${importCount} 筆商品資料！\n系統已同步更新商品與分類列表。`);
+            setShowProductTable(false); 
           } catch (error) {
             alert(`匯入失敗！\n錯誤代碼：${error.code}\n錯誤訊息：${error.message}`);
           }
         };
-        // 使用 UTF-8 讀取檔案，避免中文變亂碼
         reader.readAsText(file, 'UTF-8');
         e.target.value = ''; 
       };
