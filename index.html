@@ -910,8 +910,13 @@ const [tableProducts, setTableProducts] = useState([]);
       
       const handleDeleteProduct = async () => {
         if (!window.confirm(`確定刪除「${editingProduct.name}」嗎？無法復原喔！`)) return;
-        if (db) await db.collection('products').doc(editingProduct.id).delete();
-        setEditingProduct(null);
+        try {
+          if (db) await db.collection('products').doc(editingProduct.id).delete();
+          setEditingProduct(null);
+          alert("刪除成功！");
+        } catch (error) {
+          alert(`刪除失敗！\n錯誤代碼：${error.code}\n錯誤訊息：${error.message}`);
+        }
       };
 
       const saveCategoriesToDB = async (newList) => {
@@ -977,13 +982,18 @@ const [tableProducts, setTableProducts] = useState([]);
         const item = tableProducts[index];
         if (!window.confirm(`確定要刪除「${item.name || item.id}」嗎？\n⚠️ 警告：刪除後無法復原喔！`)) return;
 
-        if (db && !item.isNew) {
-          await db.collection('products').doc(item.id).delete();
+        try {
+          if (db && !item.isNew) {
+            await db.collection('products').doc(item.id).delete();
+          }
+          const newTable = [...tableProducts];
+          newTable.splice(index, 1);
+          setTableProducts(newTable);
+          alert("刪除成功！");
+        } catch (error) {
+          alert(`刪除失敗！\n錯誤代碼：${error.code}\n錯誤訊息：${error.message}`);
+          console.error("刪除商品錯誤:", error);
         }
-        const newTable = [...tableProducts];
-        newTable.splice(index, 1);
-        setTableProducts(newTable);
-        alert("刪除成功！");
       };
 
       const addNewTableRow = () => {
