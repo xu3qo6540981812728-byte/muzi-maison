@@ -1618,7 +1618,7 @@ const [tableProducts, setTableProducts] = useState([]);
 
                               {['pending', 'confirming'].includes(order.status) && (
                                 <div className="mb-4 p-4 bg-[#06C755]/10 border border-[#06C755]/30 rounded-xl flex flex-col items-center text-center space-y-3">
-                                  <p className="text-xs font-bold text-[#06C755] flex items-center gap-1"><MessageCircle size={16}/> 訂單已送出，請點擊下方加 LINE 通知我們！</p>
+                                  <p className="text-xs font-bold text-[#06C755] flex items-center gap-1"><MessageCircle size={16}/> 訂單已送出，請點擊下方加 LINE 通知我們才算完成訂單唷！</p>
                                   <div className="flex w-full gap-2">
                                     <button onClick={() => handleCopyOrder(order)} className="flex-1 flex items-center justify-center gap-1 bg-stone-800 text-white text-xs font-bold py-2.5 rounded-lg shadow-sm hover:bg-stone-700 transition-colors active:scale-95">{copiedOrderId === order.id ? <CheckCircle size={14} className="text-emerald-400"/> : <Copy size={14}/>}{copiedOrderId === order.id ? '已複製！' : '1. 複製明細'}</button>
                                     {contactData.lineLink ? <a href={contactData.lineLink} target="_blank" rel="noreferrer" className="flex-[1.5] bg-[#06C755] hover:bg-[#05b34c] text-white text-xs font-bold rounded-lg py-2.5 flex items-center justify-center gap-1 shadow-sm transition-all active:scale-95"><MessageCircle size={16} /> 2. 前往 LINE 傳送</a> : <button disabled className="flex-[1.5] bg-stone-300 text-white text-xs font-bold rounded-lg py-2.5 flex items-center justify-center gap-1 shadow-sm cursor-not-allowed">LINE 尚未設定</button>}
