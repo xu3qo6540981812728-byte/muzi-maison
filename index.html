@@ -168,7 +168,7 @@
       const [customerSearchName, setCustomerSearchName] = useState('');
       const [selectedCustomer, setSelectedCustomer] = useState(null);
       const [isEditingAdminCustomer, setIsEditingAdminCustomer] = useState(false);
-      const [adminEditPoints, setAdminEditPoints] = useState('');
+      
       
       const [isEditingProfile, setIsEditingProfile] = useState(false);
       const [copiedOrderId, setCopiedOrderId] = useState(null);
@@ -408,7 +408,7 @@ const [tableProducts, setTableProducts] = useState([]);
           const updatedUser = allUsers.find(u => u.id === selectedCustomer.id);
           if (updatedUser && !isEditingAdminCustomer) {
             setSelectedCustomer(updatedUser);
-            setAdminEditPoints(updatedUser.points || 0);
+            
           }
         }
       }, [allUsers, isEditingAdminCustomer]);
@@ -455,22 +455,20 @@ const [tableProducts, setTableProducts] = useState([]);
         let totalQty = 0; let nonPromoPrice = 0; let promoItemsExpanded = [];
         let totalCost = 0;
         let freeShippingQty = 0;
-        let rewardEligibleBaseTotal = 0;
+        
 
         itemsList.forEach(item => {
           totalQty += item.qty;
           totalCost += (Number(item.cost) || 0) * item.qty;
           
-          if (!item.isReward && item.isFreeShipping !== false) {
+          if (item.isFreeShipping !== false) {
              freeShippingQty += item.qty;
           }
           
-          if(item.isReward) return; 
+          
 
           const itemBasePrice = item.price * item.qty;
-          if (item.isRewardEligible !== false) {
-             rewardEligibleBaseTotal += itemBasePrice;
-          }
+         
 
           if (item.isPromo) { for(let i = 0; i < item.qty; i++) promoItemsExpanded.push(item.price); } 
           else { nonPromoPrice += item.price * item.qty; }
@@ -482,7 +480,7 @@ const [tableProducts, setTableProducts] = useState([]);
         let remainderTotal = 0;
         for(let i = promoSets * storeConfig.promoQty; i < promoItemsExpanded.length; i++) remainderTotal += promoItemsExpanded[i];
 
-        const itemsBaseTotal = itemsList.reduce((sum, item) => sum + (item.isReward?0:item.price) * item.qty, 0);
+        const itemsBaseTotal = itemsList.reduce((sum, item) => sum + item.price * item.qty, 0);
         const currentTotal = nonPromoPrice + promoTotal + remainderTotal; 
         const discountAmount = itemsBaseTotal - currentTotal; 
         
@@ -490,12 +488,9 @@ const [tableProducts, setTableProducts] = useState([]);
         if (deliveryWay === 'delivery' && freeShippingQty < storeConfig.freeShippingThreshold) shippingFee = storeConfig.shippingFee;
         const finalPrice = currentTotal + shippingFee;
 
-        let rewardEligibleAmount = 0;
-        if (itemsBaseTotal > 0) {
-           rewardEligibleAmount = Math.floor((rewardEligibleBaseTotal / itemsBaseTotal) * currentTotal);
-        }
+       
 
-        return { totalQty, freeShippingQty, currentTotal, finalPrice, shippingFee, discountAmount, itemsBaseTotal, totalCost, rewardEligibleAmount };
+        return { totalQty, freeShippingQty, currentTotal, finalPrice, shippingFee, discountAmount, itemsBaseTotal, totalCost };
       };
 
       const cartData = useMemo(() => {
@@ -524,7 +519,7 @@ const [tableProducts, setTableProducts] = useState([]);
           if (isRegistering) {
             if (!customerInfo.name || !customerInfo.phone) return alert("請填寫姓名與電話！");
             const cred = await auth.createUserWithEmailAndPassword(emailInput, passwordInput);
-            await db.collection('users').doc(cred.user.uid).set({ ...customerInfo, email: emailInput, role: 'customer', points: 0 });
+            await db.collection('users').doc(cred.user.uid).set({ ...customerInfo, email: emailInput, role: 'customer' });
             alert("註冊成功！歡迎加入木子家MUZI MAISON！");
           } else {
             await auth.signInWithEmailAndPassword(emailInput, passwordInput);
@@ -565,12 +560,12 @@ const [tableProducts, setTableProducts] = useState([]);
             if (isNewCustomer) {
                const newId = `CUST${Date.now()}`;
                await db.collection('users').doc(newId).set({
-                 name: selectedCustomer.name, phone: selectedCustomer.phone, address: selectedCustomer.address, lineId: selectedCustomer.lineId, gender: selectedCustomer.gender, points: Number(adminEditPoints), role: 'customer', email: '', createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                 name: selectedCustomer.name, phone: selectedCustomer.phone, address: selectedCustomer.address, lineId: selectedCustomer.lineId, gender: selectedCustomer.gender, role: 'customer', email: '', createdAt: firebase.firestore.FieldValue.serverTimestamp()
                });
                alert("客戶新增成功！");
             } else {
                await db.collection('users').doc(selectedCustomer.id).update({
-                 name: selectedCustomer.name, phone: selectedCustomer.phone, address: selectedCustomer.address, lineId: selectedCustomer.lineId, gender: selectedCustomer.gender, points: Number(adminEditPoints)
+                 name: selectedCustomer.name, phone: selectedCustomer.phone, address: selectedCustomer.address, lineId: selectedCustomer.lineId, gender: selectedCustomer.gender
                });
                alert("客戶資料已更新！");
             }
@@ -581,8 +576,8 @@ const [tableProducts, setTableProducts] = useState([]);
       };
 
       const handleAddCustomerBtn = () => {
-        setSelectedCustomer({ id: '', name: '', phone: '', lineId: '', address: '', gender: '女', points: 0 });
-        setAdminEditPoints(0);
+        setSelectedCustomer({ id: '', name: '', phone: '', lineId: '', address: '', gender: '女' });
+        
         setIsEditingAdminCustomer(true);
         setIsNewCustomer(true);
       };
@@ -635,8 +630,8 @@ const [tableProducts, setTableProducts] = useState([]);
           const orderRef = db.collection('orders').doc(orderId);
           batch.set(orderRef, {
             orderId, userId: finalUserId, customerInfo, items: cartData.items,
-            totals: { itemsBaseTotal: cartData.itemsBaseTotal, discountAmount: cartData.discountAmount, shippingFee: cartData.shippingFee, finalPrice: cartData.finalPrice, totalCost: cartData.totalCost, usedPoints: 0, rewardEligibleAmount: cartData.rewardEligibleAmount },
-            deliveryMethod, status: initialStatus, bankAccountLast5: checkoutBankCode || '', trackingNumber: '', orderNote, adminDiscount: 0, pointsAwarded: false,
+            totals: { itemsBaseTotal: cartData.itemsBaseTotal, discountAmount: cartData.discountAmount, shippingFee: cartData.shippingFee, finalPrice: cartData.finalPrice, totalCost: cartData.totalCost },
+            deliveryMethod, status: initialStatus, bankAccountLast5: checkoutBankCode || '', trackingNumber: '', orderNote, adminDiscount: 0,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             createdByAdmin: !!adminOrderingFor 
           });
@@ -665,7 +660,7 @@ const [tableProducts, setTableProducts] = useState([]);
         order.items.forEach(item => text += `▪️ ${item.name} ${item.weight ? `(${item.weight})` : ''} x ${item.qty} ${item.unit || ''}\n`);
         text += `----------------------\n`;
         if (order.adminDiscount > 0) text += `*手動折扣*：-$${order.adminDiscount}\n`;
-        if (order.totals.usedPoints) text += `*使用點數*：${order.totals.usedPoints} 點兌換\n`;
+        
         text += `*總計金額：$${order.totals.finalPrice}*\n`;
         if (order.bankAccountLast5) { text += `*匯款後五碼*：${order.bankAccountLast5}\n`; }
         if (order.orderNote) { text += `*備註事項*：${order.orderNote}\n`; }
@@ -719,10 +714,7 @@ const [tableProducts, setTableProducts] = useState([]);
 
       const deleteOrder = async (orderId) => {
         const orderToDelete = allOrders.find(o => o.id === orderId);
-        // ========= 【防護機制區塊】提醒手動扣回點數 =========
-        if (orderToDelete && (orderToDelete.pointsAwarded || orderToDelete.totals?.usedPoints > 0)) {
-           alert("⚠️【系統提醒】⚠️\n此訂單已發放過集點或牽涉兌換點數！\n刪除訂單前，請務必確認是否已至「客戶管理」手動調整該客戶點數！");
-        }
+       
         if (!window.confirm("確定要徹底刪除此訂單嗎？（刪除後無法復原）")) return;
         if (db) await db.collection('orders').doc(orderId).delete();
       };
@@ -735,10 +727,10 @@ const [tableProducts, setTableProducts] = useState([]);
 
         const ordersToMerge = allOrders.filter(o => mergeSelection.includes(o.id));
         const combinedItemsMap = {};
-        let totalUsedPoints = 0;
+        
         let totalAdminDiscount = 0;
         ordersToMerge.forEach(order => {
-          totalUsedPoints += (order.totals.usedPoints || 0);
+          
           totalAdminDiscount += (order.adminDiscount || 0);
           order.items.forEach(item => {
             if (combinedItemsMap[item.id]) { combinedItemsMap[item.id].qty += item.qty; } else { combinedItemsMap[item.id] = { ...item }; }
@@ -757,8 +749,8 @@ const [tableProducts, setTableProducts] = useState([]);
           const newOrderRef = db.collection('orders').doc(newOrderId);
           batch.set(newOrderRef, {
             orderId: newOrderId, userId: selectedCustomer.id, customerInfo: selectedCustomer, items: newItems,
-            totals: { itemsBaseTotal: newTotals.itemsBaseTotal, discountAmount: newTotals.discountAmount, shippingFee: newTotals.shippingFee, finalPrice: newTotals.finalPrice, totalCost: newTotals.totalCost, usedPoints: totalUsedPoints },
-            deliveryMethod: baseOrder.deliveryMethod, status: 'pending', bankAccountLast5: '', trackingNumber: '', orderNote: combinedNotes, adminDiscount: totalAdminDiscount, pointsAwarded: false,
+            totals: { itemsBaseTotal: newTotals.itemsBaseTotal, discountAmount: newTotals.discountAmount, shippingFee: newTotals.shippingFee, finalPrice: newTotals.finalPrice, totalCost: newTotals.totalCost },
+            deliveryMethod: baseOrder.deliveryMethod, status: 'pending', bankAccountLast5: '', trackingNumber: '', orderNote: combinedNotes, adminDiscount: totalAdminDiscount,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(), isMerged: true, mergeNote: `系統備註：由舊單號 ${mergeSelection.join(', ')} 合併產生。`
           });
           mergeSelection.forEach(id => { batch.delete(db.collection('orders').doc(id)); });
@@ -785,7 +777,7 @@ const [tableProducts, setTableProducts] = useState([]);
       const downloadOrdersCSV = () => {
         if (filteredAdminOrders.length === 0) return alert("目前沒有訂單可以下載");
         let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; 
-        csvContent += "訂單編號,建立時間,狀態,訂購人,性別,電話,Line ID,取貨方式,地址,商品明細,運費,手動折扣,總金額,總成本,使用點數,匯款後五碼,出貨單號,買家備註,系統備註\n";
+        csvContent += "訂單編號,建立時間,狀態,訂購人,性別,電話,Line ID,取貨方式,地址,商品明細,運費,手動折扣,總金額,總成本,匯款後五碼,出貨單號,買家備註,系統備註\n";
         filteredAdminOrders.forEach(o => {
           const date = o.createdAt ? o.createdAt.toDate().toLocaleString() : '';
           const status = STATUS_MAP[o.status]?.label || o.status;
@@ -793,7 +785,7 @@ const [tableProducts, setTableProducts] = useState([]);
           const row = [
             o.id, date, status, o.customerInfo.name, o.customerInfo.gender || '', o.customerInfo.phone, o.customerInfo.lineId || '',
             o.deliveryMethod === 'delivery' ? '宅配' : '自取', o.customerInfo.address || '',
-            itemsStr, o.totals.shippingFee, o.adminDiscount || 0, o.totals.finalPrice, o.totals.totalCost || 0, o.totals.usedPoints || 0, o.bankAccountLast5 || '', o.trackingNumber || '', o.orderNote || '', o.mergeNote || ''
+            itemsStr, o.totals.shippingFee, o.adminDiscount || 0, o.totals.finalPrice, o.totals.totalCost || 0, o.bankAccountLast5 || '', o.trackingNumber || '', o.orderNote || '', o.mergeNote || ''
           ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(',');
           csvContent += row + "\n";
         });
@@ -1435,13 +1427,9 @@ const [tableProducts, setTableProducts] = useState([]);
                     <h3 className="hidden md:block font-bold text-stone-800 mb-4 border-b border-stone-200 pb-2">已選商品</h3>
                     {cartData.items.map((item, idx) => (
                       <div key={item.id + idx} className="flex items-center justify-between py-3 border-b border-stone-100 last:border-0">
-                        <div className="flex-1"><h4 className="font-bold text-stone-800 flex items-center gap-1">{item.name}{item.isPromo && <span className="text-[9px] bg-rose-100 text-rose-600 px-1 py-0.5 rounded">指定商品活動</span>}{item.isReward && <span className="text-[9px] bg-purple-100 text-purple-600 px-1 py-0.5 rounded">兌換</span>}{item.isAddon && !item.isReward && <span className="text-[9px] bg-purple-100 text-purple-600 px-1 py-0.5 rounded">加購</span>}</h4><p className="text-xs text-stone-500">${item.price} {item.unit ? `/${item.unit}` : ''}</p></div>
+                        <div className="flex-1"><h4 className="font-bold text-stone-800 flex items-center gap-1">{item.name}{item.isPromo && <span className="text-[9px] bg-rose-100 text-rose-600 px-1 py-0.5 rounded">指定商品活動</span>}{item.isAddon && <span className="text-[9px] bg-purple-100 text-purple-600 px-1 py-0.5 rounded">加購</span>}</h4><p className="text-xs text-stone-500">${item.price} {item.unit ? `/${item.unit}` : ''}</p></div>
                         <div className="flex items-center gap-4">
-                          {!item.isReward ? (
-                             <div className="flex items-center gap-3 bg-white rounded-full px-2 py-1 border border-stone-200"><button onClick={() => updateCart(item.id, -1)} className="p-1 text-stone-500"><Minus size={14} /></button><span className="w-4 text-center text-sm font-bold">{item.qty}</span><button onClick={() => updateCart(item.id, 1)} className="p-1 text-stone-800"><Plus size={14} /></button></div>
-                          ) : (
-                             <span className="text-sm font-bold text-purple-600">x 1</span>
-                          )}
+                          <div className="flex items-center gap-3 bg-white rounded-full px-2 py-1 border border-stone-200"><button onClick={() => updateCart(item.id, -1)} className="p-1 text-stone-500"><Minus size={14} /></button><span className="w-4 text-center text-sm font-bold">{item.qty}</span><button onClick={() => updateCart(item.id, 1)} className="p-1 text-stone-800"><Plus size={14} /></button></div>
                           <div className="w-12 text-right font-bold text-stone-700">${item.price * item.qty}</div>
                         </div>
                       </div>
@@ -1621,7 +1609,7 @@ const [tableProducts, setTableProducts] = useState([]);
                               <div className="text-stone-600 text-xs space-y-1.5 mb-4 bg-stone-50 p-3 rounded-lg">
                                 {order.items.map((item, i) => (
                                   <div key={i} className="flex justify-between items-center">
-                                    <span>{item.name} {item.weight && <span className="text-[10px] text-stone-500 font-normal ml-1">({item.weight})</span>} {item.isReward && <span className="text-[10px] bg-purple-100 text-purple-600 px-1 rounded">兌換</span>} {item.isAddon && !item.isReward && <span className="text-[10px] bg-purple-100 text-purple-600 px-1 rounded">加購</span>} <span className="text-stone-400 text-[10px]">(${item.price})</span></span>
+                                    <span>{item.name} {item.weight && <span className="text-[10px] text-stone-500 font-normal ml-1">({item.weight})</span>} {item.isAddon && <span className="text-[10px] bg-purple-100 text-purple-600 px-1 rounded">加購</span>} <span className="text-stone-400 text-[10px]">(${item.price})</span></span>
                                     <span className="font-bold">x{item.qty} {item.unit || ''}</span>
                                   </div>
                                 ))}
@@ -1724,7 +1712,7 @@ const [tableProducts, setTableProducts] = useState([]);
                               <p className="font-bold text-stone-500 mb-1 border-b border-stone-200 pb-1">購買明細：</p>
                               {order.items.map((item, i) => (
                                 <div key={i} className="flex justify-between items-center mb-1">
-                                  <span>{item.name} {item.weight && <span className="text-[10px] text-stone-500 font-normal ml-1">({item.weight})</span>} {item.isReward && <span className="text-[10px] bg-purple-100 text-purple-600 px-1 rounded">兌換</span>} {item.isAddon && !item.isReward && <span className="text-[10px] bg-purple-100 text-purple-600 px-1 rounded">加購</span>} <span className="text-stone-400 text-[10px]">(${item.price})</span></span>
+                                 <span>{item.name} {item.weight && <span className="text-[10px] text-stone-500 font-normal ml-1">({item.weight})</span>} {item.isAddon && <span className="text-[10px] bg-purple-100 text-purple-600 px-1 rounded">加購</span>} <span className="text-stone-400 text-[10px]">(${item.price})</span></span>
                                   <span className="font-bold">x{item.qty} {item.unit || ''}</span>
                                 </div>
                               ))}
@@ -1830,7 +1818,7 @@ const [tableProducts, setTableProducts] = useState([]);
                             {selectedCustomer.role !== 'deleted' && (
                               !isEditingAdminCustomer ? (
           
-                                <button onClick={() => { setIsEditingAdminCustomer(true); setAdminEditPoints(selectedCustomer.points || 0); }} className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-md flex items-center gap-1 hover:bg-blue-100"><EditIcon size={14}/> 編輯</button>
+                               <button onClick={() => { setIsEditingAdminCustomer(true); }} className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-md flex items-center gap-1 hover:bg-blue-100"><EditIcon size={14}/> 編輯</button>
                               ) : (
                                 <button onClick={() => { setIsEditingAdminCustomer(false); setSelectedCustomer(allUsers.find(u => u.id === selectedCustomer.id)); }} className="text-xs font-bold text-stone-400 hover:text-stone-600">取消</button>
                               )
