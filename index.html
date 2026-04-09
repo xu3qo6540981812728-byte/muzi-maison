@@ -211,6 +211,8 @@
       const [showContactModal, setShowContactModal] = useState(false);
       const [showConfigModal, setShowConfigModal] = useState(false);
       const [tempConfig, setTempConfig] = useState(defaultStoreConfig);
+      const [showProductTable, setShowProductTable] = useState(false);
+const [tableProducts, setTableProducts] = useState([]);
 
       // ======== 【防護機制區塊】禁用右鍵與 F12 ========
       useEffect(() => {
@@ -947,6 +949,47 @@
          saveCategoriesToDB(newList);
       };
 
+      const handleTableFieldChange = (index, field, value) => {
+        const newTable = [...tableProducts];
+        newTable[index][field] = value;
+        setTableProducts(newTable);
+      };
+
+      const saveTableItem = async (index) => {
+        const item = tableProducts[index];
+        if (!item.id || !item.id.trim()) return alert("請輸入「商品品號」！");
+        if (!window.confirm(`確定要儲存「${item.name || item.id}」的修改嗎？`)) return;
+
+        const prodData = { ...item, id: item.id.trim(), price: Number(item.price) || 0, cost: Number(item.cost) || 0 };
+        delete prodData.isNew;
+
+        if (db) {
+          try {
+            await db.collection('products').doc(prodData.id).set(prodData, { merge: true });
+            alert("商品儲存成功！");
+          } catch (error) {
+            alert("儲存失敗：" + error.message);
+          }
+        }
+      };
+
+      const deleteTableItem = async (index) => {
+        const item = tableProducts[index];
+        if (!window.confirm(`確定要刪除「${item.name || item.id}」嗎？\n⚠️ 警告：刪除後無法復原喔！`)) return;
+
+        if (db && !item.isNew) {
+          await db.collection('products').doc(item.id).delete();
+        }
+        const newTable = [...tableProducts];
+        newTable.splice(index, 1);
+        setTableProducts(newTable);
+        alert("刪除成功！");
+      };
+
+      const addNewTableRow = () => {
+        setTableProducts([{ id: '', name: '', desc: '', weight: '', price: 0, cost: 0, category: adminCategoryNames[0] || '精選商品', image: '', intro: '', ingredients: '', notices: '', extraImages: [], isPromo: false, isAddon: false, isNew: true, isFreeShipping: true, isRewardEligible: true, unit: '' }, ...tableProducts]);
+      };
+
       const saveSystemConfig = async () => {
         const configToSave = { shippingFee: Number(tempConfig.shippingFee)||0, freeShippingThreshold: Number(tempConfig.freeShippingThreshold)||0, promoQty: Number(tempConfig.promoQty)||1, promoPrice: Number(tempConfig.promoPrice)||0, wholesaleThreshold: Number(tempConfig.wholesaleThreshold)||0 };
         if (db) await db.collection('settings').doc('config').set(configToSave, { merge: true });
@@ -1029,6 +1072,7 @@
                            <li className="px-6 py-2 text-xs font-bold text-stone-400 uppercase tracking-widest mt-2">管理員專區</li>
                            <li><button onClick={() => { setSidebarOpen(false); setShowAdminCustomers(true); }} className="w-full text-left px-6 py-3 hover:bg-blue-50 font-medium text-blue-700 flex items-center gap-3"><UsersIcon size={18}/>客戶管理</button></li>
                            <li><button onClick={() => { setSidebarOpen(false); setShowAdminOrders(true); }} className="w-full text-left px-6 py-3 hover:bg-amber-50 font-medium text-amber-700 flex items-center gap-3"><ClipboardList size={18}/>訂單管理</button></li>
+                          <li><button onClick={() => { setSidebarOpen(false); setTableProducts(JSON.parse(JSON.stringify(products))); setShowProductTable(true); }} className="w-full text-left px-6 py-3 hover:bg-emerald-50 font-medium text-emerald-700 flex items-center gap-3"><ClipboardList size={18}/>商品總覽編輯(表單)</button></li>
                            <li><button onClick={() => { setSidebarOpen(false); setTempConfig(storeConfig); setShowConfigModal(true); }} className="w-full text-left px-6 py-3 hover:bg-rose-50 font-medium text-rose-700 flex items-center gap-3"><SettingsIcon size={18}/>系統設定</button></li>
                            <li><button onClick={() => { setSidebarOpen(false); setTempAnnounce({}); setIsEditingAnnounce(false); setShowAnnounceConfig(true); }} className="w-full text-left px-6 py-3 hover:bg-purple-50 font-medium text-purple-700 flex items-center gap-3"><Megaphone size={18}/>公告設定</button></li>
                         </>
@@ -1812,6 +1856,88 @@
                       </div>
                     </div>
                   )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Excel 表單式：商品總覽編輯 */}
+          {showProductTable && isAdminMode && (
+            <div className="fixed inset-0 z-[45] flex justify-center items-center bg-black/60 backdrop-blur-sm px-2 md:px-6 py-4">
+              <div className="bg-[#Fdfbf7] p-4 md:p-6 rounded-3xl shadow-2xl w-full h-full max-h-[95vh] flex flex-col relative border border-stone-100 overflow-hidden animate-in zoom-in-95 duration-200">
+                <button onClick={() => setShowProductTable(false)} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-200 p-1.5 rounded-full z-10 bg-stone-100"><X size={20} /></button>
+                
+                <div className="flex justify-between items-center mb-4 border-b border-stone-200 pb-3">
+                  <h2 className="text-xl md:text-2xl font-bold text-stone-800 flex items-center gap-2"><ClipboardList size={24} className="text-emerald-600"/> 商品總覽編輯 (表單模式)</h2>
+                  <button onClick={addNewTableRow} className="bg-emerald-600 text-white text-sm font-bold px-4 py-2 rounded-lg shadow-sm hover:bg-emerald-700 flex items-center gap-1 mr-10"><Plus size={16}/> 新增一行</button>
+                </div>
+
+                <div className="flex-1 overflow-auto border border-stone-200 rounded-xl bg-white shadow-inner">
+                  <table className="w-full text-left border-collapse min-w-[1200px]">
+                    <thead className="bg-stone-100 sticky top-0 z-10 shadow-sm">
+                      <tr>
+                        <th className="p-2 border-b border-stone-200 text-stone-600 font-bold text-sm text-center w-32">操作</th>
+                        <th className="p-2 border-b border-stone-200 text-stone-600 font-bold text-sm w-24">品號</th>
+                        <th className="p-2 border-b border-stone-200 text-stone-600 font-bold text-sm w-48">商品名稱 (點擊改圖文)</th>
+                        <th className="p-2 border-b border-stone-200 text-stone-600 font-bold text-sm w-32">分類</th>
+                        <th className="p-2 border-b border-stone-200 text-stone-600 font-bold text-sm w-20">單位</th>
+                        <th className="p-2 border-b border-stone-200 text-stone-600 font-bold text-sm w-20">單價</th>
+                        <th className="p-2 border-b border-stone-200 text-stone-600 font-bold text-sm w-20">成本</th>
+                        <th className="p-2 border-b border-stone-200 text-stone-600 font-bold text-sm w-24">重量</th>
+                        <th className="p-2 border-b border-stone-200 text-stone-600 font-bold text-sm w-48">簡介</th>
+                        <th className="p-2 border-b border-stone-200 text-stone-600 font-bold text-sm text-center w-16">免運</th>
+                        <th className="p-2 border-b border-stone-200 text-stone-600 font-bold text-sm text-center w-16">集點</th>
+                        <th className="p-2 border-b border-stone-200 text-stone-600 font-bold text-sm text-center w-16">優惠</th>
+                        <th className="p-2 border-b border-stone-200 text-stone-600 font-bold text-sm text-center w-16">加購</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tableProducts.map((item, index) => (
+                        <tr key={index} className="hover:bg-amber-50/30 transition-colors group">
+                          <td className="p-2 border-b border-stone-200 text-center space-x-1">
+                            <button onClick={() => saveTableItem(index)} className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded hover:bg-blue-200">儲存</button>
+                            <button onClick={() => deleteTableItem(index)} className="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded hover:bg-red-200">刪除</button>
+                          </td>
+                          <td className="p-2 border-b border-stone-200">
+                            <input type="text" value={item.id} onChange={e => handleTableFieldChange(index, 'id', e.target.value.toUpperCase())} disabled={!item.isNew} className="w-full bg-transparent border border-transparent hover:border-stone-300 focus:border-amber-500 focus:bg-white rounded px-1 py-0.5 text-sm outline-none disabled:text-stone-400" placeholder="品號" />
+                          </td>
+                          <td className="p-2 border-b border-stone-200">
+                            <div className="flex items-center gap-1">
+                              <input type="text" value={item.name} onChange={e => handleTableFieldChange(index, 'name', e.target.value)} className="w-full bg-transparent border border-transparent hover:border-stone-300 focus:border-amber-500 focus:bg-white rounded px-1 py-0.5 text-sm font-bold text-stone-800 outline-none" placeholder="商品名稱" />
+                              <button onClick={() => openProductDetail(item)} className="shrink-0 text-amber-600 hover:text-amber-800 p-1" title="編輯圖文/成分/介紹"><EditIcon size={14}/></button>
+                            </div>
+                          </td>
+                          <td className="p-2 border-b border-stone-200">
+                            <select value={item.category} onChange={e => handleTableFieldChange(index, 'category', e.target.value)} className="w-full bg-transparent border border-transparent hover:border-stone-300 focus:border-amber-500 focus:bg-white rounded px-1 py-0.5 text-sm outline-none cursor-pointer">
+                              {adminCategoryNames.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                          </td>
+                          <td className="p-2 border-b border-stone-200">
+                            <input type="text" value={item.unit || ''} onChange={e => handleTableFieldChange(index, 'unit', e.target.value)} className="w-full bg-transparent border border-transparent hover:border-stone-300 focus:border-amber-500 focus:bg-white rounded px-1 py-0.5 text-sm outline-none" placeholder="單位" />
+                          </td>
+                          <td className="p-2 border-b border-stone-200">
+                            <input type="number" value={item.price} onChange={e => handleTableFieldChange(index, 'price', e.target.value)} className="w-full bg-transparent border border-transparent hover:border-stone-300 focus:border-amber-500 focus:bg-white rounded px-1 py-0.5 text-sm outline-none font-bold text-amber-600" />
+                          </td>
+                          <td className="p-2 border-b border-stone-200">
+                            <input type="number" value={item.cost || ''} onChange={e => handleTableFieldChange(index, 'cost', e.target.value)} className="w-full bg-transparent border border-transparent hover:border-stone-300 focus:border-amber-500 focus:bg-white rounded px-1 py-0.5 text-sm outline-none text-purple-600" />
+                          </td>
+                          <td className="p-2 border-b border-stone-200">
+                            <input type="text" value={item.weight || ''} onChange={e => handleTableFieldChange(index, 'weight', e.target.value)} className="w-full bg-transparent border border-transparent hover:border-stone-300 focus:border-amber-500 focus:bg-white rounded px-1 py-0.5 text-sm outline-none" placeholder="重量" />
+                          </td>
+                          <td className="p-2 border-b border-stone-200">
+                            <input type="text" value={item.desc || ''} onChange={e => handleTableFieldChange(index, 'desc', e.target.value)} className="w-full bg-transparent border border-transparent hover:border-stone-300 focus:border-amber-500 focus:bg-white rounded px-1 py-0.5 text-sm outline-none" placeholder="簡介" />
+                          </td>
+                          <td className="p-2 border-b border-stone-200 text-center"><input type="checkbox" checked={item.isFreeShipping !== false} onChange={e => handleTableFieldChange(index, 'isFreeShipping', e.target.checked)} className="w-4 h-4 accent-emerald-500 cursor-pointer" /></td>
+                          <td className="p-2 border-b border-stone-200 text-center"><input type="checkbox" checked={item.isRewardEligible !== false} onChange={e => handleTableFieldChange(index, 'isRewardEligible', e.target.checked)} className="w-4 h-4 accent-blue-500 cursor-pointer" /></td>
+                          <td className="p-2 border-b border-stone-200 text-center"><input type="checkbox" checked={item.isPromo} onChange={e => handleTableFieldChange(index, 'isPromo', e.target.checked)} className="w-4 h-4 accent-rose-500 cursor-pointer" /></td>
+                          <td className="p-2 border-b border-stone-200 text-center"><input type="checkbox" checked={item.isAddon} onChange={e => handleTableFieldChange(index, 'isAddon', e.target.checked)} className="w-4 h-4 accent-purple-500 cursor-pointer" /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="mt-3 text-xs font-bold text-stone-500 bg-stone-100 p-2 rounded-lg inline-block self-start">
+                  💡 提示：在表格中修改完資料後，記得點擊左側的「儲存」才會更新到系統喔！
                 </div>
               </div>
             </div>
