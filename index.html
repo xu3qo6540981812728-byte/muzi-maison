@@ -876,8 +876,8 @@ const [tableProducts, setTableProducts] = useState([]);
     };
       
       const onLogoChange = (e) => handleImageUpload(e.target.files[0], (img) => db ? db.collection('settings').doc('store').set({ logo: img }, { merge: true }) : setLogo(img), true);
-      const openProductDetail = (product) => { setEditingProduct({ intro: '', ingredients: '', notices: '', extraImages: [], isPromo: false, isAddon: false, isNew: false, isFreeShipping: true, isRewardEligible: true, unit: product.unit || '', cost: 0, ...product }); setMainDisplayImg(product.image || ''); };
-      const handleAddProduct = () => { setEditingProduct({ id: '', name: '', desc: '', weight: '', price: 0, cost: 0, category: adminCategoryNames[0] || '精選商品', image: '', intro: '', ingredients: '', notices: '', extraImages: [], isPromo: false, isAddon: false, isNew: true, isFreeShipping: true, isRewardEligible: true, unit: '' }); setMainDisplayImg(''); };
+      const openProductDetail = (product) => { setEditingProduct({ intro: '', ingredients: '', notices: '', extraImages: [], isPromo: false, isAddon: false, isNew: false, isFreeShipping: true, unit: product.unit || '', cost: 0, ...product }); setMainDisplayImg(product.image || ''); };
+      const handleAddProduct = () => { setEditingProduct({ id: '', name: '', desc: '', weight: '', price: 0, cost: 0, category: adminCategoryNames[0] || '精選商品', image: '', intro: '', ingredients: '', notices: '', extraImages: [], isPromo: false, isAddon: false, isNew: true, isFreeShipping: true, unit: '' }); setMainDisplayImg(''); };
       
       const saveProductDetail = async () => {
         if (editingProduct.isNew && !editingProduct.id.trim()) return alert("請輸入「商品品號」！");
@@ -1022,7 +1022,7 @@ const [tableProducts, setTableProducts] = useState([]);
       };
 
       const addNewTableRow = () => {
-        setTableProducts([{ id: '', name: '', desc: '', weight: '', price: 0, cost: 0, category: adminCategoryNames[0] || '精選商品', image: '', intro: '', ingredients: '', notices: '', extraImages: [], isPromo: false, isAddon: false, isNew: true, isFreeShipping: true, isRewardEligible: true, unit: '' }, ...tableProducts]);
+        setTableProducts([{ id: '', name: '', desc: '', weight: '', price: 0, cost: 0, category: adminCategoryNames[0] || '精選商品', image: '', intro: '', ingredients: '', notices: '', extraImages: [], isPromo: false, isAddon: false, isNew: true, isFreeShipping: true, unit: '' }, ...tableProducts]);
       };
       // --- 批次匯入 CSV 功能 (方案 A：覆蓋更新 + 自動註冊分類) ---
       const handleCSVImport = async (e) => {
@@ -1046,7 +1046,7 @@ const [tableProducts, setTableProducts] = useState([]);
 
           for (let i = 1; i < lines.length; i++) {
             const cols = lines[i].split(',');
-            if (cols.length < 12) continue; 
+            if (cols.length < 11) continue; 
 
             const id = cols[0].trim();
             if (!id) continue;
@@ -1064,9 +1064,8 @@ const [tableProducts, setTableProducts] = useState([]);
               cost: Number(cols[6]) || 0,
               weight: cols[7].trim(),
               isFreeShipping: cols[8].trim() === '是',
-              isRewardEligible: cols[9].trim() === '是',
-              isPromo: cols[10].trim() === '是',
-              isAddon: cols[11].trim() === '是',
+              isPromo: cols[9].trim() === '是',
+              isAddon: cols[10].trim() === '是',
             };
 
             const docRef = db.collection('products').doc(id);
@@ -1959,7 +1958,6 @@ const [tableProducts, setTableProducts] = useState([]);
                         <th className="p-2 border-b border-stone-200 text-stone-600 font-bold text-sm w-20">成本</th>
                         <th className="p-2 border-b border-stone-200 text-stone-600 font-bold text-sm w-24">重量</th>
                         <th className="p-2 border-b border-stone-200 text-stone-600 font-bold text-sm text-center w-16">免運</th>
-                        <th className="p-2 border-b border-stone-200 text-stone-600 font-bold text-sm text-center w-16">集點</th>
                         <th className="p-2 border-b border-stone-200 text-stone-600 font-bold text-sm text-center w-16">優惠</th>
                         <th className="p-2 border-b border-stone-200 text-stone-600 font-bold text-sm text-center w-16">加購</th>
                       </tr>
@@ -2001,7 +1999,6 @@ const [tableProducts, setTableProducts] = useState([]);
                             <input type="text" value={item.weight || ''} onChange={e => handleTableFieldChange(index, 'weight', e.target.value)} className="w-full bg-transparent border border-transparent hover:border-stone-300 focus:border-amber-500 focus:bg-white rounded px-1 py-0.5 text-sm outline-none" placeholder="重量" />
                           </td>
                           <td className="p-2 border-b border-stone-200 text-center"><input type="checkbox" checked={item.isFreeShipping !== false} onChange={e => handleTableFieldChange(index, 'isFreeShipping', e.target.checked)} className="w-4 h-4 accent-emerald-500 cursor-pointer" /></td>
-                          <td className="p-2 border-b border-stone-200 text-center"><input type="checkbox" checked={item.isRewardEligible !== false} onChange={e => handleTableFieldChange(index, 'isRewardEligible', e.target.checked)} className="w-4 h-4 accent-blue-500 cursor-pointer" /></td>
                           <td className="p-2 border-b border-stone-200 text-center"><input type="checkbox" checked={item.isPromo} onChange={e => handleTableFieldChange(index, 'isPromo', e.target.checked)} className="w-4 h-4 accent-rose-500 cursor-pointer" /></td>
                           <td className="p-2 border-b border-stone-200 text-center"><input type="checkbox" checked={item.isAddon} onChange={e => handleTableFieldChange(index, 'isAddon', e.target.checked)} className="w-4 h-4 accent-purple-500 cursor-pointer" /></td>
                         </tr>
