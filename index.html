@@ -508,7 +508,7 @@ const [tableProducts, setTableProducts] = useState([]);
         
         const totals = calculateTotals(items, deliveryMethod);
         return { items, ...totals };
-      }, [cart, products, storeConfig, deliveryMethod, usedRewardPoints, selectedRewardId]);
+      }, [cart, products, storeConfig, deliveryMethod]);
 
       const handleLogout = async () => {
         if (auth) {
@@ -619,7 +619,7 @@ const [tableProducts, setTableProducts] = useState([]);
       };
 
       const handleCheckout = async () => {
-        if (cartData.totalQty === 0 && !usedRewardPoints) return;
+        if (cartData.totalQty === 0) return;
         if (!currentUser && !adminOrderingFor) return alert("請先登入或註冊會員！");
         if (!customerInfo.name || !customerInfo.phone) return alert("請填寫訂購人姓名與電話！");
         if (!customerInfo.address) return alert("請務必填寫聯絡/收件地址！");
@@ -635,7 +635,7 @@ const [tableProducts, setTableProducts] = useState([]);
           const orderRef = db.collection('orders').doc(orderId);
           batch.set(orderRef, {
             orderId, userId: finalUserId, customerInfo, items: cartData.items,
-            totals: { itemsBaseTotal: cartData.itemsBaseTotal, discountAmount: cartData.discountAmount, shippingFee: cartData.shippingFee, finalPrice: cartData.finalPrice, totalCost: cartData.totalCost, usedPoints: usedRewardPoints ? 20 : 0, rewardEligibleAmount: cartData.rewardEligibleAmount },
+            totals: { itemsBaseTotal: cartData.itemsBaseTotal, discountAmount: cartData.discountAmount, shippingFee: cartData.shippingFee, finalPrice: cartData.finalPrice, totalCost: cartData.totalCost, usedPoints: 0, rewardEligibleAmount: cartData.rewardEligibleAmount },
             deliveryMethod, status: initialStatus, bankAccountLast5: checkoutBankCode || '', trackingNumber: '', orderNote, adminDiscount: 0, pointsAwarded: false,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             createdByAdmin: !!adminOrderingFor 
