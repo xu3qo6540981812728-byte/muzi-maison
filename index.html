@@ -153,8 +153,7 @@
       
       const [orderNote, setOrderNote] = useState('');
       const [checkoutBankCode, setCheckoutBankCode] = useState('');
-      const [usedRewardPoints, setUsedRewardPoints] = useState(false);
-      const [selectedRewardId, setSelectedRewardId] = useState('');
+      
 
       const [bankCodeInputs, setBankCodeInputs] = useState({});
       const [trackingInputs, setTrackingInputs] = useState({});
@@ -505,10 +504,7 @@ const [tableProducts, setTableProducts] = useState([]);
           return product ? { ...product, qty } : null;
         }).filter(Boolean);
         
-        if (usedRewardPoints && selectedRewardId) {
-           const rewardProd = products.find(p => p.id === selectedRewardId);
-           if (rewardProd) items.push({...rewardProd, qty: 1, price: 0, isReward: true, name: `[點數兌換] ${rewardProd.name}`});
-        }
+        
         
         const totals = calculateTotals(items, deliveryMethod);
         return { items, ...totals };
@@ -628,7 +624,7 @@ const [tableProducts, setTableProducts] = useState([]);
         if (!customerInfo.name || !customerInfo.phone) return alert("請填寫訂購人姓名與電話！");
         if (!customerInfo.address) return alert("請務必填寫聯絡/收件地址！");
         if (checkoutBankCode && checkoutBankCode.length > 0 && checkoutBankCode.length < 5) return alert("若要直接回報匯款，請輸入完整的後五碼！");
-        if (usedRewardPoints && !selectedRewardId) return alert("請選擇要兌換的糖果！");
+      
 
         let finalUserId = adminOrderingFor ? adminOrderingFor.id : (currentUser ? currentUser.uid : 'guest');
         const orderId = `MZ${Date.now().toString().slice(-6)}`;
@@ -645,15 +641,12 @@ const [tableProducts, setTableProducts] = useState([]);
             createdByAdmin: !!adminOrderingFor 
           });
 
-          if (usedRewardPoints && finalUserId !== 'guest') {
-             const userRef = db.collection('users').doc(finalUserId);
-             batch.update(userRef, { points: firebase.firestore.FieldValue.increment(-20) });
-          }
+         
 
           await batch.commit();
         }
 
-        setCart({}); setIsCartOpen(false); setOrderNote(''); setCheckoutBankCode(''); setUsedRewardPoints(false); setSelectedRewardId('');
+        setCart({}); setIsCartOpen(false); setOrderNote(''); setCheckoutBankCode(''); 
 
         if (adminOrderingFor) {
            alert(`成功為客戶 ${adminOrderingFor.name} 建立訂單！`);
@@ -702,21 +695,7 @@ const [tableProducts, setTableProducts] = useState([]);
          const batch = db.batch();
          const orderRef = db.collection('orders').doc(order.id);
 
-         if (newStatus === 'confirmed' && order.status !== 'confirmed' && !order.pointsAwarded && order.userId !== 'guest') {
-             const baseAmountForPoints = order.totals.rewardEligibleAmount !== undefined ? order.totals.rewardEligibleAmount : order.totals.finalPrice;
-             const addedPoints = Math.floor(baseAmountForPoints / 1000);
-             if (addedPoints > 0) {
-                 const userRef = db.collection('users').doc(order.userId);
-                 batch.update(userRef, { points: firebase.firestore.FieldValue.increment(addedPoints) });
-             }
-             batch.update(orderRef, { status: newStatus, pointsAwarded: true, earnedPoints: addedPoints || 0 });
-         } else {
-             // ========= 【防護機制區塊】提醒手動扣回點數 =========
-             if (newStatus === 'cancelled' && (order.pointsAwarded || order.totals?.usedPoints > 0)) {
-                alert("⚠️【系統提醒】⚠️\n此訂單已發放過集點或扣除過兌換點數！\n您將訂單改為「已取消」，請務必記得至「客戶管理」手動調整該客戶的點數，以免點數計算錯誤！");
-             }
-             batch.update(orderRef, { status: newStatus });
-         }
+        batch.update(orderRef, { status: newStatus });
          await batch.commit();
       };
       
@@ -1384,7 +1363,7 @@ const [tableProducts, setTableProducts] = useState([]);
                         </h3>
                         <div className="flex flex-wrap gap-2 text-xs mb-2">
                             <label className="flex items-center gap-1.5 bg-emerald-50 text-emerald-700 px-2 py-1 rounded-md cursor-pointer border border-emerald-100"><input type="checkbox" checked={editingProduct.isFreeShipping !== false} onChange={e => setEditingProduct({...editingProduct, isFreeShipping: e.target.checked})} className="accent-emerald-500 w-3 h-3" />計入免運件數</label>
-                            <label className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-2 py-1 rounded-md cursor-pointer border border-blue-100"><input type="checkbox" checked={editingProduct.isRewardEligible !== false} onChange={e => setEditingProduct({...editingProduct, isRewardEligible: e.target.checked})} className="accent-blue-500 w-3 h-3" />參與集點計算</label>
+                            
                         </div>
                         <div className="flex gap-3"><input type="text" value={editingProduct.id} onChange={e => setEditingProduct({...editingProduct, id: e.target.value.toUpperCase()})} disabled={!editingProduct.isNew} placeholder="品號 (如D01)" className="w-1/3 bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500 disabled:bg-stone-100" /><input type="text" value={editingProduct.name} onChange={e => setEditingProduct({...editingProduct, name: e.target.value})} placeholder="商品名稱" className="w-2/3 bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500" /></div>
                         <div className="flex gap-3">
@@ -1512,12 +1491,7 @@ const [tableProducts, setTableProducts] = useState([]);
                       <div className="flex justify-between text-sm text-stone-600"><span>運費</span><span className={cartData.shippingFee === 0 && deliveryMethod === 'delivery' ? 'text-emerald-500 font-bold' : ''}>{cartData.shippingFee === 0 ? (deliveryMethod==='pickup' ? '$0' : '免運費') : `$${cartData.shippingFee}`}</span></div>
                       <div className="pt-2 mt-2 border-t border-stone-200 flex justify-between items-center"><span className="font-bold text-stone-800">總計金額</span><span className="text-2xl font-black text-stone-800">${cartData.finalPrice}</span></div>
                     </div>
-                    {cartData.rewardEligibleAmount >= 1000 && (
-                      <div className="mt-3 bg-purple-50 border border-purple-100 text-purple-700 text-xs p-3 rounded-xl flex items-start gap-2 shadow-sm">
-                        <Gift size={16} className="shrink-0 mt-0.5" />
-                        <span><strong className="font-bold">滿 $1000 集點活動：</strong>此訂單含可集點金額 <strong>${cartData.rewardEligibleAmount}</strong>，點數將於「匯款完成確認訂單」後自動發放 <strong>{Math.floor(cartData.rewardEligibleAmount / 1000)}</strong> 點！</span>
-                      </div>
-                    )}
+                    
                   </div>
 
                   <div className="md:w-1/2 md:border-l border-stone-200 md:pl-8 flex flex-col mt-6 md:mt-0">
@@ -1538,37 +1512,7 @@ const [tableProducts, setTableProducts] = useState([]);
                             <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-bold">{adminOrderingFor ? '管理員代建單' : '會員已登入'}</span>
                           </h3>
 
-                          {userProfile?.points >= 20 && !adminOrderingFor && (
-                            <div className="bg-purple-50 border border-purple-200 p-4 rounded-xl">
-                               <p className="text-sm font-bold text-purple-800 flex items-center gap-1 mb-2"><Gift size={18}/> 集點兌換 (您有 {userProfile.points} 點)</p>
-                               <label className="flex items-center gap-2 text-sm text-purple-700 cursor-pointer mb-2">
-                                  <input type="checkbox" checked={usedRewardPoints} onChange={e => {setUsedRewardPoints(e.target.value); if(!e.target.checked) setSelectedRewardId('');}} className="accent-purple-600 w-4 h-4"/>
-                                  我要使用 20 點兌換糖果軟糕系列
-                               </label>
-                               {usedRewardPoints && (
-                                  <select value={selectedRewardId} onChange={e => setSelectedRewardId(e.target.value)} className="w-full bg-white border border-purple-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-500 font-bold text-purple-800">
-                                     <option value="">-- 請選擇兌換商品 --</option>
-                                     {candyProducts.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                                  </select>
-                               )}
-                            </div>
-                          )}
-
-                          {adminOrderingFor && adminOrderingFor.points >= 20 && (
-                            <div className="bg-purple-50 border border-purple-200 p-4 rounded-xl">
-                               <p className="text-sm font-bold text-purple-800 flex items-center gap-1 mb-2"><Gift size={18}/> 代客操作兌換 (客戶有 {adminOrderingFor.points} 點)</p>
-                               <label className="flex items-center gap-2 text-sm text-purple-700 cursor-pointer mb-2">
-                                  <input type="checkbox" checked={usedRewardPoints} onChange={e => {setUsedRewardPoints(e.target.value); if(!e.target.checked) setSelectedRewardId('');}} className="accent-purple-600 w-4 h-4"/>
-                                  替他扣除 20 點兌換糖果軟糕系列
-                               </label>
-                               {usedRewardPoints && (
-                                  <select value={selectedRewardId} onChange={e => setSelectedRewardId(e.target.value)} className="w-full bg-white border border-purple-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-500 font-bold text-purple-800">
-                                     <option value="">-- 請選擇兌換商品 --</option>
-                                     {candyProducts.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                                  </select>
-                               )}
-                            </div>
-                          )}
+                          
 
                           <div className="grid grid-cols-2 gap-3">
                             <input type="text" placeholder="姓名" value={customerInfo.name} onChange={e => setCustomerInfo({...customerInfo, name: e.target.value})} className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500 text-sm"/>
@@ -1616,12 +1560,7 @@ const [tableProducts, setTableProducts] = useState([]);
                 
                 <div className="flex-1 overflow-y-auto space-y-6 md:flex md:space-y-0 md:gap-6">
                   <div className="md:w-1/3 space-y-4">
-                    <div className="bg-gradient-to-br from-amber-500 to-amber-600 text-white p-5 rounded-2xl shadow-sm relative overflow-hidden">
-                       <div className="absolute right-0 top-0 opacity-10 transform translate-x-4 -translate-y-4"><Gift size={100}/></div>
-                       <h3 className="font-bold mb-1 opacity-90 text-sm">目前累積點數</h3>
-                       <div className="text-4xl font-black">{userProfile?.points || 0} <span className="text-sm font-medium">點</span></div>
-                       <p className="text-xs mt-2 bg-white/20 px-2 py-1 rounded inline-block">滿 1000 元可集 1 點</p>
-                    </div>
+                    
 
                     <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm">
                       <div className="flex justify-between items-center mb-4 border-b border-stone-100 pb-2">
@@ -1863,7 +1802,7 @@ const [tableProducts, setTableProducts] = useState([]);
                       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         {filteredUsers.map(user => (
                           <div key={user.id} onClick={() => setSelectedCustomer({...user})} className={`bg-white p-5 rounded-2xl border shadow-sm cursor-pointer hover:shadow-md transition-all flex flex-col items-center text-center relative overflow-hidden ${user.role === 'deleted' ? 'border-rose-200 opacity-80' : 'border-stone-200 hover:border-blue-400'}`}>
-                            <div className="absolute top-0 right-0 bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-1 rounded-bl-lg">點數: {user.points||0}</div>
+                          
                             <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-3 mt-2 ${user.role === 'deleted' ? 'bg-rose-100 text-rose-600' : 'bg-blue-100 text-blue-600'}`}><UserIcon size={32} /></div>
                             <h3 className="font-black text-stone-800 text-lg">{user.name} <span className="text-sm font-normal text-stone-500">({user.gender||'-'})</span></h3>
                             {user.role === 'deleted' && <div className="bg-rose-100 text-rose-600 text-[10px] font-bold px-2 py-0.5 rounded-md mt-1">已停用</div>}
@@ -1915,10 +1854,7 @@ const [tableProducts, setTableProducts] = useState([]);
                               <input type="tel" placeholder="聯絡電話" value={selectedCustomer.phone} onChange={e=>setSelectedCustomer({...selectedCustomer, phone: e.target.value})} className="w-full bg-white border border-stone-200 rounded-md px-2 py-1.5 outline-none focus:border-blue-400" />
                               <input type="text" placeholder="Line ID" value={selectedCustomer.lineId} onChange={e=>setSelectedCustomer({...selectedCustomer, lineId: e.target.value})} className="w-full bg-white border border-stone-200 rounded-md px-2 py-1.5 outline-none focus:border-blue-400" />
                               <textarea placeholder="聯絡地址" value={selectedCustomer.address} onChange={e=>setSelectedCustomer({...selectedCustomer, address: e.target.value})} rows="2" className="w-full bg-white border border-stone-200 rounded-md px-2 py-1.5 outline-none focus:border-blue-400"></textarea>
-                              <div className="flex items-center gap-2 pt-2 border-t border-stone-200 mb-3">
-                                 <span className="font-bold text-stone-600">目前點數:</span>
-                                 <input type="number" value={adminEditPoints} onChange={e=>setAdminEditPoints(e.target.value)} className="w-20 bg-white border border-stone-200 rounded-md px-2 py-1 outline-none focus:border-amber-400 font-bold text-amber-600" />
-                              </div>
+                              
                               <div className="flex gap-2">
                                 {!isNewCustomer && <button onClick={handleDeleteCustomer} className="bg-red-100 text-red-600 font-bold px-3 py-2 rounded-md hover:bg-red-200 transition-colors" title="刪除客戶"><Trash2 size={18}/></button>}
                                 <button onClick={handleUpdateCustomerByAdmin} className="flex-1 bg-blue-600 text-white font-bold py-2 rounded-md shadow-sm hover:bg-blue-700 transition-colors">儲存修改</button>
@@ -1930,7 +1866,7 @@ const [tableProducts, setTableProducts] = useState([]);
                               <div><span className="text-xs font-bold text-stone-400 block mb-1">聯絡電話</span><span className="font-bold">{selectedCustomer.phone}</span></div>
                               <div><span className="text-xs font-bold text-stone-400 block mb-1">Line ID</span><span className="font-bold text-[#06C755]">{selectedCustomer.lineId || '未提供'}</span></div>
                               <div><span className="text-xs font-bold text-stone-400 block mb-1">預設地址</span><span className="font-bold">{selectedCustomer.address || '未提供'}</span></div>
-                              <div><span className="text-xs font-bold text-amber-600 block mb-1">累積點數</span><span className="font-black text-xl text-amber-600">{selectedCustomer.points || 0}</span></div>
+                             
                               
                               {selectedCustomer.role === 'deleted' && (
                                 <div className="mt-4 pt-4 border-t border-stone-200">
