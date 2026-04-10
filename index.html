@@ -843,10 +843,15 @@ const [tableProducts, setTableProducts] = useState([]);
               const fileName = `images/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${preserveTransparency ? 'png' : 'jpg'}`;
               
               // 指向 Firebase Storage 的存放位置
-              const storageRef = storage.ref().child(fileName);
-              
-              // 執行上傳
-              const uploadTask = await storageRef.put(blob);
+const storageRef = storage.ref().child(fileName);
+
+// 1. 準備快取標籤（設定為 1 年，也就是 31536000 秒）
+const metadata = {
+  cacheControl: 'public, max-age=31536000'
+};
+
+// 2. 執行上傳，並把 metadata 標籤一起掛上去
+const uploadTask = await storageRef.put(blob, metadata);
               
               // 上傳成功後，取得公開下載網址
               const downloadURL = await uploadTask.ref.getDownloadURL();
