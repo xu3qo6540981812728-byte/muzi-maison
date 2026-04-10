@@ -1629,7 +1629,7 @@ const [tableProducts, setTableProducts] = useState([]);
                               {order.status === 'pending' && (
                                 <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl space-y-3">
                                   <div><p className="text-xs font-bold text-rose-800 mb-1 flex items-center gap-1"><CreditCard size={14}/> 匯款帳號資訊：</p><p className="text-xs text-rose-700 whitespace-pre-wrap font-medium bg-white/60 p-2 rounded border border-rose-100">{contactData.bankAccount || '店家尚未設定匯款帳號，請加 LINE 詢問'}</p></div>
-                                  <div><p className="text-xs font-bold text-rose-700 mb-2">⚠️ 請匯款後加 LINE 通知，並輸入帳戶後五碼：</p><div className="flex gap-2"><input type="text" maxLength="5" placeholder="輸入後五碼" value={bankCodeInputs[order.id] || ''} onChange={e => setBankCodeInputs({...bankCodeInputs, [order.id]: e.target.value})} className="flex-1 bg-white border border-rose-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-rose-400 font-bold tracking-widest text-center" /><button onClick={() => submitBankCode(order.id)} className="bg-rose-500 text-white font-bold px-4 rounded-lg shadow-sm active:scale-95 transition-transform">送出</button></div></div>
+                                  <div><p className="text-xs font-bold text-rose-700 mb-2">⚠️ 請匯款後加 LINE 通知，並輸入帳戶後五碼：</p><div className="flex gap-2"><input type="text" maxLength="5" placeholder="輸入後五碼" value={bankCodeInputs[order.id] || ''} onChange={e => setBankCodeInputs({...bankCodeInputs, [order.id]: e.target.value})} className="flex-1 min-w-0 bg-white border border-rose-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-rose-400 font-bold tracking-widest text-center" /><button onClick={() => submitBankCode(order.id)} className="shrink-0 whitespace-nowrap bg-rose-500 text-white font-bold px-4 rounded-lg shadow-sm active:scale-95 transition-transform">送出</button></div></div>
                                 </div>
                               )}
                               {order.status === 'confirming' && <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs font-bold text-amber-700 text-center">已送出後五碼 ({order.bankAccountLast5})，等待對帳確認中...</div>}
@@ -2229,7 +2229,21 @@ const [tableProducts, setTableProducts] = useState([]);
               <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 relative border border-stone-100">
                 <button onClick={() => setShowContactModal(false)} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full transition-colors"><X size={20} /></button>
                 <div className="flex flex-col items-center mb-6">
-                  <div className="h-24 mb-2 flex items-center justify-center">{logo ? <img src={logo} alt="Logo" className="max-h-full max-w-[150px] object-contain" /> : <Store size={50} className="text-amber-700" />}</div>
+                  <div className="h-24 mb-2 flex items-center justify-center relative group cursor-pointer">
+  {contactData.image ? (
+    <img src={contactData.image} alt="Contact" className="max-h-full max-w-[150px] object-contain" />
+  ) : (
+    <Store size={50} className="text-amber-700" />
+  )}
+  {isAdminMode && !adminOrderingFor && (
+    <>
+      <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
+        <Camera size={24} className="text-white" />
+      </div>
+      <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleImageUpload(e.target.files[0], (img) => setContactData({...contactData, image: img}))} />
+    </>
+  )}
+</div>
                   <h2 className="text-xl font-bold text-stone-800">聯絡我們</h2>
                 </div>
                 <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
