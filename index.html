@@ -2229,9 +2229,9 @@ const [tableProducts, setTableProducts] = useState([]);
               <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 relative border border-stone-100">
                 <button onClick={() => setShowContactModal(false)} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full transition-colors"><X size={20} /></button>
                 <div className="flex flex-col items-center mb-6">
-                  <div className="h-24 mb-2 flex items-center justify-center relative group cursor-pointer">
+                  <div className="h-48 mb-2 flex items-center justify-center relative group cursor-pointer">
   {contactData.image ? (
-    <img src={contactData.image} alt="Contact" className="max-h-full max-w-[150px] object-contain" />
+    <img src={contactData.image} alt="Contact" className="max-h-full max-w-[300px] object-contain" />
   ) : (
     <Store size={50} className="text-amber-700" />
   )}
