@@ -448,40 +448,42 @@ const [tableProducts, setTableProducts] = useState([]);
           const currentQty = prev[id] || 0;
           const newQty = currentQty + delta;
 
-          // 刪除商品的邏輯不變
-          if (newQty <= 0) { 
-            const newCart = { ...prev }; 
-            delete newCart[id]; 
-            return newCart; 
+          if (newQty <= 0) { const newCart = { ...prev }; delete newCart[id]; return newCart; }
+
+          // === 新增：限制加購品數量不能超過非加購品(主商品) ===
+          if (delta > 0 && product && product.isAddon) {
+             let mainQty = 0;
+             let addonQty = 0;
+             Object.entries(prev).forEach(([cartId, qty]) => {
+                const p = products.find(item => item.id === cartId);
+                if (p) {
+                   if (p.isAddon && cartId !== id) addonQty += qty; // 計算其他加購品
+                   if (!p.isAddon) mainQty += qty; // 計算所有主商品
+                }
+             });
+             if ((addonQty + newQty) > mainQty) {
+                alert("加購品的總數不能大於主商品的總數喔！");
+                return prev;
+             }
           }
 
-          // === 新增：判斷 0 元加購品的數量上限 ===
-          if (delta > 0 && product && product.isFreeAddon) {
-            // 計算購物車裡「主商品（非 0 元加購品）」的總數量
-            let mainProductQty = 0;
-            Object.entries(prev).forEach(([cartId, qty]) => {
-              const p = products.find(item => item.id === cartId);
-              if (p && !p.isFreeAddon) {
-                mainProductQty += qty;
-              }
-            });
-
-            // 檢查加購品的總數量（現在這項的數量 + 其他也是 0 元加購品的數量）
-            let totalFreeAddonQty = 0;
-            Object.entries(prev).forEach(([cartId, qty]) => {
-              const p = products.find(item => item.id === cartId);
-              if (p && p.isFreeAddon && cartId !== id) {
-                totalFreeAddonQty += qty;
-              }
-            });
-
-            // 如果 (現在這項的新數量 + 其他 0 元加購品數量) > 主商品總數量，就擋下來
-            if ((newQty + totalFreeAddonQty) > mainProductQty) {
-              alert("0 元加購品的總數量，不能超過主商品的購買數量喔！");
-              return prev; // 保持原狀不增加
-            }
+          // === 新增：減少主商品時，檢查是否會導致加購品超標 ===
+          if (delta < 0 && product && !product.isAddon) {
+             let newMainQty = 0;
+             let addonQty = 0;
+             Object.entries({ ...prev, [id]: newQty }).forEach(([cartId, qty]) => {
+                const p = products.find(item => item.id === cartId);
+                if (p) {
+                   if (p.isAddon) addonQty += qty;
+                   if (!p.isAddon) newMainQty += qty;
+                }
+             });
+             if (addonQty > newMainQty) {
+                alert("無法減少此商品！因為加購品數量會超過主商品數量，請先移除加購品。");
+                return prev;
+             }
           }
-          // ===================================
+          // ===============================================
 
           return { ...prev, [id]: newQty };
         });
@@ -493,30 +495,37 @@ const [tableProducts, setTableProducts] = useState([]);
         let freeShippingQty = 0;
         
 
+        // === 新增：先計算總共有幾個「送0元加購」的額度 ===
+        let freeAddonQuota = 0;
+        itemsList.forEach(item => {
+          if (!item.isAddon && item.providesFreeAddon) {
+            freeAddonQuota += item.qty;
+          }
+        });
+        // ===========================================
+
         itemsList.forEach(item => {
           totalQty += item.qty;
           totalCost += (Number(item.cost) || 0) * item.qty;
-          
-          if (item.isFreeShipping !== false) {
-             freeShippingQty += item.qty;
-          }
-          
-          
+          if (item.isFreeShipping !== false) { freeShippingQty += item.qty; }
 
-          const itemBasePrice = item.price * item.qty;
-         
+          // === 修改：處理加購品 0 元邏輯 ===
+          if (item.isAddon) {
+            // 看看能有幾個免費 (最多不超過剩下的免費額度)
+            let freeCount = Math.min(item.qty, freeAddonQuota);
+            let paidCount = item.qty - freeCount;
+            freeAddonQuota -= freeCount; // 扣掉剛剛用掉的額度
 
-          // === 新增：判斷是否為 0 元加購 ===
-          let itemActualPrice = item.price;
-          if (item.isFreeAddon) {
-            itemActualPrice = 0; // 如果是 0 元加購品，實際計算價格為 0
+            nonPromoPrice += (paidCount * item.price); // 只有沒免費到的才要算錢
+          } else {
+            // 原本主商品的邏輯
+            if (item.isPromo) { 
+              for(let i = 0; i < item.qty; i++) promoItemsExpanded.push(item.price); 
+            } else { 
+              nonPromoPrice += item.price * item.qty; 
+            }
           }
-
-          if (item.isPromo && !item.isFreeAddon) { // 0 元加購品不參與任選優惠
-            for(let i = 0; i < item.qty; i++) promoItemsExpanded.push(itemActualPrice); 
-          } else { 
-            nonPromoPrice += itemActualPrice * item.qty; 
-          }
+          // ===========================================
         });
 
         promoItemsExpanded.sort((a,b) => b - a);
@@ -918,8 +927,8 @@ const uploadTask = await storageRef.put(blob, metadata);
     };
       
       const onLogoChange = (e) => handleImageUpload(e.target.files[0], (img) => db ? db.collection('settings').doc('store').set({ logo: img }, { merge: true }) : setLogo(img), true);
-      const openProductDetail = (product) => { setEditingProduct({ intro: '', ingredients: '', notices: '', extraImages: [], isPromo: false, isAddon: false, isFreeAddon: false, isNew: false, isFreeShipping: true, unit: product.unit || '', cost: 0, ...product }); setMainDisplayImg(product.image || ''); };
-      const handleAddProduct = () => { setEditingProduct({ id: '', name: '', desc: '', weight: '', price: 0, cost: 0, category: adminCategoryNames[0] || '精選商品', image: '', intro: '', ingredients: '', notices: '', extraImages: [], isPromo: false, isAddon: false, isFreeAddon: false, isNew: true, isFreeShipping: true, unit: '' }); setMainDisplayImg(''); };
+      const openProductDetail = (product) => { setEditingProduct({ intro: '', ingredients: '', notices: '', extraImages: [], isPromo: false, isAddon: false, providesFreeAddon: false, isNew: false, isFreeShipping: true, unit: product.unit || '', cost: 0, ...product }); setMainDisplayImg(product.image || ''); };
+      const handleAddProduct = () => { setEditingProduct({ id: '', name: '', desc: '', weight: '', price: 0, cost: 0, category: adminCategoryNames[0] || '精選商品', image: '', intro: '', ingredients: '', notices: '', extraImages: [], isPromo: false, isAddon: false, providesFreeAddon: false, isNew: true, isFreeShipping: true, unit: '' }); setMainDisplayImg(''); };
       
       const saveProductDetail = async () => {
         if (editingProduct.isNew && !editingProduct.id.trim()) return alert("請輸入「商品品號」！");
@@ -1044,6 +1053,44 @@ const uploadTask = await storageRef.put(blob, metadata);
           }
         }
       };
+      // --- 批次全部儲存功能 ---
+      const saveAllTableItems = async () => {
+        // 1. 先檢查有沒有新增的商品忘記填寫品號
+        const invalidItem = tableProducts.find(item => !item.id || !item.id.trim());
+        if (invalidItem) return alert("有商品未填寫「品號」，請檢查後再儲存！");
+
+        if (!window.confirm("確定要儲存表格中所有的變更嗎？")) return;
+
+        if (db) {
+          try {
+            const batch = db.batch(); // 開啟批次處理
+            
+            // 2. 把表格中所有的商品都寫入 Batch
+            tableProducts.forEach(item => {
+              const prodData = { ...item, id: item.id.trim(), price: Number(item.price) || 0, cost: Number(item.cost) || 0 };
+              delete prodData.isNew;
+              
+              const docRef = db.collection('products').doc(prodData.id);
+              batch.set(docRef, prodData, { merge: true }); // 使用 merge 覆蓋更新
+            });
+
+            // 3. 一次性送出
+            await batch.commit();
+            
+            // 4. 更新畫面狀態，把「新增中 (isNew)」的標籤清掉
+            const updatedTable = tableProducts.map(item => {
+              const newItem = {...item};
+              delete newItem.isNew;
+              return newItem;
+            });
+            setTableProducts(updatedTable);
+
+            alert("✅ 全部商品已成功儲存！");
+          } catch (error) {
+            alert("批次儲存失敗：" + error.message);
+          }
+        }
+      };
 
       const deleteTableItem = async (index) => {
         const item = tableProducts[index];
@@ -1064,7 +1111,7 @@ const uploadTask = await storageRef.put(blob, metadata);
       };
 
       const addNewTableRow = () => {
-        setTableProducts([{ id: '', name: '', desc: '', weight: '', price: 0, cost: 0, category: adminCategoryNames[0] || '精選商品', image: '', intro: '', ingredients: '', notices: '', extraImages: [], isPromo: false, isAddon: false, isFreeAddon: false, isNew: true, isFreeShipping: true, unit: '' }, ...tableProducts]);
+        setTableProducts([{ id: '', name: '', desc: '', weight: '', price: 0, cost: 0, category: adminCategoryNames[0] || '精選商品', image: '', intro: '', ingredients: '', notices: '', extraImages: [], isPromo: false, isAddon: false, providesFreeAddon: false, isNew: true, isFreeShipping: true, unit: '' }, ...tableProducts]);
       };
       // --- 批次匯入 CSV 功能 (方案 A：覆蓋更新 + 自動註冊分類) ---
       const handleCSVImport = async (e) => {
@@ -1088,7 +1135,7 @@ const uploadTask = await storageRef.put(blob, metadata);
 
           for (let i = 1; i < lines.length; i++) {
             const cols = lines[i].split(',');
-            if (cols.length < 11) continue; 
+            if (cols.length < 12) continue; 
 
             const id = cols[0].trim();
             if (!id) continue;
@@ -1108,6 +1155,7 @@ const uploadTask = await storageRef.put(blob, metadata);
               isFreeShipping: cols[8].trim() === '是',
               isPromo: cols[9].trim() === '是',
               isAddon: cols[10].trim() === '是',
+              providesFreeAddon: cols[11] ? cols[11].trim() === '是' : false,
             };
 
             const docRef = db.collection('products').doc(id);
@@ -1144,7 +1192,7 @@ const uploadTask = await storageRef.put(blob, metadata);
         
         // 1. 準備 CSV 的標題列 (BOM \uFEFF 是為了解決 Excel 中文亂碼)
         let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
-        csvContent += "品號,商品名稱,分類,簡介,單位,售價,成本,重量,計入免運,優惠活動,加購商品\n";
+        csvContent += "品號,商品名稱,分類,簡介,單位,售價,成本,重量,計入免運,優惠活動,加購商品,送加購額度\n";
 
         // 2. 依序把表格內的商品轉成 CSV 格式
         tableProducts.forEach(item => {
@@ -1159,7 +1207,8 @@ const uploadTask = await storageRef.put(blob, metadata);
             item.weight || '',
             item.isFreeShipping !== false ? '是' : '否',
             item.isPromo ? '是' : '否',
-            item.isAddon ? '是' : '否'
+            item.isAddon ? '是' : '否',
+            item.providesFreeAddon ? '是' : '否'
           ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(','); // 處理內文可能有逗號的問題
           
           csvContent += row + "\n";
@@ -1438,7 +1487,11 @@ const uploadTask = await storageRef.put(blob, metadata);
                              <label className="flex items-center gap-1.5 text-xs bg-rose-100 text-rose-700 px-2 py-1 rounded-md cursor-pointer"><input type="checkbox" checked={editingProduct.isPromo} onChange={e => setEditingProduct({...editingProduct, isPromo: e.target.checked})} className="accent-rose-500 w-3 h-3" />參與優惠</label>
                              <label className="flex items-center gap-1.5 text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-md cursor-pointer"><input type="checkbox" checked={editingProduct.isAddon} onChange={e => setEditingProduct({...editingProduct, isAddon: e.target.checked})} className="accent-purple-500 w-3 h-3" />設為加購</label>
                             <label className="flex items-center gap-1.5 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-md cursor-pointer">
-  <input type="checkbox" checked={editingProduct.isFreeAddon} onChange={e => setEditingProduct({...editingProduct, isFreeAddon: e.target.checked})} className="accent-blue-500 w-3 h-3" />0元加購(綁主商品)
+  <input type="checkbox" 
+         checked={editingProduct.providesFreeAddon || false} 
+         onChange={e => setEditingProduct({...editingProduct, providesFreeAddon: e.target.checked})} 
+         className="accent-blue-500 w-3 h-3" />
+  買此商品送0元加購額度
 </label>
                           </div>
                         </h3>
@@ -1536,8 +1589,8 @@ const uploadTask = await storageRef.put(blob, metadata);
                               <div className="flex-1 flex flex-col justify-between py-0.5 min-w-0">
                                 <h4 className="font-bold text-stone-800 text-xs truncate" title={addon.name}>{addon.name}</h4>
                                 <div className="flex justify-between items-end mt-1">
-                                  <span className="text-amber-600 font-bold text-sm">
-  ${addon.isFreeAddon ? 0 : addon.price} 
+                                 <span className="text-amber-600 font-bold text-sm">
+  ${addon.price} 
   {addon.unit && <span className="text-[10px] text-stone-400">/{addon.unit}</span>}
 </span>
                                   {cart[addon.id] ? (
@@ -2029,6 +2082,9 @@ const uploadTask = await storageRef.put(blob, metadata);
   <button onClick={addNewTableRow} className="bg-emerald-600 text-white text-sm font-bold px-4 py-2 rounded-lg shadow-sm hover:bg-emerald-700 flex items-center gap-1 transition-colors">
     <Plus size={16}/> 新增一行
   </button>
+                   <button onClick={saveAllTableItems} className="bg-amber-600 text-white text-sm font-bold px-4 py-2 rounded-lg shadow-sm hover:bg-amber-700 flex items-center gap-1 transition-colors">
+    <CheckCircle size={16}/> 儲存全部變更
+  </button>
 </div>
                 </div>
 
@@ -2048,13 +2104,13 @@ const uploadTask = await storageRef.put(blob, metadata);
                         <th className="p-2 border-b border-stone-200 text-stone-600 font-bold text-sm text-center w-16">免運</th>
                         <th className="p-2 border-b border-stone-200 text-stone-600 font-bold text-sm text-center w-16">優惠</th>
                         <th className="p-2 border-b border-stone-200 text-stone-600 font-bold text-sm text-center w-16">加購</th>
+                        <th className="p-2 border-b border-stone-200 text-stone-600 font-bold text-sm text-center w-20">送加購額度</th>
                       </tr>
                     </thead>
                     <tbody>
                       {tableProducts.map((item, index) => (
                         <tr key={index} className="hover:bg-amber-50/30 transition-colors group">
-                          <td className="p-2 border-b border-stone-200 text-center space-x-1">
-                            <button onClick={() => saveTableItem(index)} className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded hover:bg-blue-200">儲存</button>
+                          <td className="p-2 border-b border-stone-200 text-center ">
                             <button onClick={() => deleteTableItem(index)} className="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded hover:bg-red-200">刪除</button>
                           </td>
                           <td className="p-2 border-b border-stone-200">
@@ -2089,6 +2145,9 @@ const uploadTask = await storageRef.put(blob, metadata);
                           <td className="p-2 border-b border-stone-200 text-center"><input type="checkbox" checked={item.isFreeShipping !== false} onChange={e => handleTableFieldChange(index, 'isFreeShipping', e.target.checked)} className="w-4 h-4 accent-emerald-500 cursor-pointer" /></td>
                           <td className="p-2 border-b border-stone-200 text-center"><input type="checkbox" checked={item.isPromo} onChange={e => handleTableFieldChange(index, 'isPromo', e.target.checked)} className="w-4 h-4 accent-rose-500 cursor-pointer" /></td>
                           <td className="p-2 border-b border-stone-200 text-center"><input type="checkbox" checked={item.isAddon} onChange={e => handleTableFieldChange(index, 'isAddon', e.target.checked)} className="w-4 h-4 accent-purple-500 cursor-pointer" /></td>
+                          <td className="p-2 border-b border-stone-200 text-center">
+  <input type="checkbox" checked={item.providesFreeAddon || false} onChange={e => handleTableFieldChange(index, 'providesFreeAddon', e.target.checked)} className="w-4 h-4 accent-blue-500 cursor-pointer" />
+</td>
                         </tr>
                       ))}
                     </tbody>
