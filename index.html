@@ -122,7 +122,16 @@
     };
 
     const defaultProducts = [];
-    const defaultStoreConfig = { shippingFee: 100, freeShippingThreshold: 12, promoQty: 3, promoPrice: 550, wholesaleThreshold: 12, freeAddonReminderMsg: '恭喜！您選購的主商品享有「0元加購」優惠！\n別忘了至下方加購專區挑選喔！' };
+    const defaultStoreConfig = { 
+  shippingFee: 100, 
+  freeShippingThreshold: 2000, 
+  promoQty: 3, 
+  promoPrice: 550, 
+  wholesaleThreshold: 12, 
+  freeAddonReminderMsg: '恭喜！您選購的主商品享有「0元加購」優惠！\n別忘了至下方加購專區挑選喔！',
+  giftThreshold: 30, // 預設滿 30 件送
+  giftProductId: '' // 預設送的商品品號（空字串代表不送或尚未設定）
+};
 
     function App() {
       // 🌟 全局載入狀態，防止畫面閃現
@@ -493,6 +502,9 @@ const [tableProducts, setTableProducts] = useState([]);
         let totalQty = 0; let nonPromoPrice = 0; let promoItemsExpanded = [];
         let totalCost = 0;
         let freeShippingQty = 0;
+        let mainProductQty = 0; // 計算非加購品(主商品)的總數量
+  let giftCount = 0;      // 應該送幾個贈品
+  let appliedGiftId = ''; // 記錄送的贈品品號
 
         let freeAddonQuota = 0;
         itemsList.forEach(item => {
@@ -522,7 +534,7 @@ const [tableProducts, setTableProducts] = useState([]);
           } else {
             item.subtotal = item.price * item.qty;
             itemsBaseTotal += item.subtotal;
-
+mainProductQty += item.qty;
             if (item.isPromo) {
               for(let i = 0; i < item.qty; i++) promoItemsExpanded.push(item.price);
             } else {
@@ -540,24 +552,45 @@ const [tableProducts, setTableProducts] = useState([]);
         const currentTotal = nonPromoPrice + promoTotal + remainderTotal;
         const discountAmount = itemsBaseTotal - currentTotal; // 現在這裡只剩下「任選優惠」的折抵了
 
+        if (storeConfig.giftThreshold > 0 && storeConfig.giftProductId) {
+    // 只有主商品數量超過門檻才送
+    giftCount = Math.floor(mainProductQty / storeConfig.giftThreshold);
+    if (giftCount > 0) {
+      appliedGiftId = storeConfig.giftProductId;
+    }
+  }
+
         let shippingFee = 0;
-        if (deliveryWay === 'delivery' && freeShippingQty < storeConfig.freeShippingThreshold) shippingFee = storeConfig.shippingFee;
+        if (deliveryWay === 'delivery' && currentTotal < storeConfig.freeShippingThreshold) shippingFee = storeConfig.shippingFee;
         const finalPrice = currentTotal + shippingFee;
 
-        return { totalQty, freeShippingQty, currentTotal, finalPrice, shippingFee, discountAmount, itemsBaseTotal, totalCost };
+        return { totalQty, freeShippingQty, currentTotal, finalPrice, shippingFee, discountAmount, itemsBaseTotal, totalCost, giftCount, appliedGiftId };
       };
 
       const cartData = useMemo(() => {
-        let items = Object.entries(cart).map(([id, qty]) => {
-          const product = products.find(p => p.id === id);
-          return product ? { ...product, qty } : null;
-        }).filter(Boolean);
-        
-        
-        
-        const totals = calculateTotals(items, deliveryMethod);
+  let items = Object.entries(cart).map(([id, qty]) => {
+    const product = products.find(p => p.id === id);
+    return product ? { ...product, qty } : null;
+  }).filter(Boolean);
+
+  const totals = calculateTotals(items, deliveryMethod);
+
+  // === 處理贈品：將贈品加到 items 陣列最後面 ===
+  if (totals.giftCount > 0 && totals.appliedGiftId) {
+    const giftProduct = products.find(p => p.id === totals.appliedGiftId);
+    if (giftProduct) {
+      // 複製一份商品資料，標記為贈品，金額設為 0
+      items.push({
+        ...giftProduct,
+        isGift: true, // 標記這是系統送的贈品
+        qty: totals.giftCount,
+        subtotal: 0,
+        price: 0 // 顯示單價為 0
+      });
+    }
+  }
         return { items, ...totals };
-      }, [cart, products, storeConfig, deliveryMethod]);
+}, [cart, products, storeConfig, deliveryMethod]);
 
       const handleLogout = async () => {
         if (auth) {
@@ -1225,11 +1258,20 @@ const uploadTask = await storageRef.put(blob, metadata);
       };
       // ------------------------------------------
 
-      const saveSystemConfig = async () => {
-        const configToSave = { shippingFee: Number(tempConfig.shippingFee)||0, freeShippingThreshold: Number(tempConfig.freeShippingThreshold)||0, promoQty: Number(tempConfig.promoQty)||1, promoPrice: Number(tempConfig.promoPrice)||0, wholesaleThreshold: Number(tempConfig.wholesaleThreshold)||0, freeAddonReminderMsg: tempConfig.freeAddonReminderMsg || '' };
-        if (db) await db.collection('settings').doc('config').set(configToSave, { merge: true });
-        setStoreConfig(configToSave); setShowConfigModal(false);
-      };
+     const saveSystemConfig = async () => {
+  const configToSave = { 
+    shippingFee: Number(tempConfig.shippingFee)||0, 
+    freeShippingThreshold: Number(tempConfig.freeShippingThreshold)||0, 
+    promoQty: Number(tempConfig.promoQty)||1, 
+    promoPrice: Number(tempConfig.promoPrice)||0, 
+    wholesaleThreshold: Number(tempConfig.wholesaleThreshold)||0, 
+    freeAddonReminderMsg: tempConfig.freeAddonReminderMsg || '',
+    giftThreshold: Number(tempConfig.giftThreshold)||0, // 加入滿幾件送
+    giftProductId: tempConfig.giftProductId || '' // 加入贈品品號
+  };
+  if (db) await db.collection('settings').doc('config').set(configToSave, { merge: true });
+  setStoreConfig(configToSave); setShowConfigModal(false);
+};
 
       const saveContactInfo = async () => {
         if (db) await db.collection('settings').doc('contact').set(contactData, { merge: true });
@@ -1586,9 +1628,24 @@ const uploadTask = await storageRef.put(blob, metadata);
                     <h3 className="hidden md:block font-bold text-stone-800 mb-4 border-b border-stone-200 pb-2">已選商品</h3>
                     {cartData.items.map((item, idx) => (
                       <div key={item.id + idx} className="flex items-center justify-between py-3 border-b border-stone-100 last:border-0">
-                        <div className="flex-1"><h4 className="font-bold text-stone-800 flex items-center gap-1">{item.name}{item.isPromo && <span className="text-[9px] bg-rose-100 text-rose-600 px-1 py-0.5 rounded">指定商品活動</span>}{item.isAddon && <span className="text-[9px] bg-purple-100 text-purple-600 px-1 py-0.5 rounded">加購</span>}</h4><p className="text-xs text-stone-500">${item.price} {item.unit ? `/${item.unit}` : ''}</p></div>
+                        <div className="flex-1"><h4 className="font-bold text-stone-800 flex items-center gap-1">
+  {item.name}
+  {item.isPromo && !item.isGift && <span className="text-[9px] bg-rose-100 text-rose-600 px-1 py-0.5 rounded">指定商品活動</span>}
+  {item.isAddon && !item.isGift && <span className="text-[9px] bg-purple-100 text-purple-600 px-1 py-0.5 rounded">加購</span>}
+  {item.isGift && <span className="text-[9px] bg-emerald-100 text-emerald-600 px-1 py-0.5 rounded font-bold">滿件贈品</span>}
+</h4><p className="text-xs text-stone-500">${item.price} {item.unit ? `/${item.unit}` : ''}</p></div>
                         <div className="flex items-center gap-4">
-                          <div className="flex items-center gap-3 bg-white rounded-full px-2 py-1 border border-stone-200"><button onClick={() => updateCart(item.id, -1)} className="p-1 text-stone-500"><Minus size={14} /></button><span className="w-4 text-center text-sm font-bold">{item.qty}</span><button onClick={() => updateCart(item.id, 1)} className="p-1 text-stone-800"><Plus size={14} /></button></div>
+  {!item.isGift ? (
+    <div className="flex items-center gap-3 bg-white rounded-full px-2 py-1 border border-stone-200">
+      <button onClick={() => updateCart(item.id, -1)} className="p-1 text-stone-500"><Minus size={14} /></button>
+      <span className="w-4 text-center text-sm font-bold">{item.qty}</span>
+      <button onClick={() => updateCart(item.id, 1)} className="p-1 text-stone-800"><Plus size={14} /></button>
+    </div>
+  ) : (
+    <div className="w-16 text-center text-sm font-bold text-emerald-600 px-2 py-1 bg-emerald-50 rounded-full">
+      x {item.qty}
+    </div>
+  )}
                           <div className="w-12 text-right font-bold text-stone-700">
                              {/* === 修改：直接顯示0元，並劃掉原價 === */}
                              {item.isAddon && item.freeQty > 0 ? (
@@ -1640,7 +1697,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                     <div className="mt-6 pt-4 border-t border-stone-100">
                       <h3 className="font-bold text-stone-800 mb-3">取貨方式</h3>
                       <div className="flex gap-4 mb-4">
-                        <label className={`flex-1 border rounded-xl p-3 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors ${deliveryMethod==='delivery' ? 'bg-amber-50 border-amber-500 text-amber-700' : 'bg-white border-stone-200 text-stone-500'}`}><input type="radio" name="delivery" value="delivery" checked={deliveryMethod === 'delivery'} onChange={(e) => setDeliveryMethod(e.target.value)} className="hidden" /><Truck size={20} /><span className="text-sm font-bold">宅配</span><span className="text-[10px] text-center whitespace-pre-line">{cartData.freeShippingQty >= storeConfig.freeShippingThreshold ? `已滿 ${storeConfig.freeShippingThreshold} 件免運` : `免運進度 ${cartData.freeShippingQty}/${storeConfig.freeShippingThreshold} 件\n(運費 $${storeConfig.shippingFee})`}</span></label>
+                        <label className={`flex-1 border rounded-xl p-3 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors ${deliveryMethod==='delivery' ? 'bg-amber-50 border-amber-500 text-amber-700' : 'bg-white border-stone-200 text-stone-500'}`}><input type="radio" name="delivery" value="delivery" checked={deliveryMethod === 'delivery'} onChange={(e) => setDeliveryMethod(e.target.value)} className="hidden" /><Truck size={20} /><span className="text-sm font-bold">宅配</span><span className="text-[10px] text-center whitespace-pre-line">{cartData.currentTotal >= storeConfig.freeShippingThreshold ? `已滿 $${storeConfig.freeShippingThreshold} 免運` : `還差 $${storeConfig.freeShippingThreshold - cartData.currentTotal} 免運\n(運費 $${storeConfig.shippingFee})`}</span></label>
                         <label className={`flex-1 border rounded-xl p-3 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors ${deliveryMethod==='pickup' ? 'bg-amber-50 border-amber-500 text-amber-700' : 'bg-white border-stone-200 text-stone-500'}`}><input type="radio" name="delivery" value="pickup" checked={deliveryMethod === 'pickup'} onChange={(e) => setDeliveryMethod(e.target.value)} className="hidden" /><Store size={20} /><span className="text-sm font-bold">自取</span><span className="text-[10px]">免運費</span></label>
                       </div>
                     </div>
@@ -2243,11 +2300,24 @@ const uploadTask = await storageRef.put(blob, metadata);
                   <div className="bg-stone-50 p-3 rounded-xl border border-stone-200">
                     <p className="text-sm font-bold text-stone-700 mb-2 flex items-center gap-1"><Truck size={16}/> 運費與免運</p>
                     <div className="flex items-center justify-between mb-2"><span className="text-xs text-stone-500">基本運費 ($)</span><input type="number" value={tempConfig.shippingFee} onChange={e => setTempConfig({...tempConfig, shippingFee: e.target.value})} className="w-20 bg-white border border-stone-300 rounded p-1 text-sm outline-none text-right font-bold focus:border-amber-500" /></div>
-                    <div className="flex items-center justify-between"><span className="text-xs text-stone-500">免運門檻 (滿X件)</span><input type="number" value={tempConfig.freeShippingThreshold} onChange={e => setTempConfig({...tempConfig, freeShippingThreshold: e.target.value})} className="w-20 bg-white border border-stone-300 rounded p-1 text-sm outline-none text-right font-bold focus:border-amber-500" /></div>
+                    <div className="flex items-center justify-between"><span className="text-xs text-stone-500">免運門檻 (滿X元)</span><input type="number" value={tempConfig.freeShippingThreshold} onChange={e => setTempConfig({...tempConfig, freeShippingThreshold: e.target.value})} className="w-20 bg-white border border-stone-300 rounded p-1 text-sm outline-none text-right font-bold focus:border-amber-500" /></div>
                   </div>
                   <div className="bg-rose-50 p-3 rounded-xl border border-rose-100">
                     <p className="text-sm font-bold text-rose-700 mb-2 flex items-center gap-1"><Info size={16}/> 任選優惠活動</p>
                   <div className="flex items-center gap-2"><span className="text-xs text-stone-600">任選</span><input type="number" value={tempConfig.promoQty} onChange={e => setTempConfig({...tempConfig, promoQty: e.target.value})} className="w-16 bg-white border border-rose-200 rounded p-1 text-sm text-center font-bold text-rose-600" /><span className="text-xs text-stone-600">件，優惠總價 $</span><input type="number" value={tempConfig.promoPrice} onChange={e => setTempConfig({...tempConfig, promoPrice: e.target.value})} className="w-20 bg-white border border-rose-200 rounded p-1 text-sm text-center font-bold text-rose-600" /></div>
+                </div>
+
+                  <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-100">
+                  <p className="text-sm font-bold text-emerald-700 mb-2 flex items-center gap-1"><Gift size={16}/> 滿件贈品活動</p>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-stone-600">滿幾件送：</span>
+                    <input type="number" value={tempConfig.giftThreshold || 30} onChange={e => setTempConfig({...tempConfig, giftThreshold: e.target.value})} className="w-20 bg-white border border-emerald-200 rounded p-1 text-sm text-center font-bold text-emerald-600 outline-none focus:border-emerald-500" />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-stone-600">贈品品號：</span>
+                    <input type="text" value={tempConfig.giftProductId || ''} onChange={e => setTempConfig({...tempConfig, giftProductId: e.target.value.toUpperCase()})} placeholder="例如 D01" className="w-24 bg-white border border-emerald-200 rounded p-1 text-sm text-center font-bold text-emerald-600 outline-none focus:border-emerald-500" />
+                  </div>
+                  <p className="text-[10px] text-stone-400 mt-1">※ 若不設定贈品，品號請留空。</p>
                 </div>
 
                 {/* 👇👇 這是新增的 0元加購提醒文字設定 👇👇 */}
