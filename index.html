@@ -246,6 +246,63 @@ const [tableProducts, setTableProducts] = useState([]);
         };
       }, []);
 
+      // ======== 【修復 Bug 3】手機版實體返回鍵防護機制 ========
+useEffect(() => {
+  // 1. 定義當下「是否至少有一個重要彈窗」是開啟的
+  const isAnyModalOpen = 
+    isCartOpen || 
+    editingProduct !== null || 
+    showMemberProfile || 
+    showLoginModal || 
+    sidebarOpen ||
+    showAdminOrders ||
+    showAdminCustomers ||
+    showProductTable;
+
+  // 2. 如果有彈窗開啟，就在瀏覽器塞入一個「假歷史紀錄」
+  // 這樣客人在按返回鍵時，只會「消耗」掉這個假紀錄，而不會跳出網站
+  if (isAnyModalOpen) {
+    window.history.pushState({ modalOpen: true }, "");
+  }
+
+  // 3. 監聽實體返回鍵 (popstate) 事件
+  const handleBackButton = (e) => {
+    // 如果返回鍵被按下時，有任何彈窗是開啟的，就將它們全部關閉
+    if (isAnyModalOpen) {
+      if (isCartOpen) setIsCartOpen(false);
+      if (editingProduct) setEditingProduct(null);
+      if (showMemberProfile) setShowMemberProfile(false);
+      if (showLoginModal) setShowLoginModal(false);
+      if (sidebarOpen) setSidebarOpen(false);
+      
+      // 管理員相關彈窗
+      if (showAdminOrders) setShowAdminOrders(false);
+      if (showAdminCustomers) { setShowAdminCustomers(false); setSelectedCustomer(null); }
+      if (showProductTable) setShowProductTable(false);
+      if (showConfigModal) setShowConfigModal(false);
+      if (showCategoryManager) setShowCategoryManager(false);
+      if (showContactModal) setShowContactModal(false);
+      if (showAboutModal) setShowAboutModal(false);
+      if (showAnnouncementModal) setShowAnnouncementModal(false);
+      if (showAnnounceConfig) setShowAnnounceConfig(false);
+    }
+  };
+
+  // 綁定監聽器
+  window.addEventListener("popstate", handleBackButton);
+
+  // 清除監聽器
+  return () => {
+    window.removeEventListener("popstate", handleBackButton);
+  };
+}, [
+  // 必須將所有會觸發攔截的 state 放進 dependency array，讓 useEffect 能抓到最新狀態
+  isCartOpen, editingProduct, showMemberProfile, showLoginModal, sidebarOpen,
+  showAdminOrders, showAdminCustomers, showProductTable, showConfigModal,
+  showCategoryManager, showContactModal, showAboutModal, showAnnouncementModal, showAnnounceConfig
+]);
+// =======================================================
+
       useEffect(() => {
         if (!db || !auth) return;
 
