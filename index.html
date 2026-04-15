@@ -220,6 +220,8 @@
       const [showConfigModal, setShowConfigModal] = useState(false);
       const [tempConfig, setTempConfig] = useState(defaultStoreConfig);
       const [showProductTable, setShowProductTable] = useState(false);
+      const [showCatalogModal, setShowCatalogModal] = useState(false); // 控制產品型錄彈窗
+const [catalogUrl, setCatalogUrl] = useState(''); // 存放 PDF 的網址
 const [tableProducts, setTableProducts] = useState([]);
 
       // ======== 【防護機制區塊】禁用右鍵與 F12 ========
@@ -257,8 +259,8 @@ useEffect(() => {
     sidebarOpen ||
     showAdminOrders ||
     showAdminCustomers ||
-    showProductTable;
-
+    showProductTable ||
+    showCatalogModal;
   // 2. 如果有彈窗開啟，就在瀏覽器塞入一個「假歷史紀錄」
   // 這樣客人在按返回鍵時，只會「消耗」掉這個假紀錄，而不會跳出網站
   if (isAnyModalOpen) {
@@ -279,6 +281,7 @@ useEffect(() => {
       if (showAdminOrders) setShowAdminOrders(false);
       if (showAdminCustomers) { setShowAdminCustomers(false); setSelectedCustomer(null); }
       if (showProductTable) setShowProductTable(false);
+      if (showCatalogModal) setShowCatalogModal(false);
       if (showConfigModal) setShowConfigModal(false);
       if (showCategoryManager) setShowCategoryManager(false);
       if (showContactModal) setShowContactModal(false);
@@ -299,7 +302,7 @@ useEffect(() => {
   // 必須將所有會觸發攔截的 state 放進 dependency array，讓 useEffect 能抓到最新狀態
   isCartOpen, editingProduct, showMemberProfile, showLoginModal, sidebarOpen,
   showAdminOrders, showAdminCustomers, showProductTable, showConfigModal,
-  showCategoryManager, showContactModal, showAboutModal, showAnnouncementModal, showAnnounceConfig
+  showCategoryManager, showContactModal, showAboutModal, showAnnouncementModal, showAnnounceConfig, showCatalogModal
 ]);
 // =======================================================
 
@@ -352,6 +355,14 @@ useEffect(() => {
           if (doc.exists) setAboutData({ ...defaultAboutData, ...doc.data() });
         });
 
+        const unsubscribeCatalog = db.collection('settings').doc('catalog').onSnapshot(doc => {
+          if (doc.exists && doc.data().url) {
+            setCatalogUrl(doc.data().url);
+          } else {
+            setCatalogUrl('');
+          }
+        });
+
         const unsubscribeAnnounce = db.collection('settings').doc('announcements').onSnapshot(doc => {
           const handleAnnouncementsUpdate = (data) => {
             setAnnouncements(data);
@@ -395,7 +406,7 @@ useEffect(() => {
         return () => {
           unsubscribeAuth(); unsubscribeLogo(); unsubscribeContact(); 
           unsubscribeConfig(); unsubscribeAbout(); unsubscribeProducts(); 
-          unsubscribeAnnounce(); unsubscribeCats();
+          unsubscribeAnnounce(); unsubscribeCats(); unsubscribeCatalog(); // <- 加上這一個
         };
       }, []);
 
@@ -1015,6 +1026,47 @@ const uploadTask = await storageRef.put(blob, metadata);
       };
       reader.readAsDataURL(file);
     };
+
+      // --- 以下為新增：處理 PDF 檔案上傳的功能 ---
+      const handleFileUpload = async (file) => {
+        if (!file) return;
+        if (file.type !== 'application/pdf') {
+          return alert("請上傳 PDF 格式的檔案！");
+        }
+        if (!storage) return alert("Firebase Storage 尚未連接！");
+
+        try {
+          // 給檔案一個帶有時間戳記的名稱，放進 catalogs 資料夾
+          const fileName = `catalogs/catalog_${Date.now()}.pdf`;
+          const storageRef = storage.ref().child(fileName);
+          
+          alert("型錄開始上傳，請稍候...");
+          // 執行上傳
+          const uploadTask = await storageRef.put(file);
+          
+          // 取得公開下載網址
+          const downloadURL = await uploadTask.ref.getDownloadURL();
+          
+          // 把網址存入資料庫中
+          if (db) {
+            await db.collection('settings').doc('catalog').set({ url: downloadURL }, { merge: true });
+          }
+          alert("產品型錄上傳成功！");
+        } catch (error) {
+          console.error("上傳失敗", error);
+          alert("上傳失敗：" + error.message);
+        }
+      };
+
+      // --- 以下為新增：刪除型錄的功能 ---
+      const handleDeleteCatalog = async () => {
+        if (!window.confirm("確定要刪除目前的產品型錄嗎？客戶將無法再下載。")) return;
+        if (db) {
+          await db.collection('settings').doc('catalog').set({ url: '' }, { merge: true });
+          alert("已移除產品型錄！");
+        }
+      };
+      // ------------------------------------------
       
       const onLogoChange = (e) => handleImageUpload(e.target.files[0], (img) => db ? db.collection('settings').doc('store').set({ logo: img }, { merge: true }) : setLogo(img), true);
       const openProductDetail = (product) => { setEditingProduct({ intro: '', ingredients: '', notices: '', extraImages: [], isPromo: false, isAddon: false, providesFreeAddon: false, isNew: false, isFreeShipping: true, unit: product.unit || '', cost: 0, ...product }); setMainDisplayImg(product.image || ''); };
@@ -1392,6 +1444,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                <div className="flex-1 overflow-y-auto py-4">
                   <ul className="space-y-1">
                      <li><button onClick={() => { setSidebarOpen(false); setShowAboutModal(true); }} className="w-full text-left px-6 py-3 hover:bg-amber-50 font-medium text-stone-700 flex items-center gap-3"><Info size={18}/>關於我們</button></li>
+                    <li><button onClick={() => { setSidebarOpen(false); setShowCatalogModal(true); }} className="w-full text-left px-6 py-3 hover:bg-blue-50 font-medium text-stone-700 flex items-center gap-3"><DownloadIcon size={18}/>產品型錄</button></li>
                      <li><button onClick={() => { setSidebarOpen(false); setShowContactModal(true); }} className="w-full text-left px-6 py-3 hover:bg-amber-50 font-medium text-stone-700 flex items-center gap-3"><Phone size={18}/>聯絡我們</button></li>
                      <li><button onClick={() => { setSidebarOpen(false); handleShareWebsite(); }} className="w-full text-left px-6 py-3 hover:bg-emerald-50 font-medium text-stone-700 flex items-center gap-3"><Share2 size={18}/>分享商店</button></li>
                      
@@ -2612,7 +2665,62 @@ const uploadTask = await storageRef.put(blob, metadata);
                </div>
             </div>
           )}
+{/* 產品型錄視窗 */}
+          {showCatalogModal && (
+            <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4">
+              <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 relative border border-stone-100">
+                <button onClick={() => setShowCatalogModal(false)} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full transition-colors"><X size={20} /></button>
+                
+                <h2 className="text-xl font-bold text-stone-800 mb-6 flex items-center gap-2 border-b border-stone-100 pb-3">
+                  <DownloadIcon size={24} className="text-blue-600"/> 產品型錄下載
+                </h2>
 
+                <div className="space-y-4">
+                  {/* === 管理員專屬介面 === */}
+                  {isAdminMode && !adminOrderingFor ? (
+                    <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 space-y-3">
+                      <p className="text-sm font-bold text-blue-800">管理員設定區</p>
+                      
+                      {catalogUrl ? (
+                        <div className="space-y-2">
+                          <p className="text-xs text-stone-600">目前已有上傳的型錄：</p>
+                          <a href={catalogUrl} target="_blank" rel="noreferrer" className="block text-center text-sm bg-white border border-stone-200 text-stone-700 py-2 rounded-lg font-bold hover:bg-stone-50">預覽目前型錄</a>
+                          <button onClick={handleDeleteCatalog} className="w-full text-sm bg-red-100 text-red-600 py-2 rounded-lg font-bold hover:bg-red-200 transition-colors">移除型錄</button>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-stone-600">目前尚未上傳任何型錄檔案</p>
+                      )}
+
+                      <label className="block w-full text-center bg-blue-600 text-white font-bold py-2.5 rounded-xl shadow-sm hover:bg-blue-700 transition-colors cursor-pointer mt-2">
+                        <span className="flex items-center justify-center gap-2"><Plus size={16} /> {catalogUrl ? '上傳新檔直接覆蓋' : '上傳 PDF 型錄'}</span>
+                        {/* 這裡限制只能選擇 pdf 檔案 */}
+                        <input type="file" accept="application/pdf" className="hidden" onChange={(e) => handleFileUpload(e.target.files[0])} />
+                      </label>
+                    </div>
+                  ) : (
+                    /* === 一般客戶看到的介面 === */
+                    <div className="flex flex-col items-center justify-center py-4">
+                      {catalogUrl ? (
+                        <>
+                          <p className="text-sm text-stone-600 mb-6 text-center leading-relaxed">我們準備了詳細的產品型錄，歡迎點擊下方按鈕下載或預覽！</p>
+                          {/* target="_blank" 讓它開新分頁預覽，手機版通常會直接下載或開啟 */}
+                          <a href={catalogUrl} target="_blank" rel="noreferrer" className="w-full bg-stone-800 text-white font-bold py-3.5 rounded-xl shadow-md flex items-center justify-center gap-2 active:scale-95 transition-transform">
+                            <DownloadIcon size={20} /> 點擊取得 PDF 型錄
+                          </a>
+                        </>
+                      ) : (
+                        <div className="text-center space-y-3 text-stone-500 py-6">
+                          <ClipboardList size={48} className="mx-auto opacity-30" />
+                          <p className="text-sm font-bold">目前尚未提供產品型錄下載</p>
+                          <p className="text-xs">敬請期待，您可以先在網頁上方選購商品喔！</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       );
     }
