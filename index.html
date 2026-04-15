@@ -1813,7 +1813,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                   {currentUser || adminOrderingFor ? (
                     <>
                       <button onClick={handleCheckout} className="w-full bg-[#06C755] text-white font-bold rounded-2xl p-4 flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform"><MessageCircle size={20} />{adminOrderingFor ? '完成代建訂單' : '送出訂單並前往確認'}</button>
-                      <p className="text-center text-[10px] text-stone-400 mt-3 font-medium">※ 為保持良好賞味，接單後7～15天出貨，敬請見諒</p>
+                      <p className="text-center text-[10px] text-stone-400 mt-3 font-medium">※ 為保持良好賞味，商品皆為接單製作，接單後5~7天出貨，敬請見諒</p>
                     </>
                   ) : (
                     <button onClick={() => { setIsCartOpen(false); setLoginMode('customer'); setShowLoginModal(true); }} className="w-full bg-stone-800 text-white font-bold rounded-2xl p-4 flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform">
@@ -1920,7 +1920,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                                 </div>
                               )}
                               {order.status === 'confirming' && <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs font-bold text-amber-700 text-center">已送出後五碼 ({order.bankAccountLast5})，等待對帳確認中...</div>}
-                              {order.status === 'confirmed' && <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs font-bold text-blue-700 text-center">💡 為保持良好的賞味，皆 7～15 天出貨，感謝您的耐心等候！</div>}
+                              {order.status === 'confirmed' && <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs font-bold text-blue-700 text-center">💡 為保持良好賞味，商品皆為接單製作，接單後5~7天出貨，感謝您的耐心等候！</div>}
 
                               <div className="flex justify-between items-end mt-4 pt-3 border-t border-stone-100">
                                 {isCancellable ? <button onClick={() => requestCancelOrder(order.id)} className="text-xs text-stone-400 hover:text-rose-500 font-bold transition-colors underline mb-1">申請取消訂單</button> : <div></div>}
