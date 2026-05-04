@@ -109,7 +109,7 @@
     const ArrowDown = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>;
     const Eye = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>;
     const EyeOff = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>;
-
+const TrendingUp = ({size=24, className=""}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>;
 
     const STATUS_MAP = {
       'pending': { label: '未處理', color: 'bg-rose-100 text-rose-700' },
@@ -150,6 +150,7 @@
       const [showMemberProfile, setShowMemberProfile] = useState(false);
       const [showAdminOrders, setShowAdminOrders] = useState(false);
       const [showAdminCustomers, setShowAdminCustomers] = useState(false);
+      const [showAdminDashboard, setShowAdminDashboard] = useState(false);
       const [showDeletedCustomers, setShowDeletedCustomers] = useState(false); 
       const [showAboutModal, setShowAboutModal] = useState(false);
       const [isEditingAbout, setIsEditingAbout] = useState(false);
@@ -288,6 +289,7 @@ useEffect(() => {
       if (showAboutModal) setShowAboutModal(false);
       if (showAnnouncementModal) setShowAnnouncementModal(false);
       if (showAnnounceConfig) setShowAnnounceConfig(false);
+      if (showAdminDashboard) setShowAdminDashboard(false);
     }
   };
 
@@ -302,7 +304,7 @@ useEffect(() => {
   // 必須將所有會觸發攔截的 state 放進 dependency array，讓 useEffect 能抓到最新狀態
   isCartOpen, editingProduct, showMemberProfile, showLoginModal, sidebarOpen,
   showAdminOrders, showAdminCustomers, showProductTable, showConfigModal,
-  showCategoryManager, showContactModal, showAboutModal, showAnnouncementModal, showAnnounceConfig, showCatalogModal
+  showCategoryManager, showContactModal, showAboutModal, showAnnouncementModal, showAnnounceConfig, showCatalogModal, showAdminDashboard
 ]);
 // =======================================================
 
@@ -1488,7 +1490,8 @@ const uploadTask = await storageRef.put(blob, metadata);
                      {isAdminMode && (
                         <>
                            <li className="px-6 py-2 text-xs font-bold text-stone-400 uppercase tracking-widest mt-2">管理員專區</li>
-                           <li><button onClick={() => { setSidebarOpen(false); setShowAdminCustomers(true); }} className="w-full text-left px-6 py-3 hover:bg-blue-50 font-medium text-blue-700 flex items-center gap-3"><UsersIcon size={18}/>客戶管理</button></li>
+                          <li><button onClick={() => { setSidebarOpen(false); setShowAdminDashboard(true); }} className="w-full text-left px-6 py-3 hover:bg-indigo-50 font-medium text-indigo-700 flex items-center gap-3"><TrendingUp size={18}/>營運儀表板</button></li> 
+                          <li><button onClick={() => { setSidebarOpen(false); setShowAdminCustomers(true); }} className="w-full text-left px-6 py-3 hover:bg-blue-50 font-medium text-blue-700 flex items-center gap-3"><UsersIcon size={18}/>客戶管理</button></li>
                            <li><button onClick={() => { setSidebarOpen(false); setShowAdminOrders(true); }} className="w-full text-left px-6 py-3 hover:bg-amber-50 font-medium text-amber-700 flex items-center gap-3"><ClipboardList size={18}/>訂單管理</button></li>
                           <li><button onClick={() => { setSidebarOpen(false); setTableProducts(JSON.parse(JSON.stringify(products))); setShowProductTable(true); }} className="w-full text-left px-6 py-3 hover:bg-emerald-50 font-medium text-emerald-700 flex items-center gap-3"><ClipboardList size={18}/>商品總覽編輯(表單)</button></li>
                            <li><button onClick={() => { setSidebarOpen(false); setTempConfig(storeConfig); setShowConfigModal(true); }} className="w-full text-left px-6 py-3 hover:bg-rose-50 font-medium text-rose-700 flex items-center gap-3"><SettingsIcon size={18}/>系統設定</button></li>
@@ -2027,6 +2030,154 @@ const uploadTask = await storageRef.put(blob, metadata);
             </div>
           )}
 
+{/* 營運儀表板 (Dashboard) */}
+          {showAdminDashboard && isAdminMode && (
+            <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4 md:px-10 py-6">
+              <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-5xl h-full flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
+                <button onClick={() => setShowAdminDashboard(false)} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full"><X size={24} /></button>
+                <h2 className="text-xl md:text-2xl font-bold text-stone-800 mb-6 flex items-center gap-2 border-b border-stone-200 pb-3">
+                  <TrendingUp size={24} className="text-indigo-600"/> 營運數據儀表板
+                </h2>
+
+                <div className="flex-1 overflow-y-auto space-y-6 pr-2">
+                  {(() => {
+                    // --- 數據核心計算邏輯開始 ---
+                    const now = new Date();
+                    const currentMonth = now.getMonth();
+                    const currentYear = now.getFullYear();
+
+                    let monthlyRevenue = 0;
+                    let monthlyCost = 0;
+                    let statusCounts = { pending: 0, confirming: 0, confirmed: 0, shipped: 0, completed: 0, cancelled: 0 };
+                    let itemSales = {};
+                    let newUsersThisMonth = 0;
+
+                    // 計算訂單數據
+                    allOrders.forEach(order => {
+                      const orderDate = order.createdAt ? order.createdAt.toDate() : new Date();
+                      const isThisMonth = orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear;
+                      
+                      // 訂單狀態統計 (不限月份)
+                      if (statusCounts[order.status] !== undefined) statusCounts[order.status]++;
+
+                      // 營收與商品統計 (僅限本月，且排除已取消的訂單)
+                      if (isThisMonth && !['cancelled', 'cancel_requested'].includes(order.status)) {
+                        monthlyRevenue += order.totals.finalPrice || 0;
+                        monthlyCost += order.totals.totalCost || 0;
+                        
+                        order.items.forEach(item => {
+                          if (!itemSales[item.name]) itemSales[item.name] = { qty: 0, revenue: 0 };
+                          itemSales[item.name].qty += item.qty;
+                          itemSales[item.name].revenue += item.subtotal;
+                        });
+                      }
+                    });
+
+                    // 計算會員成長數據
+                    allUsers.forEach(user => {
+                      if (user.createdAt) {
+                        const uDate = user.createdAt.toDate();
+                        if (uDate.getMonth() === currentMonth && uDate.getFullYear() === currentYear) newUsersThisMonth++;
+                      }
+                    });
+
+                    // 排序熱銷商品 (取前 5 名)
+                    const topItems = Object.entries(itemSales).sort((a, b) => b[1].qty - a[1].qty).slice(0, 5);
+                    const totalOrdersCount = Object.values(statusCounts).reduce((a, b) => a + b, 0);
+                    // --- 數據核心計算邏輯結束 ---
+
+                    return (
+                      <>
+                        {/* 頂部：四大核心數據卡片 */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div className="bg-white p-4 rounded-2xl border border-indigo-100 shadow-sm flex flex-col justify-center">
+                            <span className="text-xs font-bold text-indigo-500 mb-1">本月總營收</span>
+                            <span className="text-2xl md:text-3xl font-black text-stone-800">${monthlyRevenue.toLocaleString()}</span>
+                          </div>
+                          <div className="bg-white p-4 rounded-2xl border border-emerald-100 shadow-sm flex flex-col justify-center">
+                            <span className="text-xs font-bold text-emerald-500 mb-1">本月預估毛利</span>
+                            <span className="text-2xl md:text-3xl font-black text-stone-800">${(monthlyRevenue - monthlyCost).toLocaleString()}</span>
+                          </div>
+                          <div className="bg-white p-4 rounded-2xl border border-blue-100 shadow-sm flex flex-col justify-center">
+                            <span className="text-xs font-bold text-blue-500 mb-1">本月新增會員</span>
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-2xl md:text-3xl font-black text-stone-800">{newUsersThisMonth}</span>
+                              <span className="text-xs text-stone-400 font-bold">/ 總數 {allUsers.length}</span>
+                            </div>
+                          </div>
+                          <div className="bg-white p-4 rounded-2xl border border-amber-100 shadow-sm flex flex-col justify-center">
+                            <span className="text-xs font-bold text-amber-500 mb-1">未處理/確認中訂單</span>
+                            <span className="text-2xl md:text-3xl font-black text-stone-800 text-amber-600">{statusCounts.pending + statusCounts.confirming}</span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                          {/* 左側：熱銷商品排行榜 (本月) */}
+                          <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm">
+                            <h3 className="font-bold text-stone-800 mb-4 flex items-center justify-between">
+                              🏆 本月熱銷排行榜 <span className="text-[10px] bg-stone-100 text-stone-500 px-2 py-1 rounded">排除已取消訂單</span>
+                            </h3>
+                            {topItems.length === 0 ? <p className="text-sm text-stone-400 text-center py-6">本月尚無銷售數據</p> : (
+                              <div className="space-y-4">
+                                {topItems.map(([name, data], idx) => {
+                                  const maxQty = topItems[0][1].qty;
+                                  const percentage = Math.round((data.qty / maxQty) * 100);
+                                  return (
+                                    <div key={name} className="space-y-1.5">
+                                      <div className="flex justify-between text-sm">
+                                        <span className="font-bold text-stone-700 truncate pr-2"><span className="text-stone-400 mr-1">#{idx + 1}</span> {name}</span>
+                                        <span className="font-bold text-indigo-600 shrink-0">{data.qty} 件</span>
+                                      </div>
+                                      {/* 簡單的 Tailwind 進度條 */}
+                                      <div className="w-full bg-stone-100 rounded-full h-2">
+                                        <div className="bg-indigo-500 h-2 rounded-full transition-all duration-1000" style={{ width: `${percentage}%` }}></div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* 右側：訂單狀態分佈圖 (全局) */}
+                          <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm">
+                            <h3 className="font-bold text-stone-800 mb-4 flex items-center justify-between">
+                              📊 系統總訂單狀態分佈 <span className="text-[10px] bg-stone-100 text-stone-500 px-2 py-1 rounded">全部時間</span>
+                            </h3>
+                            {totalOrdersCount === 0 ? <p className="text-sm text-stone-400 text-center py-6">尚無訂單數據</p> : (
+                              <div className="space-y-3">
+                                {[
+                                  { key: 'pending', label: '未處理', color: 'bg-rose-500' },
+                                  { key: 'confirming', label: '確認中 (已傳後五碼)', color: 'bg-amber-500' },
+                                  { key: 'confirmed', label: '已確認 (待出貨)', color: 'bg-blue-500' },
+                                  { key: 'shipped', label: '已出貨', color: 'bg-purple-500' },
+                                  { key: 'completed', label: '已完成', color: 'bg-emerald-500' }
+                                ].map(status => {
+                                  const count = statusCounts[status.key] || 0;
+                                  const percentage = Math.round((count / totalOrdersCount) * 100);
+                                  return (
+                                    <div key={status.key} className="flex items-center gap-3">
+                                      <span className="text-xs font-bold text-stone-600 w-28 shrink-0">{status.label}</span>
+                                      <div className="flex-1 bg-stone-100 rounded-full h-4 overflow-hidden flex relative">
+                                        <div className={`${status.color} h-full transition-all duration-1000`} style={{ width: `${percentage}%` }}></div>
+                                        {count > 0 && <span className="absolute inset-y-0 left-2 text-[9px] text-white font-bold flex items-center">{percentage}%</span>}
+                                      </div>
+                                      <span className="text-sm font-bold text-stone-700 w-8 text-right shrink-0">{count}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+          )}
+          
           {/* 管理員訂單 */}
           {showAdminOrders && isAdminMode && (
             <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4 md:px-10 py-6">
