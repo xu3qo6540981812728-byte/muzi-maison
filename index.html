@@ -795,7 +795,38 @@ mainProductQty += item.qty;
 
           await batch.commit();
         }
+try {
+          // 1. 將下面的網址替換成你剛剛拿到的 GAS 網頁應用程式網址
+          const gasUrl = "https://script.google.com/macros/s/AKfycbzip7O2CRT_pOa2b42iT3QpFNMcmUk--dyoCaMBnq9o4-9kvIpxiBIT9BeQEbmqfBCw/exec"; 
+          
+          // 2. 打包要傳送的訂單資訊
+       const notifyData = {
+            orderId: orderId,
+            totalAmount: cartData.finalPrice,
+            customerName: customerInfo.name,
+            customerPhone: customerInfo.phone,
+            // ⬇️ 這次新增的詳細情報 ⬇️
+            deliveryMethod: deliveryMethod === 'delivery' ? '宅配' : '自取',
+            address: customerInfo.address,
+            // 把購物車明細轉換成簡單的陣列
+            items: cartData.items.map(item => ({
+              name: item.name,
+              qty: item.qty,
+              unit: item.unit || '件',
+              price: item.price
+            }))
+          };
 
+          // 3. 發送請求給 GAS (使用 text/plain 繞過瀏覽器嚴格的安全阻擋)
+          fetch(gasUrl, {
+            method: "POST",
+            body: JSON.stringify(notifyData),
+            headers: { "Content-Type": "text/plain;charset=utf-8" } 
+          }).catch(err => console.log("LINE通知背景發送失敗", err)); // 若失敗只在後台顯示，不打擾客戶
+
+        } catch (e) {
+          console.log("LINE通知模組執行錯誤", e);
+        }
         setCart({}); setIsCartOpen(false); setOrderNote(''); setCheckoutBankCode(''); 
 
         if (adminOrderingFor) {
