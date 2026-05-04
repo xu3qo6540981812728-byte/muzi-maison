@@ -2060,15 +2060,18 @@ const uploadTask = await storageRef.put(blob, metadata);
                       // 訂單狀態統計 (不限月份)
                       if (statusCounts[order.status] !== undefined) statusCounts[order.status]++;
 
-                      // 營收與商品統計 (僅限本月，且排除已取消的訂單)
-                      if (isThisMonth && !['cancelled', 'cancel_requested'].includes(order.status)) {
+                      // 營收與商品統計 (僅限本月，且只計算已確認、已出貨、已完成的真實入帳訂單)
+if (isThisMonth && ['confirmed', 'shipped', 'completed'].includes(order.status)) {
                         monthlyRevenue += order.totals.finalPrice || 0;
                         monthlyCost += order.totals.totalCost || 0;
                         
                         order.items.forEach(item => {
-                          if (!itemSales[item.name]) itemSales[item.name] = { qty: 0, revenue: 0 };
-                          itemSales[item.name].qty += item.qty;
-                          itemSales[item.name].revenue += item.subtotal;
+                          // 排除加購商品 (isAddon) 與 系統滿件贈品 (isGift)
+                          if (!item.isAddon && !item.isGift) {
+                            if (!itemSales[item.name]) itemSales[item.name] = { qty: 0, revenue: 0 };
+                            itemSales[item.name].qty += item.qty;
+                            itemSales[item.name].revenue += item.subtotal;
+                          }
                         });
                       }
                     });
