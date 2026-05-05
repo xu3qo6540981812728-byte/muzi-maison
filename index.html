@@ -213,7 +213,8 @@ const TrendingUp = ({size=24, className=""}) => <svg width={size} height={size} 
       const [allOrders, setAllOrders] = useState([]);
 const [oldOrders, setOldOrders] = useState([]); // 🌟 新增：裝舊訂單的倉庫箱
 const [lastOrderDoc, setLastOrderDoc] = useState(null); // 🌟 新增：用來記錄目前抓到哪裡的書籤
-const [cloudSearchResult, setCloudSearchResult] = useState(null); // 🌟 新增：存放雲端精準搜尋的結果
+const [cloudSearchResult, setCloudSearchResult] = useState(null); 
+      const [activeSearchId, setActiveSearchId] = useState('');
 const [allUsers, setAllUsers] = useState([]); 
 const [orderLimit, setOrderLimit] = useState(50); 
 const [userLimit, setUserLimit] = useState(50); 
@@ -912,43 +913,54 @@ try {
       };
 
       const updateOrderStatus = async (order, newStatus) => { 
-   if (!db) return;
-   const batch = db.batch();
-   const orderRef = db.collection('orders').doc(order.id);
+         if (!db) return;
+         const batch = db.batch();
+         const orderRef = db.collection('orders').doc(order.id);
 
-   // 1. 更新訂單本身的狀態
-   batch.update(orderRef, { status: newStatus });
+         // 1. 更新訂單本身的狀態
+         batch.update(orderRef, { status: newStatus });
 
-   // ==========================================
-   // 🌟 升級版：小白板記帳功能 (記錢 + 記商品銷量)
-   // ==========================================
-   if (newStatus === 'confirmed' && order.status !== 'confirmed') {
-      const now = new Date();
-      const statsId = `stats_${now.getFullYear()}_${now.getMonth() + 1}`;
-      const statsRef = db.collection('settings').doc(statsId);
+         // ==========================================
+         // 🌟 終極防呆版：小白板記帳功能 (支援自動退帳與防重複計算)
+         // ==========================================
+         // 定義哪些狀態算是「有效業績」
+         const paidStatuses = ['confirmed', 'shipped', 'completed'];
+         
+         const isOldPaid = paidStatuses.includes(order.status); // 改變前的狀態有算錢嗎？
+         const isNewPaid = paidStatuses.includes(newStatus);    // 改變後的狀態有算錢嗎？
 
-      // 先準備好要加總的營收與訂單數
-      let updatePayload = {
-         monthlyRevenue: firebase.firestore.FieldValue.increment(order.totals.finalPrice),
-         orderCount: firebase.firestore.FieldValue.increment(1)
-      };
+         // 只有在「跨越」算錢界線時（加錢或退錢），才需要去動小白板
+         if (isOldPaid !== isNewPaid) {
+            
+            // 找出這筆訂單是「哪一個月」成立的，去改那個月的小白板 (避免跨月退單算錯月)
+            const orderDate = order.createdAt ? order.createdAt.toDate() : new Date();
+            const statsId = `stats_${orderDate.getFullYear()}_${orderDate.getMonth() + 1}`;
+            const statsRef = db.collection('settings').doc(statsId);
 
-      // 迴圈檢查這筆訂單裡的所有商品，順便記下銷量
-      order.items.forEach(item => {
-         // 排除加購品跟系統贈品，只算主商品
-         if (!item.isAddon && !item.isGift) {
-            // 動態產生欄位名稱 (例如：itemSales.D01.qty) 並加上數量
-            updatePayload[`itemSales.${item.id}.qty`] = firebase.firestore.FieldValue.increment(item.qty);
+            // 判斷是要加(+)還是減(-)
+            // 如果新狀態有算錢就是 +1，如果新狀態沒算錢(退單)就是 -1
+            const multiplier = isNewPaid ? 1 : -1;
+
+            // 準備要異動的數字
+            let updatePayload = {
+               monthlyRevenue: firebase.firestore.FieldValue.increment(order.totals.finalPrice * multiplier),
+               orderCount: firebase.firestore.FieldValue.increment(1 * multiplier)
+            };
+
+            // 把訂單裡的主商品銷量也加上去或扣除
+            order.items.forEach(item => {
+               if (!item.isAddon && !item.isGift) {
+                  updatePayload[`itemSales.${item.id}.qty`] = firebase.firestore.FieldValue.increment(item.qty * multiplier);
+               }
+            });
+
+            // 將資料寫入小白板
+            batch.set(statsRef, updatePayload, { merge: true });
          }
-      });
+         // ==========================================
 
-      // 將資料一次寫入小白板
-      batch.set(statsRef, updatePayload, { merge: true });
-   }
-   // ==========================================
-
-   await batch.commit();
-};
+         await batch.commit();
+      };
       
       const saveTrackingNumber = async (orderId) => {
         if (db) { await db.collection('orders').doc(orderId).update({ trackingNumber: trackingInputs[orderId] }); alert("出貨單號已儲存！"); }
@@ -1001,28 +1013,34 @@ try {
         }
       };
 // 🌟 新增：雲端精準搜尋單號 (單次讀取，最省效能)
-      const handleCloudSearch = async () => {
-        const targetId = orderSearchId.trim().toUpperCase();
-        if (!targetId) {
-          setCloudSearchResult(null); // 如果輸入框是空的，就清空搜尋結果
+      const handleCloudSearch = () => {
+        setActiveSearchId(orderSearchId.trim().toUpperCase());
+      };
+
+      // 🌟 新增：專屬的雲端搜尋雷達 (即時監聽單一訂單)
+      useEffect(() => {
+        // 如果沒有鎖定單號，就清空結果並休息
+        if (!db || !activeSearchId) {
+          setCloudSearchResult(null);
           return;
         }
-        if (!db) return;
-        
-        try {
-          // 直接跟資料庫要「指定 ID」的那一張單
-          const doc = await db.collection('orders').doc(targetId).get();
-          
+
+        // 開啟這張單的專屬即時連線 (用 onSnapshot 替換掉原本的 get)
+        const unsubscribe = db.collection('orders').doc(activeSearchId).onSnapshot(doc => {
           if (doc.exists) {
             setCloudSearchResult({ id: doc.id, ...doc.data() });
           } else {
             alert("雲端資料庫中找不到這筆訂單喔！請確認單號是否正確。");
             setCloudSearchResult(null);
+            setActiveSearchId(''); // 找不到就解除鎖定
           }
-        } catch (error) {
-          alert("搜尋失敗：" + error.message);
-        }
-      };
+        }, error => {
+          alert("搜尋即時連線失敗：" + error.message);
+        });
+
+        // 🌟 超級重要：當離開搜尋、或改搜別張單時，自動切斷舊的連線，避免記憶體外洩！
+        return () => unsubscribe();
+      }, [activeSearchId]);
       const handleToggleMergeOrder = (orderId) => { setMergeSelection(prev => prev.includes(orderId) ? prev.filter(id => id !== orderId) : [...prev, orderId]); };
 
       const handleConfirmMerge = async () => {
@@ -2460,8 +2478,10 @@ if (isThisMonth && ['confirmed', 'shipped', 'completed'].includes(order.status))
     value={orderSearchId} 
     onChange={e => { 
       setOrderSearchId(e.target.value); 
-      // 如果把字清空，就自動退出搜尋模式
-      if(e.target.value === '') setCloudSearchResult(null); 
+      if(e.target.value === '') {
+        setCloudSearchResult(null); 
+        setActiveSearchId(''); // 🌟 新增：字被清空時，解除單號鎖定，切斷即時連線
+      }
     }} 
     onKeyDown={e => e.key === 'Enter' && handleCloudSearch()} 
     className="w-full text-sm outline-none font-bold tracking-wider" 
