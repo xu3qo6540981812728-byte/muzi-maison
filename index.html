@@ -211,9 +211,13 @@ const TrendingUp = ({size=24, className=""}) => <svg width={size} height={size} 
       const [newCatName, setNewCatName] = useState('');
 
       const [allOrders, setAllOrders] = useState([]);
-      const [allUsers, setAllUsers] = useState([]); 
-      const [orderLimit, setOrderLimit] = useState(50); 
-      const [userLimit, setUserLimit] = useState(50);   
+const [oldOrders, setOldOrders] = useState([]); // 🌟 新增：裝舊訂單的倉庫箱
+const [lastOrderDoc, setLastOrderDoc] = useState(null); // 🌟 新增：用來記錄目前抓到哪裡的書籤
+const [cloudSearchResult, setCloudSearchResult] = useState(null); // 🌟 新增：存放雲端精準搜尋的結果
+const [allUsers, setAllUsers] = useState([]); 
+const [orderLimit, setOrderLimit] = useState(50); 
+const [userLimit, setUserLimit] = useState(50); 
+      const [monthlyStats, setMonthlyStats] = useState({ monthlyRevenue: 0, orderCount: 0 });
 
       const [editingProduct, setEditingProduct] = useState(null); 
       const [mainDisplayImg, setMainDisplayImg] = useState(''); 
@@ -426,10 +430,15 @@ useEffect(() => {
         let unsubscribeProfile = () => {};
 
         if (isAdminMode) {
-          unsubscribeOrders = db.collection('orders').orderBy('createdAt', 'desc').limit(orderLimit).onSnapshot(snapshot => {
+          unsubscribeOrders = db.collection('orders').orderBy('createdAt', 'desc').limit(50).onSnapshot(snapshot => {
             const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setAllOrders(orders);
-            const newTrackingInputs = {};
+            setAllOrders(orders); // 放進魔法箱
+            
+            // 🌟 記下書籤：把這 50 筆的最後一筆存起來，當作下次抓舊單的起點
+            if (snapshot.docs.length > 0) {
+               setLastOrderDoc(snapshot.docs[snapshot.docs.length - 1]);
+            }
+           const newTrackingInputs = {};
             const newDiscountInputs = {};
             orders.forEach(o => { 
               if(o.trackingNumber) newTrackingInputs[o.id] = o.trackingNumber; 
@@ -498,79 +507,27 @@ useEffect(() => {
         }
       }, [allUsers, isEditingAdminCustomer]);
 // =========================================================
-      // === 系統自動化：管理員登入時背景自動更新「今日排行榜」 ===
-      useEffect(() => {
-        // 觸發條件：只有管理員模式、且訂單與商品資料都載入完成時才執行
-        if (isAdminMode && !adminOrderingFor && allOrders.length > 0 && products.length > 0) {
-          
-          // 取得今天日期，例如 "2026-05-05"
-          const todayStr = new Date().toISOString().split('T')[0]; 
-          
-          // 🚨 智慧防護：如果資料庫裡的排行榜已經是「今天」更新過的，就直接跳出，不重複計算浪費資源
-          if (publicTopSellers && publicTopSellers.lastUpdateDate === todayStr) {
-            return; 
-          }
+      // === 新增：即時監聽每個月的營收小白板 ===
+useEffect(() => {
+  // 只有管理員需要看這個資料
+  if (!db || !isAdminMode) return; 
 
-          // --- 開始在背景高速計算 ---
-          const now = new Date();
-          const currentMonth = now.getMonth();
-          const currentYear = now.getFullYear();
-          let lastMonth = currentMonth - 1;
-          let lastMonthYear = currentYear;
-          if (lastMonth < 0) { lastMonth = 11; lastMonthYear--; }
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1; // JavaScript 的月份是 0-11，所以要 +1
+  const statsId = `stats_${now.getFullYear()}_${currentMonth}`;
 
-          const calculateSales = (targetMonth, targetYear) => {
-            let stats = {};
-            let total = 0;
-            allOrders.forEach(order => {
-              const orderDate = order.createdAt ? order.createdAt.toDate() : new Date();
-              if (orderDate.getMonth() === targetMonth && orderDate.getFullYear() === targetYear && ['confirmed', 'shipped', 'completed'].includes(order.status)) {
-                order.items.forEach(item => {
-                  if (!item.isAddon && !item.isGift) {
-                    if (!stats[item.id]) stats[item.id] = { id: item.id, qty: 0 };
-                    stats[item.id].qty += item.qty;
-                    total += item.qty;
-                  }
-                });
-              }
-            });
-            return { stats, total };
-          };
+  // 盯著資料庫裡面的這個月小白板
+  const unsubscribeStats = db.collection('settings').doc(statsId).onSnapshot(doc => {
+    if (doc.exists) {
+      setMonthlyStats(doc.data()); // 把雲端算好的數字存進我們剛剛準備的小盒子裡
+    } else {
+      setMonthlyStats({ monthlyRevenue: 0, orderCount: 0 }); // 如果這個月還沒開市，就先放 0
+    }
+  });
 
-          let { stats: itemStats, total: totalSales } = calculateSales(currentMonth, currentYear);
-          let monthLabel = "本月";
+  return () => unsubscribeStats();
+}, [isAdminMode]);
 
-          // 智能降級：如果本月熱銷品不到3種，抓上個月的
-          if (Object.keys(itemStats).length < 3) {
-            const last = calculateSales(lastMonth, lastMonthYear);
-            itemStats = last.stats;
-            totalSales = last.total;
-            monthLabel = "上月";
-          }
-
-          // 打包最終數據
-          const exportData = Object.values(itemStats)
-            .sort((a, b) => b.qty - a.qty)
-            .slice(0, 5)
-            .map(item => {
-              const prod = products.find(p => p.id === item.id) || {};
-              const percentage = totalSales > 0 ? Math.round((item.qty / totalSales) * 100) : 0;
-              return { name: prod.name || item.id, image: prod.image || '', percentage: percentage, id: prod.id || '' };
-            }).filter(item => item.name);
-
-          // 寫入 Firebase，並壓上「今天」的專屬日期印記
-          if (db) {
-            db.collection('settings').doc('topSellers').set({ 
-              items: exportData, 
-              label: monthLabel,
-              lastUpdateDate: todayStr // 👈 關鍵：記錄更新日期
-            }, { merge: true });
-            
-            console.log("🤖 系統精靈報告：已在背景默默為您更新了今日的熱銷排行榜！");
-          }
-        }
-      }, [isAdminMode, adminOrderingFor, allOrders, products, publicTopSellers]);
-      // =========================================================
       const mergedCategories = useMemo(() => {
         const map = new Map();
         categoriesList.forEach(c => map.set(c.name, c));
@@ -955,13 +912,43 @@ try {
       };
 
       const updateOrderStatus = async (order, newStatus) => { 
-         if (!db) return;
-         const batch = db.batch();
-         const orderRef = db.collection('orders').doc(order.id);
+   if (!db) return;
+   const batch = db.batch();
+   const orderRef = db.collection('orders').doc(order.id);
 
-        batch.update(orderRef, { status: newStatus });
-         await batch.commit();
+   // 1. 更新訂單本身的狀態
+   batch.update(orderRef, { status: newStatus });
+
+   // ==========================================
+   // 🌟 升級版：小白板記帳功能 (記錢 + 記商品銷量)
+   // ==========================================
+   if (newStatus === 'confirmed' && order.status !== 'confirmed') {
+      const now = new Date();
+      const statsId = `stats_${now.getFullYear()}_${now.getMonth() + 1}`;
+      const statsRef = db.collection('settings').doc(statsId);
+
+      // 先準備好要加總的營收與訂單數
+      let updatePayload = {
+         monthlyRevenue: firebase.firestore.FieldValue.increment(order.totals.finalPrice),
+         orderCount: firebase.firestore.FieldValue.increment(1)
       };
+
+      // 迴圈檢查這筆訂單裡的所有商品，順便記下銷量
+      order.items.forEach(item => {
+         // 排除加購品跟系統贈品，只算主商品
+         if (!item.isAddon && !item.isGift) {
+            // 動態產生欄位名稱 (例如：itemSales.D01.qty) 並加上數量
+            updatePayload[`itemSales.${item.id}.qty`] = firebase.firestore.FieldValue.increment(item.qty);
+         }
+      });
+
+      // 將資料一次寫入小白板
+      batch.set(statsRef, updatePayload, { merge: true });
+   }
+   // ==========================================
+
+   await batch.commit();
+};
       
       const saveTrackingNumber = async (orderId) => {
         if (db) { await db.collection('orders').doc(orderId).update({ trackingNumber: trackingInputs[orderId] }); alert("出貨單號已儲存！"); }
@@ -987,7 +974,55 @@ try {
         if (!window.confirm("確定要徹底刪除此訂單嗎？（刪除後無法復原）")) return;
         if (db) await db.collection('orders').doc(orderId).delete();
       };
+      const loadMoreOldOrders = async () => {
+        if (!db || !lastOrderDoc) return;
+        
+        try {
+          const snapshot = await db.collection('orders')
+            .orderBy('createdAt', 'desc')
+            .startAfter(lastOrderDoc) // 從書籤之後開始抓
+            .limit(50) // 每次抓 50 筆
+            .get(); // 🌟 注意：這裡用 .get() 也就是單次讀取，極大節省效能與費用！
 
+          if (snapshot.empty) {
+            alert("已經沒有更早的訂單囉！");
+            return;
+          }
+
+          const fetchedOldOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          
+          // 把新抓到的舊訂單放入倉庫箱
+          setOldOrders(prev => [...prev, ...fetchedOldOrders]);
+          
+          // 更新書籤，以便下次可以再往下抓
+          setLastOrderDoc(snapshot.docs[snapshot.docs.length - 1]);
+        } catch (error) {
+          alert("讀取舊訂單失敗：" + error.message);
+        }
+      };
+// 🌟 新增：雲端精準搜尋單號 (單次讀取，最省效能)
+      const handleCloudSearch = async () => {
+        const targetId = orderSearchId.trim().toUpperCase();
+        if (!targetId) {
+          setCloudSearchResult(null); // 如果輸入框是空的，就清空搜尋結果
+          return;
+        }
+        if (!db) return;
+        
+        try {
+          // 直接跟資料庫要「指定 ID」的那一張單
+          const doc = await db.collection('orders').doc(targetId).get();
+          
+          if (doc.exists) {
+            setCloudSearchResult({ id: doc.id, ...doc.data() });
+          } else {
+            alert("雲端資料庫中找不到這筆訂單喔！請確認單號是否正確。");
+            setCloudSearchResult(null);
+          }
+        } catch (error) {
+          alert("搜尋失敗：" + error.message);
+        }
+      };
       const handleToggleMergeOrder = (orderId) => { setMergeSelection(prev => prev.includes(orderId) ? prev.filter(id => id !== orderId) : [...prev, orderId]); };
 
       const handleConfirmMerge = async () => {
@@ -1029,7 +1064,15 @@ try {
       };
 
       const filteredAdminOrders = useMemo(() => {
-        return allOrders.filter(order => {
+        // 🌟 如果有雲端精準搜尋的結果，畫面直接「只顯示」這一筆！
+        if (cloudSearchResult) {
+          return [cloudSearchResult];
+        }
+
+        // 🌟 否則，就顯示原本的魔法箱+倉庫箱
+        const combinedOrders = [...allOrders, ...oldOrders];
+        
+        return combinedOrders.filter(order => {
           const matchId = orderSearchId ? order.id.toLowerCase().includes(orderSearchId.toLowerCase()) : true;
           const matchStatus = orderStatusFilter !== 'all' ? order.status === orderStatusFilter : true;
           let matchDate = true;
@@ -1041,26 +1084,67 @@ try {
           }
           return matchId && matchStatus && matchDate;
         });
-      }, [allOrders, orderSearchId, orderStatusFilter, orderStartDate, orderEndDate]);
+      }, [allOrders, oldOrders, cloudSearchResult, orderSearchId, orderStatusFilter, orderStartDate, orderEndDate]); // 🌟 記得這裡多加了 cloudSearchResult
 
-      const downloadOrdersCSV = () => {
-        if (filteredAdminOrders.length === 0) return alert("目前沒有訂單可以下載");
-        let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; 
-        csvContent += "訂單編號,建立時間,狀態,訂購人,性別,電話,Line ID,取貨方式,地址,商品明細,運費,手動折扣,總金額,總成本,匯款後五碼,出貨單號,買家備註,系統備註\n";
-        filteredAdminOrders.forEach(o => {
-          const date = o.createdAt ? o.createdAt.toDate().toLocaleString() : '';
-          const status = STATUS_MAP[o.status]?.label || o.status;
-          const itemsStr = o.items.map(i => `${i.name} ${i.weight ? `(${i.weight})` : ''} ($${i.price}) x ${i.qty} ${i.unit || ''}`).join(' ; ');
-          const row = [
-            o.id, date, status, o.customerInfo.name, o.customerInfo.gender || '', o.customerInfo.phone, o.customerInfo.lineId || '',
-            o.deliveryMethod === 'delivery' ? '宅配' : '自取', o.customerInfo.address || '',
-            itemsStr, o.totals.shippingFee, o.adminDiscount || 0, o.totals.finalPrice, o.totals.totalCost || 0, o.bankAccountLast5 || '', o.trackingNumber || '', o.orderNote || '', o.mergeNote || ''
-          ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(',');
-          csvContent += row + "\n";
-        });
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a"); link.setAttribute("href", encodedUri); link.setAttribute("download", `訂單明細_${new Date().toISOString().split('T')[0]}.csv`);
-        document.body.appendChild(link); link.click(); document.body.removeChild(link);
+     const downloadOrdersCSV = async () => {
+        // 1. 防呆機制：強制要求選擇日期，避免一次下載幾萬筆當機
+        if (!orderStartDate || !orderEndDate) {
+          return alert("⚠️ 為了保護系統效能，下載明細前請先在上方設定「開始日期」與「結束日期」喔！");
+        }
+
+        if (!db) return alert("資料庫尚未連線");
+
+        try {
+          alert("正在為您從雲端打包資料，請稍候...");
+          
+          // 轉換日期格式給 Firebase 看 (包含一整天的時間)
+          const start = new Date(orderStartDate);
+          start.setHours(0, 0, 0, 0);
+          const end = new Date(orderEndDate);
+          end.setHours(23, 59, 59, 999);
+
+          // 2. 直接發送單次請求 (.get) 去拿這段時間的所有訂單
+          const snapshot = await db.collection('orders')
+            .where('createdAt', '>=', firebase.firestore.Timestamp.fromDate(start))
+            .where('createdAt', '<=', firebase.firestore.Timestamp.fromDate(end))
+            .orderBy('createdAt', 'desc')
+            .get();
+
+          if (snapshot.empty) {
+            return alert("這段時間內沒有任何訂單可以下載喔！");
+          }
+
+          // 3. 開始組合 CSV 內容
+          let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; 
+          csvContent += "訂單編號,建立時間,狀態,訂購人,性別,電話,Line ID,取貨方式,地址,商品明細,運費,手動折扣,總金額,總成本,匯款後五碼,出貨單號,買家備註,系統備註\n";
+
+          snapshot.docs.forEach(doc => {
+            const o = { id: doc.id, ...doc.data() };
+            const date = o.createdAt ? o.createdAt.toDate().toLocaleString() : '';
+            const status = STATUS_MAP[o.status]?.label || o.status;
+            const itemsStr = o.items.map(i => `${i.name} ${i.weight ? `(${i.weight})` : ''} ($${i.price}) x ${i.qty} ${i.unit || ''}`).join(' ; ');
+            
+            const row = [
+              o.id, date, status, o.customerInfo.name, o.customerInfo.gender || '', o.customerInfo.phone, o.customerInfo.lineId || '',
+              o.deliveryMethod === 'delivery' ? '宅配' : '自取', o.customerInfo.address || '',
+              itemsStr, o.totals.shippingFee, o.adminDiscount || 0, o.totals.finalPrice, o.totals.totalCost || 0, o.bankAccountLast5 || '', o.trackingNumber || '', o.orderNote || '', o.mergeNote || ''
+            ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(',');
+            
+            csvContent += row + "\n";
+          });
+
+          // 4. 觸發下載，並把檔名加上日期，方便管理
+          const encodedUri = encodeURI(csvContent);
+          const link = document.createElement("a"); 
+          link.setAttribute("href", encodedUri); 
+          link.setAttribute("download", `木子家訂單_${orderStartDate}_至_${orderEndDate}.csv`);
+          document.body.appendChild(link); 
+          link.click(); 
+          document.body.removeChild(link);
+
+        } catch (error) {
+          alert("下載失敗：" + error.message);
+        }
       };
 
       const handlePrintConfirmedOrders = () => {
@@ -2207,15 +2291,7 @@ const uploadTask = await storageRef.put(blob, metadata);
 if (isThisMonth && ['confirmed', 'shipped', 'completed'].includes(order.status)) {
                         monthlyRevenue += order.totals.finalPrice || 0;
                         monthlyCost += order.totals.totalCost || 0;
-                        
-                        order.items.forEach(item => {
-                          // 排除加購商品 (isAddon) 與 系統滿件贈品 (isGift)
-                          if (!item.isAddon && !item.isGift) {
-                            if (!itemSales[item.name]) itemSales[item.name] = { qty: 0, revenue: 0 };
-                            itemSales[item.name].qty += item.qty;
-                            itemSales[item.name].revenue += item.subtotal;
-                          }
-                        });
+                      
                       }
                     });
 
@@ -2226,7 +2302,16 @@ if (isThisMonth && ['confirmed', 'shipped', 'completed'].includes(order.status))
                         if (uDate.getMonth() === currentMonth && uDate.getFullYear() === currentYear) newUsersThisMonth++;
                       }
                     });
-
+// 🌟 新增：讓排行榜直接讀取小白板上算好的商品銷量
+                    if (monthlyStats && monthlyStats.itemSales) {
+                       // 將小白板上以「品號(id)」記錄的資料，轉換回來
+                       Object.entries(monthlyStats.itemSales).forEach(([itemId, data]) => {
+                          // 找出對應的商品名稱
+                          const prod = products.find(p => p.id === itemId);
+                          const name = prod ? prod.name : itemId; 
+                          itemSales[name] = { qty: data.qty };
+                       });
+                    }
                     // 排序熱銷商品 (取前 5 名)
                     const topItems = Object.entries(itemSales).sort((a, b) => b[1].qty - a[1].qty).slice(0, 5);
                     const totalOrdersCount = Object.values(statusCounts).reduce((a, b) => a + b, 0);
@@ -2238,7 +2323,7 @@ if (isThisMonth && ['confirmed', 'shipped', 'completed'].includes(order.status))
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                           <div className="bg-white p-4 rounded-2xl border border-indigo-100 shadow-sm flex flex-col justify-center">
                             <span className="text-xs font-bold text-indigo-500 mb-1">本月總營收</span>
-                            <span className="text-2xl md:text-3xl font-black text-stone-800">${monthlyRevenue.toLocaleString()}</span>
+                            <span className="text-2xl md:text-3xl font-black text-stone-800">${(monthlyStats.monthlyRevenue || 0).toLocaleString()}</span>
                           </div>
                           <div className="bg-white p-4 rounded-2xl border border-emerald-100 shadow-sm flex flex-col justify-center">
                             <span className="text-xs font-bold text-emerald-500 mb-1">本月預估毛利</span>
@@ -2367,7 +2452,22 @@ if (isThisMonth && ['confirmed', 'shipped', 'completed'].includes(order.status))
                 </div>
 
                 <div className="flex flex-wrap gap-3 mb-4 bg-stone-50 p-4 rounded-xl border border-stone-200">
-                  <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-stone-200 flex-1 min-w-[200px]"><SearchIcon size={16} className="text-stone-400" /><input type="text" placeholder="搜尋訂單編號..." value={orderSearchId} onChange={e => setOrderSearchId(e.target.value)} className="w-full text-sm outline-none font-bold tracking-wider" /></div>
+                  <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-stone-200 flex-1 min-w-[200px]">
+  <SearchIcon size={16} className="text-stone-400" />
+  <input 
+    type="text" 
+    placeholder="輸入單號後按 Enter 雲端搜尋..." 
+    value={orderSearchId} 
+    onChange={e => { 
+      setOrderSearchId(e.target.value); 
+      // 如果把字清空，就自動退出搜尋模式
+      if(e.target.value === '') setCloudSearchResult(null); 
+    }} 
+    onKeyDown={e => e.key === 'Enter' && handleCloudSearch()} 
+    className="w-full text-sm outline-none font-bold tracking-wider" 
+  />
+  <button onClick={handleCloudSearch} className="bg-stone-800 text-white text-xs font-bold px-3 py-1.5 rounded hover:bg-stone-700 transition-colors shadow-sm shrink-0 active:scale-95">搜尋</button>
+</div>
                   <select value={orderStatusFilter} onChange={e => setOrderStatusFilter(e.target.value)} className="bg-white px-3 py-2 rounded-lg border border-stone-200 text-sm font-bold text-stone-600 outline-none flex-1 min-w-[120px] cursor-pointer"><option value="all">所有狀態</option>{Object.entries(STATUS_MAP).map(([key, info]) => <option key={key} value={key}>{info.label}</option>)}</select>
                   <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-stone-200 flex-1 min-w-[250px]"><input type="date" value={orderStartDate} onChange={e => setOrderStartDate(e.target.value)} className="text-sm outline-none text-stone-600 cursor-pointer" /><span className="text-stone-400">-</span><input type="date" value={orderEndDate} onChange={e => setOrderEndDate(e.target.value)} className="text-sm outline-none text-stone-600 cursor-pointer" /></div>
                   <button onClick={downloadOrdersCSV} className="flex items-center justify-center gap-2 bg-emerald-100 text-emerald-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-emerald-200 transition-colors shadow-sm active:scale-95 min-w-[120px]"><DownloadIcon size={16} /> 下載明細</button>
@@ -2445,13 +2545,12 @@ if (isThisMonth && ['confirmed', 'shipped', 'completed'].includes(order.status))
                         );
                       })}
                       
-                      {filteredAdminOrders.length >= orderLimit && (
-                        <div className="col-span-full flex justify-center mt-6 mb-8">
-                          <button onClick={() => setOrderLimit(prev => prev + 50)} className="bg-stone-200 text-stone-600 px-6 py-2 rounded-full font-bold text-sm hover:bg-stone-300 transition-colors">
-                            載入更早的訂單...
-                          </button>
-                        </div>
-                      )}
+                      {/* 🌟 更改：移除舊的條件，直接換成呼叫 loadMoreOldOrders */}
+                      <div className="col-span-full flex justify-center mt-6 mb-8">
+                        <button onClick={loadMoreOldOrders} className="bg-stone-200 text-stone-600 px-6 py-2 rounded-full font-bold text-sm hover:bg-stone-300 transition-colors shadow-sm active:scale-95">
+                          載入更早的訂單...
+                        </button>
+                      </div>
                       
                     </div>
                   )}
