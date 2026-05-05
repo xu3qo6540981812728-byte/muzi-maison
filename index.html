@@ -942,16 +942,17 @@ try {
             const multiplier = isNewPaid ? 1 : -1;
 
             // 準備要異動的數字
-           let updatePayload = {
+          // 🌟 修正重點：準備要異動的數字，並「預先建立一個真正的 itemSales 物件」
+            let updatePayload = {
                monthlyRevenue: firebase.firestore.FieldValue.increment(order.totals.finalPrice * multiplier),
                orderCount: firebase.firestore.FieldValue.increment(1 * multiplier),
-               itemSales: {} // 🌟 修改 1：預先準備好一個真正的 itemSales 資料夾
+               itemSales: {} // <--- 這裡非常重要！預先準備資料夾
             };
 
             // 把訂單裡的主商品銷量也加上去或扣除
             order.items.forEach(item => {
                if (!item.isAddon && !item.isGift) {
-                  // 🌟 修改 2：用標準的物件結構放進去，取代小數點字串
+                  // 🌟 修正重點：改用標準的物件寫法，不用小數點字串
                   updatePayload.itemSales[item.id] = {
                      qty: firebase.firestore.FieldValue.increment(item.qty * multiplier)
                   };
