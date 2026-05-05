@@ -1207,19 +1207,18 @@ const ordersToMerge = currentOrders.filter(o => mergeSelection.includes(o.id));
       };
 
       // 🌟 終極進化版：前端直出 PDF，完美解決各別訂單獨立頁數的問題！
+      // 🌟 終極進化版：陣列分裝法直出 PDF，完美解決文字被裁切，且每筆訂單獨立頁數！
       const handlePrintConfirmedOrders = async () => {
         const confirmedOrders = allOrders.filter(o => o.status === 'confirmed');
         if (confirmedOrders.length === 0) return alert("目前沒有「已匯款，確認訂單」狀態的訂單可以列印！");
 
-        alert("⏳ 系統正在為您打包並生成高畫質 PDF 出貨單...\n(若訂單量較多，可能需要數十秒鐘，請勿關閉網頁)");
+        alert("⏳ 系統正在為您進行「防裁切排版」並生成高畫質 PDF...\n(若訂單量較多，可能需要數十秒鐘，請勿關閉網頁)");
 
-        // 1. 建立一個隱形的畫布區
+        // 建立一個隱形的畫布區
         const printContainer = document.createElement('div');
         printContainer.style.position = 'absolute';
         printContainer.style.left = '-9999px';
         printContainer.style.top = '0';
-        printContainer.style.width = '800px'; 
-        printContainer.style.backgroundColor = '#fff';
         document.body.appendChild(printContainer);
 
         try {
@@ -1229,121 +1228,144 @@ const ordersToMerge = currentOrders.filter(o => mergeSelection.includes(o.id));
 
           const { jsPDF } = window.jspdf;
           const pdf = new jsPDF('p', 'mm', 'a4');
-          const a4Width = 210;
-          const a4Height = 297;
-          let isFirstPage = true;
-
-          // 💡 獨家防呆魔法：jsPDF 原生不支援中文會變亂碼。
-          // 所以我們寫一個小工具，把你要寫的「中文頁尾」畫成圖片再貼上去！
-          const createFooterImage = (text) => {
-            const canvas = document.createElement('canvas');
-            canvas.width = 1000; canvas.height = 60;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.font = 'bold 22px "Microsoft JhengHei", sans-serif';
-            ctx.fillStyle = '#555555';
-            ctx.textAlign = 'center';
-            ctx.fillText(text, canvas.width / 2, 40);
-            return canvas.toDataURL('image/jpeg');
-          };
+          let isVeryFirstPage = true;
 
           for (const o of confirmedOrders) {
-            // 清空並注入單筆訂單的 HTML (這次不用表格包裝了，純淨排版)
-            printContainer.innerHTML = `
-              <div style="padding: 30px; font-family: 'Microsoft JhengHei', sans-serif; color: #000; line-height: 1.6;">
-                <h1 style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px;">木子家MUZI MAISON - 出貨明細單</h1>
-                <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 1.2em; border-bottom: 1px dashed #ccc; padding-bottom: 10px; margin-bottom: 15px;">
-                  <span>訂單編號：${o.id}</span>
-                  <span>${o.deliveryMethod === 'delivery' ? '🚚 宅配' : '🏪 自取'}</span>
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; font-size: 1.1em;">
-                  <div><strong>收件人：</strong>${o.customerInfo.name}</div>
-                  <div><strong>電話：</strong>${o.customerInfo.phone}</div>
-                  <div style="grid-column: span 2;"><strong>地址：</strong>${o.customerInfo.address || '無'}</div>
-                  <div style="grid-column: span 2;"><strong>Line ID：</strong>${o.customerInfo.lineId || '無'}</div>
-                </div>
-                <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 1em;">
-                  <thead>
-                    <tr>
-                      <th style="border: 1px solid #333; padding: 10px; background: #f0f0f0;">品號</th>
-                      <th style="border: 1px solid #333; padding: 10px; background: #f0f0f0;">分類</th>
-                      <th style="border: 1px solid #333; padding: 10px; background: #f0f0f0;">商品名稱</th>
-                      <th style="border: 1px solid #333; padding: 10px; background: #f0f0f0;">單價</th>
-                      <th style="border: 1px solid #333; padding: 10px; background: #f0f0f0;">數量</th>
-                      <th style="border: 1px solid #333; padding: 10px; background: #f0f0f0;">小計</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${o.items.map(i => `
-                      <tr>
-                        <td style="border: 1px solid #333; padding: 10px;">${i.id || ''}</td>
-                        <td style="border: 1px solid #333; padding: 10px;">${i.category || ''}</td>
-                        <td style="border: 1px solid #333; padding: 10px;">${i.name} ${i.weight ? `(${i.weight})` : ''}</td>
-                        <td style="border: 1px solid #333; padding: 10px;">$${i.isAddon && i.freeQty > 0 && i.paidQty > 0 ? `${i.freeQty}件$0, ${i.paidQty}件$${i.price}` : (i.subtotal === 0 ? '0' : i.price)}</td>
-                        <td style="border: 1px solid #333; padding: 10px;">${i.qty} ${i.unit || ''}</td>
-                        <td style="border: 1px solid #333; padding: 10px;">$${i.subtotal !== undefined ? i.subtotal : (i.price * i.qty)}</td>
-                      </tr>
-                    `).join('')}
-                  </tbody>
-                </table>
-                ${o.orderNote ? `<div style="margin-top: 15px; padding: 10px; border: 1px solid #333; background: #fafafa;"><strong>買家/訂單備註：</strong><br/>${o.orderNote.replace(/\n/g, '<br/>')}</div>` : ''}
-                ${o.mergeNote ? `<div style="margin-top: 15px; padding: 10px; border: 1px solid #333; background: #fafafa;"><strong>系統備註：</strong><br/>${o.mergeNote}</div>` : ''}
-                <div style="margin-top: 20px; padding-top: 15px; border-top: 2px solid #333; text-align: right; font-size: 1.2em;">
-                  <div style="display: flex; justify-content: flex-end; gap: 20px; margin-bottom: 5px;"><span>商品小計：</span><span>$${o.totals.itemsBaseTotal}</span></div>
-                  ${o.totals.discountAmount > 0 ? `<div style="display: flex; justify-content: flex-end; gap: 20px; margin-bottom: 5px; color: #e11d48;"><span>活動折抵：</span><span>-$${o.totals.discountAmount}</span></div>` : ''}
-                  ${o.adminDiscount > 0 ? `<div style="display: flex; justify-content: flex-end; gap: 20px; margin-bottom: 5px; color: #e11d48;"><span>手動折扣：</span><span>-$${o.adminDiscount}</span></div>` : ''}
-                  <div style="display: flex; justify-content: flex-end; gap: 20px; margin-bottom: 5px;"><span>運費：</span><span>${o.totals.shippingFee === 0 ? '免運費 ($0)' : `$${o.totals.shippingFee}`}</span></div>
-                  <div style="font-weight: bold; font-size: 1.4em; margin-top: 10px;"><span>總計金額：</span><span>$${o.totals.finalPrice}</span></div>
-                </div>
-              </div>
-            `;
-
-            // 等待一下讓瀏覽器渲染 HTML
-            await new Promise(resolve => setTimeout(resolve, 100));
-
-            // 將這張訂單轉成一長條的圖片
-            const canvas = await html2canvas(printContainer, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
-            const imgData = canvas.toDataURL('image/jpeg', 1.0);
-
-            // 🌟 精準計算這筆訂單的專屬頁數！
-            const imgWidth = a4Width;
-            const contentHeight = a4Height - 15; // 底部留 15mm 給頁尾
-            const imgHeight = (canvas.height * a4Width) / canvas.width;
-            let heightLeft = imgHeight;
-            let position = 0;
+            // --- 1. 計算分頁邏輯 (把很長的商品陣列，切成一塊一塊) ---
+            let itemsCopy = [...o.items];
+            let chunks = [];
             
-            const totalPagesForThisOrder = Math.ceil(imgHeight / contentHeight);
-            let currentPageForThisOrder = 1;
+            // 第一頁可以放的商品數量 (扣掉表頭與收件資訊)
+            const MAX_FIRST_PAGE = 12;
+            // 之後每一頁可以放的商品數量
+            const MAX_OTHER_PAGE = 20;
 
-            if (!isFirstPage) pdf.addPage();
-            isFirstPage = false;
+            if (itemsCopy.length <= MAX_FIRST_PAGE) {
+               chunks.push(itemsCopy);
+            } else {
+               chunks.push(itemsCopy.splice(0, MAX_FIRST_PAGE));
+               while(itemsCopy.length > 0) {
+                  chunks.push(itemsCopy.splice(0, MAX_OTHER_PAGE));
+               }
+            }
 
-            while (heightLeft > 0) {
-              // 貼上內容圖片 (如果高度超過一頁，就會用負數的 position 把長條圖片往上推)
-              pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-              
-              // 🌟 貼上我們剛剛自製的「專屬中文圖層頁尾」
-              const footerText = `📦 訂單編號: ${o.id}  |  第 ${currentPageForThisOrder} 頁 / 共 ${totalPagesForThisOrder} 頁`;
-              const footerImg = createFooterImage(footerText);
-              // 固定在每一張 A4 實體紙張的底部
-              pdf.addImage(footerImg, 'JPEG', 0, a4Height - 12, a4Width, 8); 
+            // 檢查最後一頁有沒有足夠的空間放「訂單備註與總計金額」
+            // 預估總計區塊大約需要 6 筆商品的高度
+            const lastChunk = chunks[chunks.length - 1];
+            const maxForLastChunk = chunks.length === 1 ? MAX_FIRST_PAGE : MAX_OTHER_PAGE;
+            if (lastChunk.length > (maxForLastChunk - 6)) {
+               // 如果最後一頁太滿，就塞一頁空白的專門放總計，避免爆版
+               chunks.push([]); 
+            }
 
-              heightLeft -= contentHeight;
-              position -= contentHeight;
+            const totalPages = chunks.length;
 
-              if (heightLeft > 0) {
-                pdf.addPage();
-                currentPageForThisOrder++;
-              }
+            // --- 2. 逐頁畫出完美的 A4 畫布 ---
+            for (let i = 0; i < chunks.length; i++) {
+                const chunkItems = chunks[i];
+                const isFirstPageOfOrder = (i === 0);
+                const isLastPageOfOrder = (i === chunks.length - 1);
+
+                // 設定標準 A4 尺寸的 HTML 容器 (794px * 1123px，完美對應 A4 比例)
+                let pageHtml = `
+                  <div style="width: 794px; height: 1123px; padding: 40px; box-sizing: border-box; background: #fff; position: relative; font-family: 'Microsoft JhengHei', sans-serif; color: #000;">
+                `;
+
+                if (isFirstPageOfOrder) {
+                    pageHtml += `
+                      <h1 style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px;">木子家MUZI MAISON - 出貨明細單</h1>
+                      <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 1.2em; border-bottom: 1px dashed #ccc; padding-bottom: 10px; margin-bottom: 15px;">
+                        <span>訂單編號：${o.id}</span>
+                        <span>${o.deliveryMethod === 'delivery' ? '🚚 宅配' : '🏪 自取'}</span>
+                      </div>
+                      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; font-size: 1.1em;">
+                        <div><strong>收件人：</strong>${o.customerInfo.name}</div>
+                        <div><strong>電話：</strong>${o.customerInfo.phone}</div>
+                        <div style="grid-column: span 2;"><strong>地址：</strong>${o.customerInfo.address || '無'}</div>
+                        <div style="grid-column: span 2;"><strong>Line ID：</strong>${o.customerInfo.lineId || '無'}</div>
+                      </div>
+                    `;
+                } else {
+                    pageHtml += `
+                      <div style="font-weight: bold; font-size: 1.2em; border-bottom: 1px dashed #ccc; padding-bottom: 10px; margin-bottom: 15px; color: #555;">
+                        訂單編號：${o.id} (續)
+                      </div>
+                    `;
+                }
+
+                if (chunkItems.length > 0) {
+                    pageHtml += `
+                      <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 1em;">
+                        <thead>
+                          <tr>
+                            <th style="border: 1px solid #333; padding: 10px; background: #f0f0f0;">品號</th>
+                            <th style="border: 1px solid #333; padding: 10px; background: #f0f0f0;">分類</th>
+                            <th style="border: 1px solid #333; padding: 10px; background: #f0f0f0;">商品名稱</th>
+                            <th style="border: 1px solid #333; padding: 10px; background: #f0f0f0;">單價</th>
+                            <th style="border: 1px solid #333; padding: 10px; background: #f0f0f0;">數量</th>
+                            <th style="border: 1px solid #333; padding: 10px; background: #f0f0f0;">小計</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          ${chunkItems.map(item => `
+                            <tr>
+                              <td style="border: 1px solid #333; padding: 10px;">${item.id || ''}</td>
+                              <td style="border: 1px solid #333; padding: 10px;">${item.category || ''}</td>
+                              <td style="border: 1px solid #333; padding: 10px;">${item.name} ${item.weight ? `(${item.weight})` : ''}</td>
+                              <td style="border: 1px solid #333; padding: 10px;">$${item.isAddon && item.freeQty > 0 && item.paidQty > 0 ? `${item.freeQty}件$0, ${item.paidQty}件$${item.price}` : (item.subtotal === 0 ? '0' : item.price)}</td>
+                              <td style="border: 1px solid #333; padding: 10px;">${item.qty} ${item.unit || ''}</td>
+                              <td style="border: 1px solid #333; padding: 10px;">$${item.subtotal !== undefined ? item.subtotal : (item.price * item.qty)}</td>
+                            </tr>
+                          `).join('')}
+                        </tbody>
+                      </table>
+                    `;
+                }
+
+                if (isLastPageOfOrder) {
+                    pageHtml += `
+                      ${o.orderNote ? `<div style="margin-top: 15px; padding: 10px; border: 1px solid #333; background: #fafafa;"><strong>買家/訂單備註：</strong><br/>${o.orderNote.replace(/\n/g, '<br/>')}</div>` : ''}
+                      ${o.mergeNote ? `<div style="margin-top: 15px; padding: 10px; border: 1px solid #333; background: #fafafa;"><strong>系統備註：</strong><br/>${o.mergeNote}</div>` : ''}
+                      <div style="margin-top: 20px; padding-top: 15px; border-top: 2px solid #333; text-align: right; font-size: 1.2em;">
+                        <div style="display: flex; justify-content: flex-end; gap: 20px; margin-bottom: 5px;"><span>商品小計：</span><span>$${o.totals.itemsBaseTotal}</span></div>
+                        ${o.totals.discountAmount > 0 ? `<div style="display: flex; justify-content: flex-end; gap: 20px; margin-bottom: 5px; color: #e11d48;"><span>活動折抵：</span><span>-$${o.totals.discountAmount}</span></div>` : ''}
+                        ${o.adminDiscount > 0 ? `<div style="display: flex; justify-content: flex-end; gap: 20px; margin-bottom: 5px; color: #e11d48;"><span>手動折扣：</span><span>-$${o.adminDiscount}</span></div>` : ''}
+                        <div style="display: flex; justify-content: flex-end; gap: 20px; margin-bottom: 5px;"><span>運費：</span><span style="${o.totals.shippingFee === 0 ? 'color: #10b981; font-weight: bold;' : ''}">${o.totals.shippingFee === 0 ? '免運費 ($0)' : `$${o.totals.shippingFee}`}</span></div>
+                        <div style="font-weight: bold; font-size: 1.4em; margin-top: 10px;"><span>總計金額：</span><span>$${o.totals.finalPrice}</span></div>
+                      </div>
+                    `;
+                }
+
+                // 🌟 獨立的自製頁尾，精準標示單筆訂單的頁數
+                pageHtml += `
+                  <div style="position: absolute; bottom: 40px; right: 40px; font-weight: bold; font-size: 16px; color: #555; border-top: 2px solid #333; padding-top: 10px; width: calc(100% - 80px); text-align: right;">
+                    📦 訂單編號: ${o.id} &nbsp;&nbsp;|&nbsp;&nbsp; 第 ${i + 1} 頁 / 共 ${totalPages} 頁
+                  </div>
+                </div>`;
+
+                printContainer.innerHTML = pageHtml;
+                // 等待渲染完成
+                await new Promise(resolve => setTimeout(resolve, 50)); 
+
+                // 拍照：因為我們已經把容器設定成完美的 A4 比例，所以出來的照片完全不需要再用數學切割！
+                const canvas = await html2canvas(printContainer.firstElementChild, { scale: 2, useCORS: true });
+                const imgData = canvas.toDataURL('image/jpeg', 0.9);
+
+                if (!isVeryFirstPage) {
+                   pdf.addPage();
+                }
+                isVeryFirstPage = false;
+                
+                // 將照片完整貼滿整張 A4 PDF
+                pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
             }
           }
 
           document.body.removeChild(printContainer);
-          // 觸發下載
           pdf.save(`木子家出貨明細單_${new Date().toISOString().split('T')[0]}.pdf`);
           
         } catch (error) {
-          document.body.removeChild(printContainer);
+          if(printContainer.parentNode) document.body.removeChild(printContainer);
           alert("PDF 產生失敗：" + error.message);
         }
       };
