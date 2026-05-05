@@ -435,10 +435,7 @@ useEffect(() => {
             const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setAllOrders(orders); // 放進魔法箱
             
-            // 🌟 記下書籤：把這 50 筆的最後一筆存起來，當作下次抓舊單的起點
-            if (snapshot.docs.length > 0) {
-               setLastOrderDoc(snapshot.docs[snapshot.docs.length - 1]);
-            }
+            
            const newTrackingInputs = {};
             const newDiscountInputs = {};
             orders.forEach(o => { 
@@ -965,14 +962,31 @@ try {
          // ==========================================
 
          await batch.commit();
+
+         // 🌟 修正2：消除視覺假死！手動更新沒有即時連線的「舊訂單」與「搜尋結果」的畫面狀態
+         setOldOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: newStatus } : o));
+         if (cloudSearchResult && cloudSearchResult.id === order.id) {
+            setCloudSearchResult(prev => ({ ...prev, status: newStatus }));
+         }
       };
       
       const saveTrackingNumber = async (orderId) => {
-        if (db) { await db.collection('orders').doc(orderId).update({ trackingNumber: trackingInputs[orderId] }); alert("出貨單號已儲存！"); }
+        if (db) { 
+          await db.collection('orders').doc(orderId).update({ trackingNumber: trackingInputs[orderId] }); 
+          alert("出貨單號已儲存！"); 
+          // 🌟 修正：消除舊訂單的視覺假死
+          setOldOrders(prev => prev.map(o => o.id === orderId ? { ...o, trackingNumber: trackingInputs[orderId] } : o));
+        }
       };
       
       const saveOrderNote = async (orderId) => {
-        if (db) { await db.collection('orders').doc(orderId).update({ orderNote: adminNoteInputs[orderId] !== undefined ? adminNoteInputs[orderId] : '' }); alert("訂單備註已儲存！"); }
+        if (db) { 
+          const newNote = adminNoteInputs[orderId] !== undefined ? adminNoteInputs[orderId] : '';
+          await db.collection('orders').doc(orderId).update({ orderNote: newNote }); 
+          alert("訂單備註已儲存！"); 
+          // 🌟 修正：消除舊訂單的視覺假死
+          setOldOrders(prev => prev.map(o => o.id === orderId ? { ...o, orderNote: newNote } : o));
+        }
       };
 
       const saveAdminDiscount = async (order) => {
@@ -982,24 +996,49 @@ try {
          if (db) { 
             await db.collection('orders').doc(order.id).update({ adminDiscount: discount, 'totals.finalPrice': newFinalPrice }); 
             alert("訂單金額已修改！"); 
+            // 🌟 修正：消除舊訂單的視覺假死
+            setOldOrders(prev => prev.map(o => o.id === order.id ? { ...o, adminDiscount: discount, totals: { ...o.totals, finalPrice: newFinalPrice } } : o));
          }
       };
 
       const deleteOrder = async (orderId) => {
-        const orderToDelete = allOrders.find(o => o.id === orderId);
+        // 🌟 修正1：擴大搜尋範圍，確保不管在新單、舊單還是搜尋結果中，都能找到這張單
+        const currentOrders = [...allOrders, ...oldOrders, ...(cloudSearchResult ? [cloudSearchResult] : [])];
+        const orderToDelete = currentOrders.find(o => o.id === orderId);
+        
+        if (!orderToDelete) return alert("找不到此訂單資料");
+
+        // 🌟 修正2：防呆機制！如果訂單有算過錢，阻擋直接刪除！
+        const paidStatuses = ['confirmed', 'shipped', 'completed'];
+        if (paidStatuses.includes(orderToDelete.status)) {
+          return alert("⚠️ 財務防呆警告：\n無法直接刪除「已確認/已出貨/已完成」的訂單！\n請先將狀態改為「已取消」(讓系統自動扣除營業額) 後，再進行刪除。");
+        }
        
         if (!window.confirm("確定要徹底刪除此訂單嗎？（刪除後無法復原）")) return;
         if (db) await db.collection('orders').doc(orderId).delete();
+
+        // 🌟 修正3：如果剛好是在「雲端搜尋」模式下刪除的，順便清空畫面
+        if (cloudSearchResult && cloudSearchResult.id === orderId) {
+           setCloudSearchResult(null);
+           setActiveSearchId('');
+           setOrderSearchId('');
+        }
       };
       const loadMoreOldOrders = async () => {
-        if (!db || !lastOrderDoc) return;
+        if (!db) return;
+        
+        // 🌟 升級版：動態尋找畫面上的「最後一筆訂單」，用它的時間當作完美書籤！
+        const currentList = [...allOrders, ...oldOrders];
+        if (currentList.length === 0) return;
+        
+        const lastOrder = currentList[currentList.length - 1]; // 抓出畫面最後一筆
         
         try {
           const snapshot = await db.collection('orders')
             .orderBy('createdAt', 'desc')
-            .startAfter(lastOrderDoc) // 從書籤之後開始抓
-            .limit(50) // 每次抓 50 筆
-            .get(); // 🌟 注意：這裡用 .get() 也就是單次讀取，極大節省效能與費用！
+            .startAfter(lastOrder.createdAt) // 🌟 直接使用訂單的建立時間作為游標，精準無縫接軌！
+            .limit(50)
+            .get(); 
 
           if (snapshot.empty) {
             alert("已經沒有更早的訂單囉！");
@@ -1007,12 +1046,8 @@ try {
           }
 
           const fetchedOldOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          
-          // 把新抓到的舊訂單放入倉庫箱
           setOldOrders(prev => [...prev, ...fetchedOldOrders]);
           
-          // 更新書籤，以便下次可以再往下抓
-          setLastOrderDoc(snapshot.docs[snapshot.docs.length - 1]);
         } catch (error) {
           alert("讀取舊訂單失敗：" + error.message);
         }
@@ -1052,7 +1087,8 @@ try {
         if (mergeSelection.length < 2) return alert("請至少選擇兩筆訂單合併");
         if (!window.confirm("確定要合併這幾筆訂單嗎？系統會將舊訂單刪除，並重新計算總數、運費及折扣，產生一筆新的訂單。")) return;
 
-        const ordersToMerge = allOrders.filter(o => mergeSelection.includes(o.id));
+        const currentOrders = [...allOrders, ...oldOrders, ...(cloudSearchResult ? [cloudSearchResult] : [])];
+const ordersToMerge = currentOrders.filter(o => mergeSelection.includes(o.id));
         const combinedItemsMap = {};
         
         let totalAdminDiscount = 0;
@@ -1121,10 +1157,8 @@ try {
           alert("正在為您從雲端打包資料，請稍候...");
           
           // 轉換日期格式給 Firebase 看 (包含一整天的時間)
-          const start = new Date(orderStartDate);
-          start.setHours(0, 0, 0, 0);
-          const end = new Date(orderEndDate);
-          end.setHours(23, 59, 59, 999);
+        const start = new Date(`${orderStartDate}T00:00:00`);
+          const end = new Date(`${orderEndDate}T23:59:59`);
 
           // 2. 直接發送單次請求 (.get) 去拿這段時間的所有訂單
           const snapshot = await db.collection('orders')
@@ -2702,8 +2736,9 @@ if (isThisMonth && ['confirmed', 'shipped', 'completed'].includes(order.status))
                         </div>
 
                         <div className="space-y-4 pb-10">
-                          {allOrders.filter(o => o.userId === selectedCustomer.id).length === 0 ? <p className="text-center text-stone-400 py-10 bg-white rounded-2xl border border-stone-200 border-dashed">尚無訂單紀錄</p> : (
-                            allOrders.filter(o => o.userId === selectedCustomer.id).map(order => {
+                          {/* 🌟 修正3：把原本的 allOrders 換成 [...allOrders, ...oldOrders]，新單舊單一起找！ */}
+                          {[...allOrders, ...oldOrders].filter(o => o.userId === selectedCustomer.id).length === 0 ? <p className="text-center text-stone-400 py-10 bg-white rounded-2xl border border-stone-200 border-dashed">尚無訂單紀錄</p> : (
+                            [...allOrders, ...oldOrders].filter(o => o.userId === selectedCustomer.id).map(order => {
                               const canMerge = isMergeMode && (order.status === 'pending' || order.status === 'confirming');
                               const isSelectedForMerge = mergeSelection.includes(order.id);
                               return (
