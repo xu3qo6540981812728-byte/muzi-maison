@@ -497,7 +497,80 @@ useEffect(() => {
           }
         }
       }, [allUsers, isEditingAdminCustomer]);
+// =========================================================
+      // === 系統自動化：管理員登入時背景自動更新「今日排行榜」 ===
+      useEffect(() => {
+        // 觸發條件：只有管理員模式、且訂單與商品資料都載入完成時才執行
+        if (isAdminMode && !adminOrderingFor && allOrders.length > 0 && products.length > 0) {
+          
+          // 取得今天日期，例如 "2026-05-05"
+          const todayStr = new Date().toISOString().split('T')[0]; 
+          
+          // 🚨 智慧防護：如果資料庫裡的排行榜已經是「今天」更新過的，就直接跳出，不重複計算浪費資源
+          if (publicTopSellers && publicTopSellers.lastUpdateDate === todayStr) {
+            return; 
+          }
 
+          // --- 開始在背景高速計算 ---
+          const now = new Date();
+          const currentMonth = now.getMonth();
+          const currentYear = now.getFullYear();
+          let lastMonth = currentMonth - 1;
+          let lastMonthYear = currentYear;
+          if (lastMonth < 0) { lastMonth = 11; lastMonthYear--; }
+
+          const calculateSales = (targetMonth, targetYear) => {
+            let stats = {};
+            let total = 0;
+            allOrders.forEach(order => {
+              const orderDate = order.createdAt ? order.createdAt.toDate() : new Date();
+              if (orderDate.getMonth() === targetMonth && orderDate.getFullYear() === targetYear && ['confirmed', 'shipped', 'completed'].includes(order.status)) {
+                order.items.forEach(item => {
+                  if (!item.isAddon && !item.isGift) {
+                    if (!stats[item.id]) stats[item.id] = { id: item.id, qty: 0 };
+                    stats[item.id].qty += item.qty;
+                    total += item.qty;
+                  }
+                });
+              }
+            });
+            return { stats, total };
+          };
+
+          let { stats: itemStats, total: totalSales } = calculateSales(currentMonth, currentYear);
+          let monthLabel = "本月";
+
+          // 智能降級：如果本月熱銷品不到3種，抓上個月的
+          if (Object.keys(itemStats).length < 3) {
+            const last = calculateSales(lastMonth, lastMonthYear);
+            itemStats = last.stats;
+            totalSales = last.total;
+            monthLabel = "上月";
+          }
+
+          // 打包最終數據
+          const exportData = Object.values(itemStats)
+            .sort((a, b) => b.qty - a.qty)
+            .slice(0, 5)
+            .map(item => {
+              const prod = products.find(p => p.id === item.id) || {};
+              const percentage = totalSales > 0 ? Math.round((item.qty / totalSales) * 100) : 0;
+              return { name: prod.name || item.id, image: prod.image || '', percentage: percentage, id: prod.id || '' };
+            }).filter(item => item.name);
+
+          // 寫入 Firebase，並壓上「今天」的專屬日期印記
+          if (db) {
+            db.collection('settings').doc('topSellers').set({ 
+              items: exportData, 
+              label: monthLabel,
+              lastUpdateDate: todayStr // 👈 關鍵：記錄更新日期
+            }, { merge: true });
+            
+            console.log("🤖 系統精靈報告：已在背景默默為您更新了今日的熱銷排行榜！");
+          }
+        }
+      }, [isAdminMode, adminOrderingFor, allOrders, products, publicTopSellers]);
+      // =========================================================
       const mergedCategories = useMemo(() => {
         const map = new Map();
         categoriesList.forEach(c => map.set(c.name, c));
@@ -2192,13 +2265,17 @@ if (isThisMonth && ['confirmed', 'shipped', 'completed'].includes(order.status))
                                 🏆 本月熱銷排行榜 <span className="text-[10px] bg-stone-100 text-stone-500 px-2 py-1 rounded">排除已取消</span>
                               </h3>
                               <button onClick={() => {
-                                // 提取排行榜資料，並存入 Firebase
+                                // 1. 先算出「所有主商品的總銷售數量」當作正確的分母
+                                const totalItemsSold = Object.values(itemSales).reduce((sum, item) => sum + item.qty, 0);
+
+                                // 2. 提取排行榜資料，並存入 Firebase
                                 const exportData = topItems.map(([name, data]) => {
-                                  // 找出對應的商品資料取得圖片
                                   const prod = products.find(p => p.name === name) || {};
-                                  const percentage = totalOrdersCount > 0 ? Math.round((data.qty / totalOrdersCount) * 100) : 0; // 這裡以總訂單為分母做簡單佔比
+                                  // 3. 修正數學邏輯：(單一商品銷量 / 總銷量) * 100
+                                  const percentage = totalItemsSold > 0 ? Math.round((data.qty / totalItemsSold) * 100) : 0; 
                                   return { name: name, image: prod.image || '', percentage: percentage, id: prod.id || '' };
                                 });
+                                
                                 if (db) {
                                   db.collection('settings').doc('topSellers').set({ items: exportData, label: '本月' });
                                   alert('✅ 已成功將最新排行榜發佈至首頁！');
