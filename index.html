@@ -2308,9 +2308,18 @@ if (isThisMonth && ['confirmed', 'shipped', 'completed'].includes(order.status))
 
                           {/* 右側：訂單狀態分佈圖 (全局) */}
                           <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm">
-                            <h3 className="font-bold text-stone-800 mb-4 flex items-center justify-between">
-                              📊 系統總訂單狀態分佈 <span className="text-[10px] bg-stone-100 text-stone-500 px-2 py-1 rounded">全部時間</span>
-                            </h3>
+                            <div className="flex items-center justify-between mb-4 border-b border-stone-100 pb-2">
+                              <h3 className="font-bold text-stone-800 flex items-center gap-2">
+                                📊 系統總訂單狀態分佈 <span className="text-[10px] bg-stone-100 text-stone-500 px-2 py-1 rounded">全部時間</span>
+                              </h3>
+                              {/* 加入跳轉至訂單管理的按鈕 */}
+                              <button onClick={() => {
+                                setShowAdminDashboard(false); // 第一步：關閉目前的儀表板
+                                setShowAdminOrders(true);     // 第二步：瞬間打開訂單管理視窗
+                              }} className="text-xs bg-indigo-50 text-indigo-700 font-bold px-2.5 py-1.5 rounded-lg shadow-sm hover:bg-indigo-100 transition-colors flex items-center gap-1 active:scale-95">
+                                前往管理 ➔
+                              </button>
+                            </div>
                             {totalOrdersCount === 0 ? <p className="text-sm text-stone-400 text-center py-6">尚無訂單數據</p> : (
                               <div className="space-y-3">
                                 {[
