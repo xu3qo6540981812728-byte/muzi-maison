@@ -1236,9 +1236,9 @@ const ordersToMerge = currentOrders.filter(o => mergeSelection.includes(o.id));
             let chunks = [];
             
             // 第一頁可以放的商品數量 (扣掉表頭與收件資訊)
-            const MAX_FIRST_PAGE = 12;
+            const MAX_FIRST_PAGE = 8;
             // 之後每一頁可以放的商品數量
-            const MAX_OTHER_PAGE = 20;
+            const MAX_OTHER_PAGE = 10;
 
             if (itemsCopy.length <= MAX_FIRST_PAGE) {
                chunks.push(itemsCopy);
