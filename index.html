@@ -1253,7 +1253,7 @@ const ordersToMerge = currentOrders.filter(o => mergeSelection.includes(o.id));
             // 預估總計區塊大約需要 6 筆商品的高度
             const lastChunk = chunks[chunks.length - 1];
             const maxForLastChunk = chunks.length === 1 ? MAX_FIRST_PAGE : MAX_OTHER_PAGE;
-            if (lastChunk.length > (maxForLastChunk - 6)) {
+            if (lastChunk.length > (maxForLastChunk - 3)) {
                // 如果最後一頁太滿，就塞一頁空白的專門放總計，避免爆版
                chunks.push([]); 
             }
