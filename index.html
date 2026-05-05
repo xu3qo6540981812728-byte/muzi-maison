@@ -30,6 +30,8 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -1204,86 +1206,146 @@ const ordersToMerge = currentOrders.filter(o => mergeSelection.includes(o.id));
         }
       };
 
-      const handlePrintConfirmedOrders = () => {
+      // 🌟 終極進化版：前端直出 PDF，完美解決各別訂單獨立頁數的問題！
+      const handlePrintConfirmedOrders = async () => {
         const confirmedOrders = allOrders.filter(o => o.status === 'confirmed');
         if (confirmedOrders.length === 0) return alert("目前沒有「已匯款，確認訂單」狀態的訂單可以列印！");
-        
-        // 🌟 升級1：修改 CSS，加入專屬的表尾樣式，並保護內部表格不跑版
-        let html = `<html><head><title>木子家MUZI MAISON - 出貨明細單</title><style>
-          body { font-family: "Microsoft JhengHei", sans-serif; line-height: 1.5; padding: 0; background: #fff; color: #000; } 
-          .print-page { page-break-after: always; padding: 20px; max-width: 800px; margin: 0 auto; } 
-          h1 { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; } 
-          .order-header { display: flex; justify-content: space-between; font-weight: bold; font-size: 1.2em; border-bottom: 1px dashed #ccc; padding-bottom: 10px; margin-bottom: 15px; } 
-          .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; font-size: 1.1em; } 
-          
-          /* 限定只對商品明細表格加框線 */
-          table.item-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 0.95em; } 
-          table.item-table th, table.item-table td { border: 1px solid #333; padding: 8px; text-align: left; } 
-          table.item-table th { background: #f0f0f0; } 
-          
-          .total-box { margin-top: 20px; padding-top: 15px; border-top: 2px solid #333; text-align: right; font-size: 1.1em; } 
-          .total-row { display: flex; justify-content: flex-end; gap: 20px; margin-bottom: 5px; } 
-          .total-final { font-weight: bold; font-size: 1.4em; margin-top: 10px; color: #000; } 
-          .note-box { margin-top: 15px; padding: 10px; border: 1px solid #333; background: #fafafa; }
-          
-          /* 🌟 核心魔法：設定 tfoot 強制在每一張實體紙張的底部重複出現 */
-          tfoot { display: table-footer-group; }
-          .page-footer { border-top: 2px solid #000; padding-top: 8px; margin-top: 30px; text-align: right; font-size: 13px; font-weight: bold; color: #333; }
-        </style></head><body>`;
 
-        // 🌟 升級2：用隱形的大 <table> 把整筆訂單包起來
-        confirmedOrders.forEach((o, index) => {
-          html += `
-          <div class="print-page">
-            <table style="width: 100%; border: none;">
-              <tfoot style="display: table-footer-group;">
-                <tr>
-                  <td style="border: none; padding: 0;">
-                    <div class="page-footer">
-                      📦 訂單編號：${o.id} | 批次：第 ${index + 1} 筆 / 共 ${confirmedOrders.length} 筆
-                    </div>
-                  </td>
-                </tr>
-              </tfoot>
-              <tbody>
-                <tr>
-                  <td style="border: none; padding: 0;">
-                    <h1>木子家MUZI MAISON - 出貨明細單</h1>
-                    <p style="text-align:right; font-size: 0.9em; margin-top:-10px;">列印時間：${new Date().toLocaleString()}</p>
-                    <div class="order-header"><span>訂單編號：${o.id}</span><span>${o.deliveryMethod === 'delivery' ? '🚚 宅配' : '🏪 自取'}</span></div>
-                    <div class="info-grid"><div><strong>收件人：</strong>${o.customerInfo.name}</div><div><strong>電話：</strong>${o.customerInfo.phone}</div><div style="grid-column: span 2;"><strong>地址：</strong>${o.customerInfo.address || '無'}</div><div style="grid-column: span 2;"><strong>Line ID：</strong>${o.customerInfo.lineId || '無'}</div></div>
-                    
-                    <table class="item-table">
-                      <tr><th>品號</th><th>分類</th><th>商品名稱</th><th>單價</th><th>重量</th><th>數量</th><th>小計</th></tr>
-                      ${o.items.map(i => `<tr><td>${i.id || ''}</td><td>${i.category || ''}</td><td>${i.name}</td><td>$${i.isAddon && i.freeQty > 0 && i.paidQty > 0 ? `${i.freeQty}件$0, ${i.paidQty}件$${i.price}` : (i.subtotal === 0 ? '0' : i.price)}</td><td>${i.weight || ''}</td><td>${i.qty} ${i.unit || ''}</td><td>$${i.subtotal !== undefined ? i.subtotal : (i.price * i.qty)}</td></tr>`).join('')}
-                    </table>
-                    
-                    ${o.orderNote ? `<div class="note-box"><strong>買家/訂單備註：</strong><br/>${o.orderNote.replace(/\n/g, '<br/>')}</div>` : ''}
-                    ${o.mergeNote ? `<div class="note-box"><strong>系統備註：</strong><br/>${o.mergeNote}</div>` : ''}
-                    <div class="total-box">
-                      <div class="total-row"><span>商品小計：</span><span>$${o.totals.itemsBaseTotal}</span></div>
-                      ${o.totals.discountAmount > 0 ? `<div class="total-row" style="color: #e11d48;"><span>活動折抵：</span><span>-$${o.totals.discountAmount}</span></div>` : ''}
-                      ${o.adminDiscount > 0 ? `<div class="total-row" style="color: #e11d48;"><span>手動折扣：</span><span>-$${o.adminDiscount}</span></div>` : ''}
-                      <div class="total-row"><span>運費：</span><span style="${o.totals.shippingFee === 0 ? 'color: #10b981; font-weight: bold;' : ''}">${o.totals.shippingFee === 0 ? '免運費 ($0)' : `$${o.totals.shippingFee}`}</span></div>
-                      <div class="total-final"><span>總計金額：</span><span>$${o.totals.finalPrice}</span></div>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>`;
-        });
-        
-        html += '</body></html>';
-        const printWindow = window.open('', '', 'width=800,height=600'); 
-        printWindow.document.write(html); 
-        printWindow.document.close(); 
-        
-        // 給系統一點時間渲染複雜表格再印
-        setTimeout(() => { 
-          alert("💡 小提醒：為了讓出貨單更美觀，請在接下來的列印視窗中，把【頁首和頁尾】的選項「取消勾選」喔！");
-          printWindow.print(); 
-        }, 800);
+        alert("⏳ 系統正在為您打包並生成高畫質 PDF 出貨單...\n(若訂單量較多，可能需要數十秒鐘，請勿關閉網頁)");
+
+        // 1. 建立一個隱形的畫布區
+        const printContainer = document.createElement('div');
+        printContainer.style.position = 'absolute';
+        printContainer.style.left = '-9999px';
+        printContainer.style.top = '0';
+        printContainer.style.width = '800px'; 
+        printContainer.style.backgroundColor = '#fff';
+        document.body.appendChild(printContainer);
+
+        try {
+          if (!window.jspdf || !window.html2canvas) {
+             return alert("PDF 引擎尚未載入完成，請稍後再試一次！");
+          }
+
+          const { jsPDF } = window.jspdf;
+          const pdf = new jsPDF('p', 'mm', 'a4');
+          const a4Width = 210;
+          const a4Height = 297;
+          let isFirstPage = true;
+
+          // 💡 獨家防呆魔法：jsPDF 原生不支援中文會變亂碼。
+          // 所以我們寫一個小工具，把你要寫的「中文頁尾」畫成圖片再貼上去！
+          const createFooterImage = (text) => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1000; canvas.height = 60;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.font = 'bold 22px "Microsoft JhengHei", sans-serif';
+            ctx.fillStyle = '#555555';
+            ctx.textAlign = 'center';
+            ctx.fillText(text, canvas.width / 2, 40);
+            return canvas.toDataURL('image/jpeg');
+          };
+
+          for (const o of confirmedOrders) {
+            // 清空並注入單筆訂單的 HTML (這次不用表格包裝了，純淨排版)
+            printContainer.innerHTML = `
+              <div style="padding: 30px; font-family: 'Microsoft JhengHei', sans-serif; color: #000; line-height: 1.6;">
+                <h1 style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px;">木子家MUZI MAISON - 出貨明細單</h1>
+                <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 1.2em; border-bottom: 1px dashed #ccc; padding-bottom: 10px; margin-bottom: 15px;">
+                  <span>訂單編號：${o.id}</span>
+                  <span>${o.deliveryMethod === 'delivery' ? '🚚 宅配' : '🏪 自取'}</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; font-size: 1.1em;">
+                  <div><strong>收件人：</strong>${o.customerInfo.name}</div>
+                  <div><strong>電話：</strong>${o.customerInfo.phone}</div>
+                  <div style="grid-column: span 2;"><strong>地址：</strong>${o.customerInfo.address || '無'}</div>
+                  <div style="grid-column: span 2;"><strong>Line ID：</strong>${o.customerInfo.lineId || '無'}</div>
+                </div>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 1em;">
+                  <thead>
+                    <tr>
+                      <th style="border: 1px solid #333; padding: 10px; background: #f0f0f0;">品號</th>
+                      <th style="border: 1px solid #333; padding: 10px; background: #f0f0f0;">分類</th>
+                      <th style="border: 1px solid #333; padding: 10px; background: #f0f0f0;">商品名稱</th>
+                      <th style="border: 1px solid #333; padding: 10px; background: #f0f0f0;">單價</th>
+                      <th style="border: 1px solid #333; padding: 10px; background: #f0f0f0;">數量</th>
+                      <th style="border: 1px solid #333; padding: 10px; background: #f0f0f0;">小計</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${o.items.map(i => `
+                      <tr>
+                        <td style="border: 1px solid #333; padding: 10px;">${i.id || ''}</td>
+                        <td style="border: 1px solid #333; padding: 10px;">${i.category || ''}</td>
+                        <td style="border: 1px solid #333; padding: 10px;">${i.name} ${i.weight ? `(${i.weight})` : ''}</td>
+                        <td style="border: 1px solid #333; padding: 10px;">$${i.isAddon && i.freeQty > 0 && i.paidQty > 0 ? `${i.freeQty}件$0, ${i.paidQty}件$${i.price}` : (i.subtotal === 0 ? '0' : i.price)}</td>
+                        <td style="border: 1px solid #333; padding: 10px;">${i.qty} ${i.unit || ''}</td>
+                        <td style="border: 1px solid #333; padding: 10px;">$${i.subtotal !== undefined ? i.subtotal : (i.price * i.qty)}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+                ${o.orderNote ? `<div style="margin-top: 15px; padding: 10px; border: 1px solid #333; background: #fafafa;"><strong>買家/訂單備註：</strong><br/>${o.orderNote.replace(/\n/g, '<br/>')}</div>` : ''}
+                ${o.mergeNote ? `<div style="margin-top: 15px; padding: 10px; border: 1px solid #333; background: #fafafa;"><strong>系統備註：</strong><br/>${o.mergeNote}</div>` : ''}
+                <div style="margin-top: 20px; padding-top: 15px; border-top: 2px solid #333; text-align: right; font-size: 1.2em;">
+                  <div style="display: flex; justify-content: flex-end; gap: 20px; margin-bottom: 5px;"><span>商品小計：</span><span>$${o.totals.itemsBaseTotal}</span></div>
+                  ${o.totals.discountAmount > 0 ? `<div style="display: flex; justify-content: flex-end; gap: 20px; margin-bottom: 5px; color: #e11d48;"><span>活動折抵：</span><span>-$${o.totals.discountAmount}</span></div>` : ''}
+                  ${o.adminDiscount > 0 ? `<div style="display: flex; justify-content: flex-end; gap: 20px; margin-bottom: 5px; color: #e11d48;"><span>手動折扣：</span><span>-$${o.adminDiscount}</span></div>` : ''}
+                  <div style="display: flex; justify-content: flex-end; gap: 20px; margin-bottom: 5px;"><span>運費：</span><span>${o.totals.shippingFee === 0 ? '免運費 ($0)' : `$${o.totals.shippingFee}`}</span></div>
+                  <div style="font-weight: bold; font-size: 1.4em; margin-top: 10px;"><span>總計金額：</span><span>$${o.totals.finalPrice}</span></div>
+                </div>
+              </div>
+            `;
+
+            // 等待一下讓瀏覽器渲染 HTML
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            // 將這張訂單轉成一長條的圖片
+            const canvas = await html2canvas(printContainer, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+            const imgData = canvas.toDataURL('image/jpeg', 1.0);
+
+            // 🌟 精準計算這筆訂單的專屬頁數！
+            const imgWidth = a4Width;
+            const contentHeight = a4Height - 15; // 底部留 15mm 給頁尾
+            const imgHeight = (canvas.height * a4Width) / canvas.width;
+            let heightLeft = imgHeight;
+            let position = 0;
+            
+            const totalPagesForThisOrder = Math.ceil(imgHeight / contentHeight);
+            let currentPageForThisOrder = 1;
+
+            if (!isFirstPage) pdf.addPage();
+            isFirstPage = false;
+
+            while (heightLeft > 0) {
+              // 貼上內容圖片 (如果高度超過一頁，就會用負數的 position 把長條圖片往上推)
+              pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+              
+              // 🌟 貼上我們剛剛自製的「專屬中文圖層頁尾」
+              const footerText = `📦 訂單編號: ${o.id}  |  第 ${currentPageForThisOrder} 頁 / 共 ${totalPagesForThisOrder} 頁`;
+              const footerImg = createFooterImage(footerText);
+              // 固定在每一張 A4 實體紙張的底部
+              pdf.addImage(footerImg, 'JPEG', 0, a4Height - 12, a4Width, 8); 
+
+              heightLeft -= contentHeight;
+              position -= contentHeight;
+
+              if (heightLeft > 0) {
+                pdf.addPage();
+                currentPageForThisOrder++;
+              }
+            }
+          }
+
+          document.body.removeChild(printContainer);
+          // 觸發下載
+          pdf.save(`木子家出貨明細單_${new Date().toISOString().split('T')[0]}.pdf`);
+          
+        } catch (error) {
+          document.body.removeChild(printContainer);
+          alert("PDF 產生失敗：" + error.message);
+        }
       };
 
       const filteredUsers = useMemo(() => {
