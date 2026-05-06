@@ -1851,6 +1851,11 @@ const uploadTask = await storageRef.put(blob, metadata);
                 <div className="p-6 md:p-8">
                   <h1 className="text-3xl font-black text-stone-800 mb-2">{productFromRoute.name}</h1>
                   {productFromRoute.desc && <p className="text-stone-500 mb-4">{productFromRoute.desc}</p>}
+                  {productFromRoute.weight && (
+                    <p className="inline-block mb-3 px-2 py-1 rounded bg-stone-100 text-stone-500 text-xs font-bold">
+                      重量：{productFromRoute.weight}
+                    </p>
+                  )}
                   <p className="text-3xl font-black text-amber-600 mb-6">
                     ${productFromRoute.price}
                     {productFromRoute.unit && <span className="text-sm text-stone-400 font-normal"> / {productFromRoute.unit}</span>}
@@ -1860,6 +1865,27 @@ const uploadTask = await storageRef.put(blob, metadata);
                     <span className="w-10 text-center font-bold">{cart[productFromRoute.id] || 0}</span>
                     <button onClick={() => updateCart(productFromRoute.id, 1)} className="bg-amber-500 text-white px-3 py-2 rounded-lg font-bold">+</button>
                     <Link to="/cart" className="ml-auto bg-stone-800 text-white px-4 py-2 rounded-lg font-bold">前往購物車</Link>
+                  </div>
+
+                  <div className="mt-8 space-y-5">
+                    {productFromRoute.intro && (
+                      <div>
+                        <h3 className="font-bold text-stone-700 mb-1">產品介紹</h3>
+                        <p className="text-sm text-stone-600 whitespace-pre-wrap">{productFromRoute.intro}</p>
+                      </div>
+                    )}
+                    {productFromRoute.ingredients && (
+                      <div>
+                        <h3 className="font-bold text-stone-700 mb-1">產品成分</h3>
+                        <p className="text-sm text-stone-600 whitespace-pre-wrap">{productFromRoute.ingredients}</p>
+                      </div>
+                    )}
+                    {productFromRoute.notices && (
+                      <div>
+                        <h3 className="font-bold text-stone-700 mb-1">注意事項</h3>
+                        <p className="text-sm text-rose-700 bg-rose-50 border border-rose-100 rounded-xl p-3 whitespace-pre-wrap">{productFromRoute.notices}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
