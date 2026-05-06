@@ -151,6 +151,9 @@ export default function CartDrawer({
                     >
                       <img
                         src={addon.image || 'https://via.placeholder.com/150?text=Empty'}
+                        loading="lazy"
+                        decoding="async"
+                        fetchPriority="low"
                         className="w-14 h-14 object-cover rounded-lg shrink-0"
                       />
                       <div className="flex-1 flex flex-col justify-between py-0.5 min-w-0">

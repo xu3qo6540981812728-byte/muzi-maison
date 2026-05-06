@@ -18,7 +18,7 @@ export default function ProductCard({
           onClick={onOpenDetail}
           className="relative block w-24 h-24 rounded-xl shrink-0 overflow-hidden cursor-pointer hover:ring-2 hover:ring-amber-400 transition-all"
         >
-          <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+          <img src={product.image} alt={product.name} loading="lazy" decoding="async" fetchPriority="low" className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-black/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
             <span className="bg-white/90 text-stone-800 text-[10px] font-bold px-2 py-1 rounded-full">編輯</span>
           </div>
@@ -38,7 +38,7 @@ export default function ProductCard({
           to={`/product/${product.id}`}
           className="relative block w-24 h-24 rounded-xl shrink-0 overflow-hidden cursor-pointer hover:ring-2 hover:ring-amber-400 transition-all"
         >
-          <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+          <img src={product.image} alt={product.name} loading="lazy" decoding="async" fetchPriority="low" className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-black/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
             <span className="bg-white/90 text-stone-800 text-[10px] font-bold px-2 py-1 rounded-full">詳情</span>
           </div>

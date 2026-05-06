@@ -190,7 +190,7 @@ const [publicTopSellers, setPublicTopSellers] = useState({ items: [], label: '�
       const writeAdminLog = async (action, detail = {}) => {
         if (!db || !currentUser || !isAdminMode) return
         try {
-          await db.collection('admin_logs').add({
+          await db.collection('settings').doc('adminLogs').collection('items').add({
             action,
             detail,
             adminUid: currentUser.uid,
@@ -199,6 +199,133 @@ const [publicTopSellers, setPublicTopSellers] = useState({ items: [], label: '�
           })
         } catch (error) {
           console.error('寫入管理操作紀錄失敗', error)
+        }
+      }
+      const normalizeLogValue = (value) => {
+        if (value === undefined || value === null || value === '') return '（空）'
+        if (typeof value === 'boolean') return value ? '是' : '否'
+        return String(value)
+      }
+      const buildFieldChanges = (beforeObj, afterObj, fields) => {
+        const changes = []
+        fields.forEach(({ key, label }) => {
+          const beforeVal = beforeObj?.[key]
+          const afterVal = afterObj?.[key]
+          if (beforeVal !== afterVal) {
+            changes.push({
+              field: key,
+              label,
+              before: normalizeLogValue(beforeVal),
+              after: normalizeLogValue(afterVal)
+            })
+          }
+        })
+        return changes
+      }
+      const findOrderById = (orderId) => {
+        return [...allOrders, ...oldOrders, ...(cloudSearchResult ? [cloudSearchResult] : [])].find((o) => o.id === orderId) || null
+      }
+      const formatAdminLog = (log) => {
+        const d = log?.detail || {}
+        const actionMap = {
+          order_status_updated: '更新訂單狀態',
+          tracking_number_saved: '儲存物流單號',
+          order_note_saved: '儲存訂單備註',
+          order_discount_saved: '修改訂單折扣',
+          order_deleted: '刪除訂單',
+          product_saved: '儲存商品',
+          product_deleted: '刪除商品',
+          products_csv_imported: '匯入商品 CSV',
+          system_config_updated: '更新系統設定',
+          top_sellers_published: '發布熱銷排行',
+          contact_info_updated: '更新聯絡資訊',
+          about_info_updated: '更新關於我們',
+          admin_customer_saved: '更新客戶資料',
+          admin_customer_deleted: '停用客戶',
+          admin_customer_restored: '恢復客戶',
+          category_added: '新增分類',
+          category_deleted: '刪除分類',
+          category_renamed: '分類更名',
+          category_reordered: '調整分類順序',
+          category_visibility_toggled: '切換分類顯示狀態',
+          catalog_uploaded: '上傳型錄',
+          products_csv_exported: '匯出商品 CSV',
+          admin_order_session_started: '開始代客建單',
+          admin_order_session_ended: '結束代客建單',
+          confirmed_orders_printed: '列印出貨明細',
+          announcement_saved: '儲存公告',
+          announcement_deleted: '刪除公告',
+          announcement_reordered: '調整公告順序',
+          catalog_deleted: '移除型錄'
+        }
+
+        let summary = ''
+        if (log.action === 'order_status_updated') {
+          summary = `訂單 ${d.orderId || '-'}：${STATUS_MAP[d.fromStatus]?.label || d.fromStatus || '-'} -> ${STATUS_MAP[d.toStatus]?.label || d.toStatus || '-'}`
+        } else if (log.action === 'tracking_number_saved') {
+          summary = `訂單 ${d.orderId || '-'}：物流單號更新為 ${d.trackingNumber || '(空)'}`
+        } else if (log.action === 'order_note_saved') {
+          summary = `訂單 ${d.orderId || '-'}：備註已更新（${d.noteLength || 0} 字）`
+        } else if (log.action === 'order_discount_saved') {
+          summary = `訂單 ${d.orderId || '-'}：折扣 ${d.adminDiscount || 0} 元，總額 ${d.finalPrice || 0} 元`
+        } else if (log.action === 'order_deleted') {
+          summary = `訂單 ${d.orderId || '-'} 已刪除`
+        } else if (log.action === 'product_saved') {
+          summary = `商品 ${d.productId || '-'}（${d.productName || '未命名'}）已儲存`
+        } else if (log.action === 'product_deleted') {
+          summary = `商品 ${d.productId || '-'}（${d.productName || '未命名'}）已刪除`
+        } else if (log.action === 'products_csv_imported') {
+          summary = `CSV 匯入 ${d.importCount || 0} 筆，新增分類 ${d.newCategoriesAdded || 0} 個`
+        } else if (log.action === 'system_config_updated') {
+          summary = `更新設定欄位：${Array.isArray(d.keys) ? d.keys.join('、') : '-'}`
+        } else if (log.action === 'top_sellers_published') {
+          summary = `發布熱銷排行 ${d.itemCount || 0} 筆（榜首：${d.topItemId || '-'}）`
+        } else if (log.action === 'contact_info_updated') {
+          summary = `聯絡資訊已更新（電話:${d.hasPhone ? '有' : '無'}、地址:${d.hasAddress ? '有' : '無'}、LINE:${d.hasLineLink ? '有' : '無'}）`
+        } else if (log.action === 'about_info_updated') {
+          summary = `關於我們已更新（標題：${d.title || '未提供'}）`
+        } else if (log.action === 'admin_customer_saved') {
+          summary = `客戶 ${d.customerId || '-'}（${d.customerName || '未命名'}）資料已${d.isNew ? '新增' : '更新'}`
+        } else if (log.action === 'admin_customer_deleted') {
+          summary = `客戶 ${d.customerId || '-'}（${d.customerName || '未命名'}）已停用`
+        } else if (log.action === 'admin_customer_restored') {
+          summary = `客戶 ${d.customerId || '-'}（${d.customerName || '未命名'}）已恢復`
+        } else if (log.action === 'category_added') {
+          summary = `新增分類：${d.categoryName || '未命名'}`
+        } else if (log.action === 'category_deleted') {
+          summary = `刪除分類：${d.categoryName || '未命名'}`
+        } else if (log.action === 'category_renamed') {
+          summary = `分類由「${d.from || '-'}」改為「${d.to || '-'}」，同步 ${d.affectedProducts || 0} 筆商品`
+        } else if (log.action === 'category_reordered') {
+          summary = `分類「${d.categoryName || '-'}」排序由 ${d.fromIndex ?? '-'} -> ${d.toIndex ?? '-'}`
+        } else if (log.action === 'category_visibility_toggled') {
+          summary = `分類「${d.categoryName || '-'}」已${d.isHidden ? '隱藏' : '顯示'}`
+        } else if (log.action === 'catalog_uploaded') {
+          summary = `上傳型錄：${d.fileName || '未命名檔案'}`
+        } else if (log.action === 'products_csv_exported') {
+          summary = `匯出商品 CSV ${d.exportCount || 0} 筆`
+        } else if (log.action === 'admin_order_session_started') {
+          summary = `開始代客建單：${d.customerName || '-'}（${d.customerId || '-'}）`
+        } else if (log.action === 'admin_order_session_ended') {
+          summary = `結束代客建單：${d.customerName || '-'}（${d.customerId || '-'}）`
+        } else if (log.action === 'confirmed_orders_printed') {
+          summary = `列印已確認訂單出貨明細 ${d.orderCount || 0} 筆`
+        } else if (log.action === 'announcement_saved') {
+          summary = `公告已儲存（${d.id === 'new' ? '新增' : '編輯'}：${d.title || '未命名'}）`
+        } else if (log.action === 'announcement_deleted') {
+          summary = `公告 ${d.id || '-'} 已刪除`
+        } else if (log.action === 'announcement_reordered') {
+          summary = `公告順序已調整（原索引 ${d.fromIndex ?? '-'}，方向 ${d.direction === -1 ? '上移' : '下移'}）`
+        } else if (log.action === 'catalog_deleted') {
+          summary = '產品型錄已移除'
+        } else {
+          summary = '已執行管理操作'
+        }
+
+        return {
+          title: actionMap[log.action] || log.action || '管理操作',
+          summary,
+          changes: Array.isArray(d.changes) ? d.changes : []
         }
       }
       const productFromRoute = useMemo(() => {
@@ -489,7 +616,7 @@ useEffect(() => {
             const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setAllUsers(users);
           });
-          unsubscribeAdminLogs = db.collection('admin_logs').orderBy('createdAt', 'desc').limit(100).onSnapshot(snapshot => {
+          unsubscribeAdminLogs = db.collection('settings').doc('adminLogs').collection('items').orderBy('createdAt', 'desc').limit(100).onSnapshot(snapshot => {
             const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setAdminLogs(logs);
           });
@@ -801,6 +928,7 @@ mainProductQty += item.qty;
       };
 
       const handleUpdateCustomerByAdmin = async () => {
+        if (!requireAdminAccess()) return;
         if (!selectedCustomer.name || !selectedCustomer.phone) return alert("姓名與電話不能為空！");
         if (db) {
           try {
@@ -809,11 +937,36 @@ mainProductQty += item.qty;
                await db.collection('users').doc(newId).set({
                  name: selectedCustomer.name, phone: selectedCustomer.phone, address: selectedCustomer.address, lineId: selectedCustomer.lineId, gender: selectedCustomer.gender, role: 'customer', email: '', createdAt: firebase.firestore.FieldValue.serverTimestamp()
                });
+               await writeAdminLog('admin_customer_saved', {
+                 isNew: true,
+                 customerId: newId,
+                 customerName: selectedCustomer.name,
+                 changes: buildFieldChanges({}, selectedCustomer, [
+                  { key: 'name', label: '姓名' },
+                  { key: 'phone', label: '電話' },
+                  { key: 'address', label: '地址' },
+                  { key: 'lineId', label: 'LINE ID' },
+                  { key: 'gender', label: '性別' }
+                 ])
+               })
                alert("客戶新增成功！");
             } else {
+               const beforeCustomer = allUsers.find(u => u.id === selectedCustomer.id) || {}
                await db.collection('users').doc(selectedCustomer.id).update({
                  name: selectedCustomer.name, phone: selectedCustomer.phone, address: selectedCustomer.address, lineId: selectedCustomer.lineId, gender: selectedCustomer.gender
                });
+               await writeAdminLog('admin_customer_saved', {
+                 isNew: false,
+                 customerId: selectedCustomer.id,
+                 customerName: selectedCustomer.name,
+                 changes: buildFieldChanges(beforeCustomer, selectedCustomer, [
+                  { key: 'name', label: '姓名' },
+                  { key: 'phone', label: '電話' },
+                  { key: 'address', label: '地址' },
+                  { key: 'lineId', label: 'LINE ID' },
+                  { key: 'gender', label: '性別' }
+                 ])
+               })
                alert("客戶資料已更新！");
             }
             setIsEditingAdminCustomer(false);
@@ -830,9 +983,11 @@ mainProductQty += item.qty;
       };
 
       const handleDeleteCustomer = async () => {
+        if (!requireAdminAccess()) return;
         if(!window.confirm('確定徹底刪除此客戶資料嗎？(該帳號將被停用且無法再次登入)')) return;
         if (db) {
           await db.collection('users').doc(selectedCustomer.id).update({ role: 'deleted' });
+          await writeAdminLog('admin_customer_deleted', { customerId: selectedCustomer.id, customerName: selectedCustomer.name || '' })
           alert("客戶帳號已刪除並停用！");
           setSelectedCustomer(null);
           setIsEditingAdminCustomer(false);
@@ -840,15 +995,18 @@ mainProductQty += item.qty;
       };
 
       const handleRestoreCustomer = async () => {
+        if (!requireAdminAccess()) return;
         if(!window.confirm('確定要恢復此客戶的登入與購物權限嗎？')) return;
         if (db) {
           await db.collection('users').doc(selectedCustomer.id).update({ role: 'customer' });
+          await writeAdminLog('admin_customer_restored', { customerId: selectedCustomer.id, customerName: selectedCustomer.name || '' })
           alert("帳號已恢復成功！客戶可以正常登入了。");
           setSelectedCustomer(null);
         }
       };
 
       const startAdminOrder = (customer) => {
+         writeAdminLog('admin_order_session_started', { customerId: customer.id || '', customerName: customer.name || '' })
          setAdminOrderingFor(customer);
          setCustomerInfo({
             name: customer.name || '', phone: customer.phone || '', address: customer.address || '',
@@ -859,6 +1017,13 @@ mainProductQty += item.qty;
          setSidebarOpen(false);
          alert(`已進入「代客建單」模式！\n目前正在幫客戶 [${customer.name}] 選購商品。\n選購完畢後請至購物車結帳送出。`);
       };
+      const endAdminOrderSession = () => {
+        if (adminOrderingFor) {
+          writeAdminLog('admin_order_session_ended', { customerId: adminOrderingFor.id || '', customerName: adminOrderingFor.name || '' })
+        }
+        setAdminOrderingFor(null)
+        setCart({})
+      }
 
       const handleCheckout = async () => {
         if (cartData.totalQty === 0) return;
@@ -1020,7 +1185,15 @@ try {
          await writeAdminLog('order_status_updated', {
            orderId: order.id,
            fromStatus: order.status,
-           toStatus: newStatus
+           toStatus: newStatus,
+           changes: [
+             {
+               field: 'status',
+               label: '訂單狀態',
+               before: STATUS_MAP[order.status]?.label || order.status || '（空）',
+               after: STATUS_MAP[newStatus]?.label || newStatus || '（空）'
+             }
+           ]
          })
 
          // 🌟 修正2：消除視覺假死！手動更新沒有即時連線的「舊訂單」與「搜尋結果」的畫面狀態
@@ -1032,9 +1205,22 @@ try {
       
       const saveTrackingNumber = async (orderId) => {
         if (!requireAdminAccess()) return;
+        const orderBefore = findOrderById(orderId)
         if (db) { 
           await db.collection('orders').doc(orderId).update({ trackingNumber: trackingInputs[orderId] }); 
           alert("出貨單號已儲存！"); 
+          await writeAdminLog('tracking_number_saved', {
+            orderId,
+            trackingNumber: trackingInputs[orderId] || '',
+            changes: [
+              {
+                field: 'trackingNumber',
+                label: '物流單號',
+                before: normalizeLogValue(orderBefore?.trackingNumber),
+                after: normalizeLogValue(trackingInputs[orderId])
+              }
+            ]
+          })
           // 🌟 修正：消除舊訂單的視覺假死
           setOldOrders(prev => prev.map(o => o.id === orderId ? { ...o, trackingNumber: trackingInputs[orderId] } : o));
         }
@@ -1042,10 +1228,23 @@ try {
       
       const saveOrderNote = async (orderId) => {
         if (!requireAdminAccess()) return;
+        const orderBefore = findOrderById(orderId)
         if (db) { 
           const newNote = adminNoteInputs[orderId] !== undefined ? adminNoteInputs[orderId] : '';
           await db.collection('orders').doc(orderId).update({ orderNote: newNote }); 
           alert("訂單備註已儲存！"); 
+          await writeAdminLog('order_note_saved', {
+            orderId,
+            noteLength: newNote.length,
+            changes: [
+              {
+                field: 'orderNote',
+                label: '訂單備註',
+                before: normalizeLogValue(orderBefore?.orderNote),
+                after: normalizeLogValue(newNote)
+              }
+            ]
+          })
           // 🌟 修正：消除舊訂單的視覺假死
           setOldOrders(prev => prev.map(o => o.id === orderId ? { ...o, orderNote: newNote } : o));
         }
@@ -1059,6 +1258,15 @@ try {
          if (db) { 
             await db.collection('orders').doc(order.id).update({ adminDiscount: discount, 'totals.finalPrice': newFinalPrice }); 
             alert("訂單金額已修改！"); 
+            await writeAdminLog('order_discount_saved', {
+              orderId: order.id,
+              adminDiscount: discount,
+              finalPrice: newFinalPrice,
+              changes: [
+                { field: 'adminDiscount', label: '管理折扣', before: normalizeLogValue(order.adminDiscount || 0), after: normalizeLogValue(discount) },
+                { field: 'finalPrice', label: '最終金額', before: normalizeLogValue(order.totals?.finalPrice), after: normalizeLogValue(newFinalPrice) }
+              ]
+            })
             // 🌟 修正：消除舊訂單的視覺假死
             setOldOrders(prev => prev.map(o => o.id === order.id ? { ...o, adminDiscount: discount, totals: { ...o.totals, finalPrice: newFinalPrice } } : o));
          }
@@ -1080,6 +1288,7 @@ try {
        
         if (!window.confirm("確定要徹底刪除此訂單嗎？（刪除後無法復原）")) return;
         if (db) await db.collection('orders').doc(orderId).delete();
+        await writeAdminLog('order_deleted', { orderId });
 
         // 🌟 修正3：如果剛好是在「雲端搜尋」模式下刪除的，順便清空畫面
         if (cloudSearchResult && cloudSearchResult.id === orderId) {
@@ -1425,6 +1634,7 @@ const ordersToMerge = currentOrders.filter(o => mergeSelection.includes(o.id));
 
           document.body.removeChild(printContainer);
           pdf.save(`木子家出貨明細單_${new Date().toISOString().split('T')[0]}.pdf`);
+          await writeAdminLog('confirmed_orders_printed', { orderCount: confirmedOrders.length })
           
         } catch (error) {
           if(printContainer.parentNode) document.body.removeChild(printContainer);
@@ -1501,6 +1711,7 @@ const uploadTask = await storageRef.put(blob, metadata);
 
       // --- 以下為新增：處理 PDF 檔案上傳的功能 ---
       const handleFileUpload = async (file) => {
+        if (!requireAdminAccess()) return;
         if (!file) return;
         if (file.type !== 'application/pdf') {
           return alert("請上傳 PDF 格式的檔案！");
@@ -1523,6 +1734,7 @@ const uploadTask = await storageRef.put(blob, metadata);
           if (db) {
             await db.collection('settings').doc('catalog').set({ url: downloadURL }, { merge: true });
           }
+          await writeAdminLog('catalog_uploaded', { fileName: file.name || '', fileSize: file.size || 0 })
           alert("產品型錄上傳成功！");
         } catch (error) {
           console.error("上傳失敗", error);
@@ -1536,6 +1748,7 @@ const uploadTask = await storageRef.put(blob, metadata);
         if (!window.confirm("確定要刪除目前的產品型錄嗎？客戶將無法再下載。")) return;
         if (db) {
           await db.collection('settings').doc('catalog').set({ url: '' }, { merge: true });
+          await writeAdminLog('catalog_deleted', {})
           alert("已移除產品型錄！");
         }
       };
@@ -1553,8 +1766,24 @@ const uploadTask = await storageRef.put(blob, metadata);
         if (editingProduct.isNew && !editingProduct.id.trim()) return alert("請輸入「商品品號」！");
         const prodData = { ...editingProduct, id: editingProduct.id.trim(), price: Number(editingProduct.price) || 0, cost: Number(editingProduct.cost) || 0 };
         delete prodData.isNew;
+        const beforeProduct = products.find(p => p.id === prodData.id) || {}
         if (db) { try { await db.collection('products').doc(prodData.id).set(prodData); alert("商品儲存成功！"); } catch (error) { alert("儲存失敗！可能是圖片檔案過大超過限制。"); return; } }
-        await writeAdminLog('product_saved', { productId: prodData.id, productName: prodData.name || '' })
+        await writeAdminLog('product_saved', {
+          productId: prodData.id,
+          productName: prodData.name || '',
+          changes: buildFieldChanges(beforeProduct, prodData, [
+            { key: 'name', label: '商品名稱' },
+            { key: 'price', label: '售價' },
+            { key: 'cost', label: '成本' },
+            { key: 'category', label: '分類' },
+            { key: 'unit', label: '單位' },
+            { key: 'weight', label: '重量' },
+            { key: 'isPromo', label: '促銷商品' },
+            { key: 'isAddon', label: '加購商品' },
+            { key: 'providesFreeAddon', label: '提供免費加購額度' },
+            { key: 'isFreeShipping', label: '計入免運件數' }
+          ])
+        })
         setEditingProduct(null); 
       };
       
@@ -1579,6 +1808,7 @@ const uploadTask = await storageRef.put(blob, metadata);
 
       const handleAddCategory = () => {
          if (newCatName && !categoriesList.find(c => c.name === newCatName)) {
+           writeAdminLog('category_added', { categoryName: newCatName })
             saveCategoriesToDB([...categoriesList, { name: newCatName, isHidden: false }]);
             setNewCatName('');
          }
@@ -1586,6 +1816,7 @@ const uploadTask = await storageRef.put(blob, metadata);
 
       const handleDeleteCategory = (index) => {
          if(!window.confirm('確定刪除此分類？此動作不會刪除商品，但分類將從列表中移除。')) return;
+         writeAdminLog('category_deleted', { categoryName: categoriesList[index]?.name || '', index })
          const newList = [...categoriesList];
          newList.splice(index, 1);
          saveCategoriesToDB(newList);
@@ -1630,6 +1861,11 @@ const uploadTask = await storageRef.put(blob, metadata);
               });
               await batch.commit(); // 一口氣送出更新
             }
+            await writeAdminLog('category_renamed', {
+              from: oldName,
+              to: finalNewName,
+              affectedProducts: snapshot.empty ? 0 : snapshot.size
+            })
           }
           alert(`修改成功！已將分類名稱更新為「${finalNewName}」\n並同步更新了相關商品。`);
         } catch (error) {
@@ -1645,12 +1881,14 @@ const uploadTask = await storageRef.put(blob, metadata);
          const temp = newList[index];
          newList[index] = newList[index + direction];
          newList[index + direction] = temp;
+         writeAdminLog('category_reordered', { fromIndex: index, toIndex: index + direction, categoryName: temp?.name || '' })
          saveCategoriesToDB(newList);
       };
 
       const toggleCategoryVisibility = (index) => {
          const newList = [...categoriesList];
          newList[index].isHidden = !newList[index].isHidden;
+         writeAdminLog('category_visibility_toggled', { categoryName: newList[index].name, isHidden: newList[index].isHidden })
          saveCategoriesToDB(newList);
       };
 
@@ -1668,10 +1906,23 @@ const uploadTask = await storageRef.put(blob, metadata);
 
         const prodData = { ...item, id: item.id.trim(), price: Number(item.price) || 0, cost: Number(item.cost) || 0 };
         delete prodData.isNew;
+        const beforeProduct = products.find(p => p.id === prodData.id) || {}
 
         if (db) {
           try {
             await db.collection('products').doc(prodData.id).set(prodData, { merge: true });
+            await writeAdminLog('product_saved', {
+              productId: prodData.id,
+              productName: prodData.name || '',
+              changes: buildFieldChanges(beforeProduct, prodData, [
+                { key: 'name', label: '商品名稱' },
+                { key: 'price', label: '售價' },
+                { key: 'cost', label: '成本' },
+                { key: 'category', label: '分類' },
+                { key: 'unit', label: '單位' },
+                { key: 'weight', label: '重量' }
+              ])
+            })
             alert("商品儲存成功！");
           } catch (error) {
             alert("儲存失敗：" + error.message);
@@ -1726,6 +1977,7 @@ const uploadTask = await storageRef.put(blob, metadata);
         try {
           if (db && !item.isNew) {
             await db.collection('products').doc(item.id).delete();
+            await writeAdminLog('product_deleted', { productId: item.id || '', productName: item.name || '' })
           }
           const newTable = [...tableProducts];
           newTable.splice(index, 1);
@@ -1805,6 +2057,7 @@ const uploadTask = await storageRef.put(blob, metadata);
             }
 
             alert(`✅ 成功匯入/更新了 ${importCount} 筆商品資料！\n系統已同步更新商品與分類列表。`);
+            await writeAdminLog('products_csv_imported', { importCount, newCategoriesAdded: newCatsToAdd.length })
             setShowProductTable(false); 
           } catch (error) {
             alert(`匯入失敗！\n錯誤代碼：${error.code}\n錯誤訊息：${error.message}`);
@@ -1817,6 +2070,7 @@ const uploadTask = await storageRef.put(blob, metadata);
       // --- 批次匯出 CSV 功能 ---
       const handleCSVExport = () => {
         if (tableProducts.length === 0) return alert("目前沒有商品可以匯出！");
+        writeAdminLog('products_csv_exported', { exportCount: tableProducts.length })
         
         // 1. 準備 CSV 的標題列 (BOM \uFEFF 是為了解決 Excel 中文亂碼)
         let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
@@ -1865,20 +2119,51 @@ const uploadTask = await storageRef.put(blob, metadata);
     giftThreshold: Number(tempConfig.giftThreshold)||0, // 加入滿幾件送
     giftProductId: tempConfig.giftProductId || '' // 加入贈品品號
   };
+  const configLabels = {
+    shippingFee: '運費',
+    freeShippingThreshold: '免運門檻',
+    promoQty: '促銷組數門檻',
+    promoPrice: '促銷組合價',
+    wholesaleThreshold: '批發門檻',
+    freeAddonReminderMsg: '加購提醒文字',
+    giftThreshold: '滿額贈門檻',
+    giftProductId: '贈品品號'
+  }
+  const configChanges = Object.keys(configToSave)
+    .filter((key) => storeConfig?.[key] !== configToSave[key])
+    .map((key) => ({
+      field: key,
+      label: configLabels[key] || key,
+      before: normalizeLogValue(storeConfig?.[key]),
+      after: normalizeLogValue(configToSave[key])
+    }))
   if (db) await db.collection('settings').doc('config').set(configToSave, { merge: true });
-  await writeAdminLog('system_config_updated', { keys: Object.keys(configToSave) })
+  await writeAdminLog('system_config_updated', { keys: Object.keys(configToSave), changes: configChanges })
   setStoreConfig(configToSave); setShowConfigModal(false);
 };
 
       const saveContactInfo = async () => {
         if (!requireAdminAccess()) return;
         if (db) await db.collection('settings').doc('contact').set(contactData, { merge: true });
+        await writeAdminLog('contact_info_updated', {
+          hasPhone: !!contactData.phone,
+          hasAddress: !!contactData.address,
+          hasLineLink: !!contactData.lineLink
+        })
         setShowContactModal(false);
       };
 
       const saveAboutInfo = async () => {
         if (!requireAdminAccess()) return;
         if (db) { try { await db.collection('settings').doc('about').set(tempAboutData, { merge: true }); alert('「關於我們」已成功儲存！'); } catch (error) { alert('儲存失敗！可能是圖片過大。'); return; } }
+        await writeAdminLog('about_info_updated', {
+          title: tempAboutData?.title || '',
+          changes: buildFieldChanges(aboutData || {}, tempAboutData || {}, [
+            { key: 'title', label: '標題' },
+            { key: 'content', label: '內容' },
+            { key: 'image', label: '圖片連結' }
+          ])
+        })
         setIsEditingAbout(false);
       };
 
@@ -1891,6 +2176,22 @@ const uploadTask = await storageRef.put(blob, metadata);
             newList.push({ ...tempAnnounce, id: Date.now().toString() });
          }
          if (db) { await db.collection('settings').doc('announcements').set({ list: newList }); alert("公告已儲存！"); setIsEditingAnnounce(false); }
+         await writeAdminLog('announcement_saved', {
+           id: tempAnnounce.id || 'new',
+           title: tempAnnounce.title || '',
+           changes: buildFieldChanges(
+             announcements.find(a => a.id === tempAnnounce.id) || {},
+             tempAnnounce,
+             [
+               { key: 'title', label: '公告標題' },
+               { key: 'content', label: '公告內容' },
+               { key: 'isActive', label: '是否啟用' },
+               { key: 'showOnLoad', label: '是否進站彈出' },
+               { key: 'isPermanent', label: '是否永久顯示' },
+               { key: 'expireDate', label: '到期日' }
+             ]
+           )
+         })
       };
 
       const deleteAnnouncement = async (id) => {
@@ -1898,6 +2199,7 @@ const uploadTask = await storageRef.put(blob, metadata);
          if(!window.confirm('確定刪除此公告？')) return;
          const newList = announcements.filter(a => a.id !== id);
          if (db) await db.collection('settings').doc('announcements').set({ list: newList });
+         await writeAdminLog('announcement_deleted', { id })
       };
 
       const moveAnnounce = async (index, direction) => {
@@ -1910,6 +2212,7 @@ const uploadTask = await storageRef.put(blob, metadata);
          newList[index + direction] = temp;
          setAnnouncements(newList); 
          if (db) await db.collection('settings').doc('announcements').set({ list: newList });
+         await writeAdminLog('announcement_reordered', { fromIndex: index, direction })
       };
 
       const myOrders = currentUser ? allOrders.filter(o => o.userId === currentUser.uid) : [];
@@ -1954,7 +2257,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                 <div className="md:w-1/2 md:border-r border-stone-200 flex flex-col">
                   <div className="w-full h-64 md:h-80 bg-stone-200 flex-shrink-0 relative">
                     {currentImage ? (
-                      <img src={currentImage} className="w-full h-full object-cover" />
+                      <img src={currentImage} loading="eager" decoding="async" fetchPriority="high" className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-stone-400 bg-stone-100">
                         <ImageIcon size={48} opacity={0.5} />
@@ -2082,7 +2385,7 @@ const uploadTask = await storageRef.put(blob, metadata);
           {adminOrderingFor && (
             <div className="bg-amber-600 text-white px-4 py-2.5 flex justify-between items-center text-sm font-bold z-30 relative shadow-md">
               <span className="flex items-center gap-2"><ShoppingCart size={16}/> 正在為 {adminOrderingFor.name} 代建單...</span>
-              <button onClick={() => {setAdminOrderingFor(null); setCart({});}} className="bg-amber-700 px-3 py-1 rounded-md hover:bg-amber-800 transition-colors">取消代建</button>
+              <button onClick={endAdminOrderSession} className="bg-amber-700 px-3 py-1 rounded-md hover:bg-amber-800 transition-colors">取消代建</button>
             </div>
           )}
 
@@ -2092,7 +2395,7 @@ const uploadTask = await storageRef.put(blob, metadata);
               <div className="flex items-center gap-3 relative">
                 <button onClick={() => setSidebarOpen(true)} className="p-2 -ml-2 text-stone-600 hover:bg-stone-100 rounded-full transition-colors"><Menu size={24} /></button>
                 <label className={`relative block h-28 min-w-[6rem] max-w-[300px] flex items-center justify-center ${isAdminMode && !adminOrderingFor ? 'cursor-pointer hover:ring-2 hover:ring-amber-400 p-1 rounded-lg border border-dashed border-stone-300' : ''}`}>
-                  {logo ? <img src={logo} alt="Logo" className="max-w-full max-h-full object-contain" /> : <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center"><Store size={20} className="text-amber-700" /></div>}
+                  {logo ? <img src={logo} alt="Logo" loading="eager" decoding="async" fetchPriority="high" className="max-w-full max-h-full object-contain" /> : <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center"><Store size={20} className="text-amber-700" /></div>}
                   {isAdminMode && !adminOrderingFor && <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-lg"><Camera size={18} className="text-white" /></div>}
                   {isAdminMode && !adminOrderingFor && <input type="file" accept="image/*" className="hidden" onChange={onLogoChange} />}
                 </label>
@@ -2156,7 +2459,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                   {/* 第二名 */}
                   <div onClick={() => navigate(`/product/${publicTopSellers.items[1].id}`)} className="flex flex-col items-center w-1/3 max-w-[130px] md:max-w-[160px] z-0 cursor-pointer group">
                      <div className="relative w-20 h-20 md:w-28 md:h-28 mb-3">
-                        <img src={publicTopSellers.items[1].image} className="w-full h-full object-cover rounded-full border-4 border-slate-200 shadow-md transition-transform duration-300 group-hover:scale-105" />
+                        <img src={publicTopSellers.items[1].image} loading="lazy" decoding="async" fetchPriority="low" className="w-full h-full object-cover rounded-full border-4 border-slate-200 shadow-md transition-transform duration-300 group-hover:scale-105" />
                         <div className="absolute -bottom-1 -right-1 bg-slate-400 text-white text-[11px] font-black w-7 h-7 rounded-full flex items-center justify-center border-2 border-white shadow-sm">2</div>
                      </div>
                      <span className="text-xs md:text-sm font-bold text-stone-700 w-full text-center px-1 group-hover:text-amber-600 transition-colors leading-snug break-words">{publicTopSellers.items[1].name}</span>
@@ -2168,7 +2471,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                   {/* 第一名 */}
                   <div onClick={() => navigate(`/product/${publicTopSellers.items[0].id}`)} className="flex flex-col items-center w-1/3 max-w-[150px] md:max-w-[180px] z-10 cursor-pointer group">
                      <div className="relative w-24 h-24 md:w-32 md:h-32 mb-3">
-                        <img src={publicTopSellers.items[0].image} className="w-full h-full object-cover rounded-full border-4 border-amber-400 shadow-xl transition-transform duration-300 group-hover:scale-105" />
+                        <img src={publicTopSellers.items[0].image} loading="lazy" decoding="async" fetchPriority="low" className="w-full h-full object-cover rounded-full border-4 border-amber-400 shadow-xl transition-transform duration-300 group-hover:scale-105" />
                         <div className="absolute -bottom-1 -right-1 bg-amber-500 text-white text-sm font-black w-8 h-8 rounded-full flex items-center justify-center border-2 border-white shadow-sm">1</div>
                      </div>
                      <span className="text-sm md:text-base font-black text-stone-800 w-full text-center px-1 group-hover:text-amber-600 transition-colors leading-snug break-words">{publicTopSellers.items[0].name}</span>
@@ -2180,7 +2483,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                   {/* 第三名 */}
                   <div onClick={() => navigate(`/product/${publicTopSellers.items[2].id}`)} className="flex flex-col items-center w-1/3 max-w-[130px] md:max-w-[160px] z-0 cursor-pointer group">
                      <div className="relative w-20 h-20 md:w-28 md:h-28 mb-3">
-                        <img src={publicTopSellers.items[2].image} className="w-full h-full object-cover rounded-full border-4 border-orange-200 shadow-md transition-transform duration-300 group-hover:scale-105" />
+                        <img src={publicTopSellers.items[2].image} loading="lazy" decoding="async" fetchPriority="low" className="w-full h-full object-cover rounded-full border-4 border-orange-200 shadow-md transition-transform duration-300 group-hover:scale-105" />
                         <div className="absolute -bottom-1 -right-1 bg-orange-400 text-white text-[11px] font-black w-7 h-7 rounded-full flex items-center justify-center border-2 border-white shadow-sm">3</div>
                      </div>
                      <span className="text-xs md:text-sm font-bold text-stone-700 w-full text-center px-1 group-hover:text-amber-600 transition-colors leading-snug break-words">{publicTopSellers.items[2].name}</span>
@@ -2196,7 +2499,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                      {publicTopSellers.items.slice(3, 5).map((item, index) => (
                        <div key={item.id || `${item.name}-${index}`} onClick={() => navigate(`/product/${item.id}`)} className="flex items-center gap-3 bg-stone-50/50 p-2 rounded-xl border border-stone-100 hover:bg-amber-50 cursor-pointer transition-all duration-300 group">
                            <span className="text-stone-300 font-black w-4 text-center group-hover:text-amber-400 transition-colors">{index + 4}</span>
-                           <img src={item.image} className="w-10 h-10 object-cover rounded-lg shadow-sm transition-transform duration-300 group-hover:scale-105" />
+                           <img src={item.image} loading="lazy" decoding="async" fetchPriority="low" className="w-10 h-10 object-cover rounded-lg shadow-sm transition-transform duration-300 group-hover:scale-105" />
                            <span className="flex-1 text-sm font-bold text-stone-700 truncate group-hover:text-amber-700 transition-colors">{item.name}</span>
                            <span className="text-xs font-black bg-white px-2 py-1 rounded shadow-sm text-stone-500 border border-stone-100 group-hover:border-amber-200 group-hover:text-amber-600 transition-colors">{item.percentage}%</span>
                         </div>
@@ -2245,7 +2548,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                 <div className="flex-1 overflow-y-auto pt-16 pb-24 md:flex md:flex-row">
                   <div className="md:w-1/2 md:border-r border-stone-200 flex flex-col">
                     <div className="w-full h-64 md:h-80 bg-stone-200 flex-shrink-0 relative">
-                      {mainDisplayImg ? <img src={mainDisplayImg} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-stone-400 bg-stone-100"><ImageIcon size={48} opacity={0.5}/></div>}
+                      {mainDisplayImg ? <img src={mainDisplayImg} loading="eager" decoding="async" fetchPriority="high" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-stone-400 bg-stone-100"><ImageIcon size={48} opacity={0.5}/></div>}
                     </div>
                     <div className="flex gap-2 p-4 overflow-x-auto [&::-webkit-scrollbar]:hidden bg-white shadow-sm relative z-0">
                       
@@ -2253,7 +2556,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                       <div className="relative shrink-0 group">
                         {editingProduct.image ? (
                            <>
-                             <img src={editingProduct.image} onClick={() => setMainDisplayImg(editingProduct.image)} className={`w-16 h-16 object-cover rounded-lg cursor-pointer border-2 ${mainDisplayImg === editingProduct.image ? 'border-amber-500' : 'border-stone-200'}`} />
+                             <img src={editingProduct.image} loading="lazy" decoding="async" fetchPriority="low" onClick={() => setMainDisplayImg(editingProduct.image)} className={`w-16 h-16 object-cover rounded-lg cursor-pointer border-2 ${mainDisplayImg === editingProduct.image ? 'border-amber-500' : 'border-stone-200'}`} />
                              {isAdminMode && !adminOrderingFor && (
                                 <button onClick={() => { setEditingProduct({...editingProduct, image: ''}); if(mainDisplayImg === editingProduct.image) setMainDisplayImg(''); }} className="absolute -top-1 -right-1 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center shadow-md z-10"><X size={12} /></button>
                              )}
@@ -2269,7 +2572,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                       {/* ======== 額外圖片 ======== */}
                       {(editingProduct.extraImages || []).map((img, idx) => (
                         <div key={idx} className="relative shrink-0 group">
-                          <img src={img} onClick={() => setMainDisplayImg(img)} className={`w-16 h-16 object-cover rounded-lg cursor-pointer border-2 ${mainDisplayImg === img ? 'border-amber-500' : 'border-stone-200'}`} />
+                          <img src={img} loading="lazy" decoding="async" fetchPriority="low" onClick={() => setMainDisplayImg(img)} className={`w-16 h-16 object-cover rounded-lg cursor-pointer border-2 ${mainDisplayImg === img ? 'border-amber-500' : 'border-stone-200'}`} />
                           {isAdminMode && !adminOrderingFor && <button onClick={() => { const newExtra = [...editingProduct.extraImages]; newExtra.splice(idx, 1); setEditingProduct({...editingProduct, extraImages: newExtra}); if(mainDisplayImg === img) setMainDisplayImg(editingProduct.image); }} className="absolute -top-1 -right-1 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center shadow-md z-10"><X size={12} /></button>}
                         </div>
                       ))}
@@ -2568,22 +2871,33 @@ const uploadTask = await storageRef.put(blob, metadata);
                   {adminLogs.length === 0 ? (
                     <div className="text-sm text-stone-400 text-center py-10">目前尚無操作紀錄</div>
                   ) : (
-                    adminLogs.map((log) => (
+                    adminLogs.map((log) => {
+                      const readable = formatAdminLog(log)
+                      return (
                       <div key={log.id} className="bg-white border border-stone-200 rounded-xl p-3">
                         <div className="flex items-center justify-between gap-3">
-                          <p className="font-bold text-stone-700 text-sm">{log.action || 'unknown_action'}</p>
+                          <p className="font-bold text-stone-700 text-sm">{readable.title}</p>
                           <p className="text-xs text-stone-400 shrink-0">
                             {log.createdAt?.toDate ? log.createdAt.toDate().toLocaleString() : '-'}
                           </p>
                         </div>
-                        <p className="text-xs text-stone-500 mt-1">管理員：{log.adminEmail || log.adminUid || '-'}</p>
-                        {log.detail && (
-                          <pre className="mt-2 text-xs text-stone-600 bg-stone-50 border border-stone-100 rounded-lg p-2 overflow-x-auto whitespace-pre-wrap">
-                            {JSON.stringify(log.detail, null, 2)}
-                          </pre>
+                        <p className="text-sm text-stone-700 mt-1">{readable.summary}</p>
+                        <p className="text-xs text-stone-500 mt-2">管理員：{log.adminEmail || log.adminUid || '-'}</p>
+                        {readable.changes?.length > 0 && (
+                          <div className="mt-2 bg-stone-50 border border-stone-100 rounded-lg p-2 space-y-1">
+                            {readable.changes.map((c, idx) => (
+                              <div key={`${log.id}-${idx}`} className="text-xs text-stone-600">
+                                <span className="font-bold text-stone-700">{c.label || c.field}</span>
+                                <span className="mx-1 text-stone-400">：</span>
+                                <span className="text-rose-600">{c.before}</span>
+                                <span className="mx-1 text-stone-400">→</span>
+                                <span className="text-emerald-700">{c.after}</span>
+                              </div>
+                            ))}
+                          </div>
                         )}
                       </div>
-                    ))
+                    )})
                   )}
                 </div>
               </div>
