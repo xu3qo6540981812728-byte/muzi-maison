@@ -180,6 +180,20 @@ const [publicTopSellers, setPublicTopSellers] = useState({ items: [], label: '�
       const isProductsRoute = routeMode === 'admin-products'
 
       useEffect(() => {
+        // 每次路由切換先清空路由型頁面狀態，避免殘留互相覆蓋
+        setIsCartOpen(false)
+        setShowMemberProfile(false)
+        setShowAdminDashboard(false)
+        setShowAdminOrders(false)
+        setShowAdminCustomers(false)
+        setShowProductTable(false)
+        setSelectedCustomer(null)
+        setIsEditingAdminCustomer(false)
+        setIsMergeMode(false)
+        setMergeSelection([])
+        setIsNewCustomer(false)
+        setShowDeletedCustomers(false)
+
         if (routeMode === 'member') {
           setShowMemberProfile(true)
           setIsEditingProfile(false)
