@@ -1,4 +1,5 @@
 import { ChevronRight, Minus, Plus } from '../Icons'
+import { Link } from 'react-router-dom'
 
 export default function ProductCard({
   product,
@@ -10,9 +11,9 @@ export default function ProductCard({
 }) {
   return (
     <div className="bg-white rounded-2xl p-3 shadow-sm flex gap-4 border border-stone-100 relative group overflow-hidden">
-      <div
+      <Link
+        to={`/product/${product.id}`}
         className="relative block w-24 h-24 rounded-xl shrink-0 overflow-hidden cursor-pointer hover:ring-2 hover:ring-amber-400 transition-all"
-        onClick={onOpenDetail}
       >
         <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-black/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -30,7 +31,7 @@ export default function ProductCard({
             加購商品
           </div>
         )}
-      </div>
+      </Link>
 
       <div className="flex-1 flex flex-col justify-between py-0.5">
         <div onClick={onOpenDetail} className="cursor-pointer">

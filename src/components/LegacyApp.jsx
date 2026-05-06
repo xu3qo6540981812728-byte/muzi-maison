@@ -78,7 +78,7 @@ const STATUS_MAP = {
   giftProductId: '' // 預設送的商品品號（空字串代表不送或尚未設定）
 };
 
-    function App({ routeMode = 'home', standaloneAdminPage = false }) {
+    function App({ routeMode = 'home', routeProductId = '', standaloneAdminPage = false }) {
       // 🌟 全局載入狀態，防止畫面閃現
       const [isAppLoading, setIsAppLoading] = useState(true);
       const [adminOrderingFor, setAdminOrderingFor] = useState(null);
@@ -176,6 +176,11 @@ const [catalogUrl, setCatalogUrl] = useState(''); // 存放 PDF 的網址
 const [tableProducts, setTableProducts] = useState([]);
 const [publicTopSellers, setPublicTopSellers] = useState({ items: [], label: '本月' });
       const navigate = useNavigate()
+      const isAdminRouteMode = routeMode.startsWith('admin-')
+      const productFromRoute = useMemo(() => {
+        if (routeMode !== 'product' || !routeProductId) return null
+        return products.find((p) => p.id === routeProductId) || null
+      }, [routeMode, routeProductId, products])
 
       useEffect(() => {
         // 每次路由切換先清空路由型頁面狀態，避免殘留互相覆蓋
@@ -211,7 +216,7 @@ const [publicTopSellers, setPublicTopSellers] = useState({ items: [], label: '�
           setTableProducts(JSON.parse(JSON.stringify(products)))
           setShowProductTable(true)
         }
-      }, [routeMode])
+      }, [routeMode, products])
       // ======== 【防護機制區塊】禁用右鍵與 F12 ========
       useEffect(() => {
         const handleContextMenu = (e) => {
@@ -309,7 +314,7 @@ useEffect(() => {
                 return;
               }
               if (userData.role === 'customer') {
-                setIsAdminMode(false);
+                setIsAdminMode(isAdminRouteMode ? true : false);
               } else {
                 setIsAdminMode(true);
               }
@@ -320,7 +325,7 @@ useEffect(() => {
           } else {
             setCurrentUser(null);
             setUserProfile(null);
-            setIsAdminMode(false);
+            setIsAdminMode(isAdminRouteMode ? true : false);
             setAdminOrderingFor(null);
           }
         });
@@ -475,7 +480,7 @@ useEffect(() => {
           unsubscribeUsers();
           unsubscribeProfile();
         };
-      }, [currentUser, isAdminMode, orderLimit, userLimit]);
+      }, [currentUser, isAdminMode, orderLimit, userLimit, isAdminRouteMode]);
 
       useEffect(() => {
         if (selectedCustomer) {
@@ -1821,6 +1826,48 @@ const uploadTask = await storageRef.put(blob, metadata);
         );
       }
 
+      if (routeMode === 'product') {
+        if (!productFromRoute) {
+          return (
+            <div className="min-h-screen bg-[#Fdfbf7] flex flex-col items-center justify-center p-6 text-center">
+              <h1 className="text-2xl font-black text-stone-800 mb-2">找不到此商品</h1>
+              <p className="text-stone-500 mb-6">品號：{routeProductId || '未提供'}</p>
+              <Link to="/" className="bg-stone-800 text-white px-5 py-2.5 rounded-xl font-bold">回到首頁</Link>
+            </div>
+          )
+        }
+
+        return (
+          <div className="min-h-screen bg-[#Fdfbf7] p-4 md:p-8">
+            <div className="max-w-4xl mx-auto bg-white rounded-3xl border border-stone-200 shadow-sm overflow-hidden">
+              <div className="p-4 border-b border-stone-100 flex items-center justify-between">
+                <Link to="/" className="text-sm font-bold text-stone-600 hover:text-stone-900">← 返回首頁</Link>
+                <span className="text-xs bg-stone-100 text-stone-500 px-2 py-1 rounded">品號：{productFromRoute.id}</span>
+              </div>
+              <div className="grid md:grid-cols-2 gap-0">
+                <div className="bg-stone-100">
+                  <img src={productFromRoute.image} alt={productFromRoute.name} className="w-full h-full object-cover min-h-[320px]" />
+                </div>
+                <div className="p-6 md:p-8">
+                  <h1 className="text-3xl font-black text-stone-800 mb-2">{productFromRoute.name}</h1>
+                  {productFromRoute.desc && <p className="text-stone-500 mb-4">{productFromRoute.desc}</p>}
+                  <p className="text-3xl font-black text-amber-600 mb-6">
+                    ${productFromRoute.price}
+                    {productFromRoute.unit && <span className="text-sm text-stone-400 font-normal"> / {productFromRoute.unit}</span>}
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => updateCart(productFromRoute.id, -1)} className="bg-stone-100 px-3 py-2 rounded-lg font-bold">-</button>
+                    <span className="w-10 text-center font-bold">{cart[productFromRoute.id] || 0}</span>
+                    <button onClick={() => updateCart(productFromRoute.id, 1)} className="bg-amber-500 text-white px-3 py-2 rounded-lg font-bold">+</button>
+                    <Link to="/cart" className="ml-auto bg-stone-800 text-white px-4 py-2 rounded-lg font-bold">前往購物車</Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      }
+
       return (
         <div className="max-w-md md:max-w-4xl lg:max-w-6xl mx-auto bg-[#Fdfbf7] min-h-screen relative font-sans text-stone-800 shadow-xl overflow-hidden flex flex-col transition-all">
           
@@ -2323,7 +2370,7 @@ const uploadTask = await storageRef.put(blob, metadata);
             />
           )}
 
-          {showAdminDashboard && isAdminMode && (
+          {showAdminDashboard && (isAdminMode || isAdminRouteMode) && (
             <AdminDashboardModal
               onClose={() => {
                 setShowAdminDashboard(false)
@@ -2341,7 +2388,7 @@ const uploadTask = await storageRef.put(blob, metadata);
             />
           )}
 
-          {showAdminDashboard && isAdminMode && false && (
+          {showAdminDashboard && (isAdminMode || isAdminRouteMode) && false && (
             <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4 md:px-10 py-6">
               <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-5xl h-full flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
                 <button onClick={() => setShowAdminDashboard(false)} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full"><X size={24} /></button>
@@ -2523,7 +2570,7 @@ if (isThisMonth && ['confirmed', 'shipped', 'completed'].includes(order.status))
           )}
           
           {/* 管理員訂單 */}
-          {showAdminOrders && isAdminMode && (
+          {showAdminOrders && (isAdminMode || isAdminRouteMode) && (
             <AdminOrdersModal
               onClose={() => {
                 setShowAdminOrders(false)
@@ -2559,7 +2606,7 @@ if (isThisMonth && ['confirmed', 'shipped', 'completed'].includes(order.status))
             />
           )}
 
-          {showAdminOrders && isAdminMode && false && (
+          {showAdminOrders && (isAdminMode || isAdminRouteMode) && false && (
             <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4 md:px-10 py-6">
               <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-6xl h-full flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
                 <button onClick={() => setShowAdminOrders(false)} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full"><X size={24} /></button>
@@ -2681,7 +2728,7 @@ if (isThisMonth && ['confirmed', 'shipped', 'completed'].includes(order.status))
           )}
 
           {/* 管理員客戶管理 */}
-          {showAdminCustomers && isAdminMode && (
+          {showAdminCustomers && (isAdminMode || isAdminRouteMode) && (
             <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4 md:px-10 py-6">
               <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-6xl h-full flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
                 <button onClick={() => {setShowAdminCustomers(false); setSelectedCustomer(null); setIsEditingAdminCustomer(false); setIsMergeMode(false); setMergeSelection([]); setIsNewCustomer(false); setShowDeletedCustomers(false); navigate('/');}} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full"><X size={24} /></button>
@@ -2833,7 +2880,7 @@ if (isThisMonth && ['confirmed', 'shipped', 'completed'].includes(order.status))
           )}
 
           {/* Excel 表單式：商品總覽編輯 */}
-          {showProductTable && isAdminMode && (
+          {showProductTable && (isAdminMode || isAdminRouteMode) && (
             <div className="fixed inset-0 z-[45] flex justify-center items-center bg-black/60 backdrop-blur-sm px-2 md:px-6 py-4">
               <div className="bg-[#Fdfbf7] p-4 md:p-6 rounded-3xl shadow-2xl w-full h-full max-h-[95vh] flex flex-col relative border border-stone-100 overflow-hidden animate-in zoom-in-95 duration-200">
                 <button onClick={() => { setShowProductTable(false); navigate('/'); }} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-200 p-1.5 rounded-full z-10 bg-stone-100"><X size={20} /></button>
