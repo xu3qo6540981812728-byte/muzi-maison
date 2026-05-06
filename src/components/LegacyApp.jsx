@@ -176,6 +176,8 @@ const [catalogUrl, setCatalogUrl] = useState(''); // 存放 PDF 的網址
 const [tableProducts, setTableProducts] = useState([]);
 const [publicTopSellers, setPublicTopSellers] = useState({ items: [], label: '本月' });
       const navigate = useNavigate()
+      const isCustomersRoute = routeMode === 'admin-customers'
+      const isProductsRoute = routeMode === 'admin-products'
 
       useEffect(() => {
         if (routeMode === 'member') {
@@ -2664,9 +2666,9 @@ if (isThisMonth && ['confirmed', 'shipped', 'completed'].includes(order.status))
 
           {/* 管理員客戶管理 */}
           {showAdminCustomers && isAdminMode && (
-            <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4 md:px-10 py-6">
-              <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-6xl h-full flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
-                <button onClick={() => {setShowAdminCustomers(false); setSelectedCustomer(null); setIsEditingAdminCustomer(false); setIsMergeMode(false); setMergeSelection([]); setIsNewCustomer(false); setShowDeletedCustomers(false);}} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full"><X size={24} /></button>
+            <div className={isCustomersRoute ? "relative z-30 px-4 md:px-10 py-6 flex-1" : "fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4 md:px-10 py-6"}>
+              <div className={`bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-6xl h-full flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100 ${isCustomersRoute ? '' : ''}`}>
+                <button onClick={() => {setShowAdminCustomers(false); setSelectedCustomer(null); setIsEditingAdminCustomer(false); setIsMergeMode(false); setMergeSelection([]); setIsNewCustomer(false); setShowDeletedCustomers(false); navigate('/');}} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full"><X size={24} /></button>
                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 border-b border-stone-200 pb-3 gap-4">
                   <h2 className="text-xl md:text-2xl font-bold text-stone-800 flex items-center gap-2"><UsersIcon size={24} className="text-blue-600"/> 客戶管理中心</h2>
                   {!selectedCustomer && (
@@ -2791,7 +2793,7 @@ if (isThisMonth && ['confirmed', 'shipped', 'completed'].includes(order.status))
                                     {isMergeMode && <div className={`mt-1 w-5 h-5 rounded border flex items-center justify-center shrink-0 ${isSelectedForMerge ? 'bg-purple-600 border-purple-600 text-white' : (canMerge ? 'border-stone-300 bg-white' : 'border-stone-200 bg-stone-100 opacity-50')}`}>{isSelectedForMerge && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}</div>}
                                     <div>
                                       <div className="flex items-center gap-2">
-                                        <span className="font-black text-blue-600 hover:text-blue-800 text-lg tracking-wide cursor-pointer underline" onClick={(e) => { e.stopPropagation(); setShowAdminCustomers(false); setOrderSearchId(order.id); setOrderStatusFilter('all'); setShowAdminOrders(true); }}>{order.id}</span>
+                                        <span className="font-black text-blue-600 hover:text-blue-800 text-lg tracking-wide cursor-pointer underline" onClick={(e) => { e.stopPropagation(); setShowAdminCustomers(false); setOrderSearchId(order.id); setOrderStatusFilter('all'); setShowAdminOrders(true); navigate('/admin/orders'); }}>{order.id}</span>
                                         <span className={`px-2 py-0.5 rounded text-xs font-bold ${STATUS_MAP[order.status]?.color || 'bg-stone-100'}`}>{STATUS_MAP[order.status]?.label}</span>
                                         {order.createdByAdmin && <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded inline-block ml-1">代建</span>}
                                       </div>
@@ -2816,9 +2818,9 @@ if (isThisMonth && ['confirmed', 'shipped', 'completed'].includes(order.status))
 
           {/* Excel 表單式：商品總覽編輯 */}
           {showProductTable && isAdminMode && (
-            <div className="fixed inset-0 z-[45] flex justify-center items-center bg-black/60 backdrop-blur-sm px-2 md:px-6 py-4">
+            <div className={isProductsRoute ? "relative z-30 px-2 md:px-6 py-4 flex-1" : "fixed inset-0 z-[45] flex justify-center items-center bg-black/60 backdrop-blur-sm px-2 md:px-6 py-4"}>
               <div className="bg-[#Fdfbf7] p-4 md:p-6 rounded-3xl shadow-2xl w-full h-full max-h-[95vh] flex flex-col relative border border-stone-100 overflow-hidden animate-in zoom-in-95 duration-200">
-                <button onClick={() => setShowProductTable(false)} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-200 p-1.5 rounded-full z-10 bg-stone-100"><X size={20} /></button>
+                <button onClick={() => { setShowProductTable(false); navigate('/'); }} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-200 p-1.5 rounded-full z-10 bg-stone-100"><X size={20} /></button>
                 
                 <div className="flex justify-between items-center mb-4 border-b border-stone-200 pb-3">
                   <h2 className="text-xl md:text-2xl font-bold text-stone-800 flex items-center gap-2"><ClipboardList size={24} className="text-emerald-600"/> 商品總覽編輯 (表單模式)</h2>
