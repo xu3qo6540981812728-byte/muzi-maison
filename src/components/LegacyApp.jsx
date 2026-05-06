@@ -2120,7 +2120,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                 {publicTopSellers.items.length > 3 && (
                   <div className="space-y-2 pt-4 border-t border-stone-100">
                      {publicTopSellers.items.slice(3, 5).map((item, index) => (
-                       <div key={item.name} onClick={() => navigate(`/product/${item.id}`)} className="flex items-center gap-3 bg-stone-50/50 p-2 rounded-xl border border-stone-100 hover:bg-amber-50 cursor-pointer transition-all duration-300 group">
+                       <div key={item.id || `${item.name}-${index}`} onClick={() => navigate(`/product/${item.id}`)} className="flex items-center gap-3 bg-stone-50/50 p-2 rounded-xl border border-stone-100 hover:bg-amber-50 cursor-pointer transition-all duration-300 group">
                            <span className="text-stone-300 font-black w-4 text-center group-hover:text-amber-400 transition-colors">{index + 4}</span>
                            <img src={item.image} className="w-10 h-10 object-cover rounded-lg shadow-sm transition-transform duration-300 group-hover:scale-105" />
                            <span className="flex-1 text-sm font-bold text-stone-700 truncate group-hover:text-amber-700 transition-colors">{item.name}</span>
@@ -2524,12 +2524,14 @@ if (isThisMonth && ['confirmed', 'shipped', 'completed'].includes(order.status))
                     });
 // 🌟 新增：讓排行榜直接讀取小白板上算好的商品銷量
                     if (monthlyStats && monthlyStats.itemSales) {
-                       // 將小白板上以「品號(id)」記錄的資料，轉換回來
+                       // 以商品 id 為唯一鍵，避免同名商品互相覆蓋
                        Object.entries(monthlyStats.itemSales).forEach(([itemId, data]) => {
-                          // 找出對應的商品名稱
                           const prod = products.find(p => p.id === itemId);
-                          const name = prod ? prod.name : itemId; 
-                          itemSales[name] = { qty: data.qty };
+                          itemSales[itemId] = {
+                            qty: data.qty || 0,
+                            name: prod?.name || itemId,
+                            image: prod?.image || ''
+                          };
                        });
                     }
                     // 排序熱銷商品 (取前 5 名)
@@ -2574,11 +2576,10 @@ if (isThisMonth && ['confirmed', 'shipped', 'completed'].includes(order.status))
                                 const totalItemsSold = Object.values(itemSales).reduce((sum, item) => sum + item.qty, 0);
 
                                 // 2. 提取排行榜資料，並存入 Firebase
-                                const exportData = topItems.map(([name, data]) => {
-                                  const prod = products.find(p => p.name === name) || {};
+                                const exportData = topItems.map(([itemId, data]) => {
                                   // 3. 修正數學邏輯：(單一商品銷量 / 總銷量) * 100
                                   const percentage = totalItemsSold > 0 ? Math.round((data.qty / totalItemsSold) * 100) : 0; 
-                                  return { name: name, image: prod.image || '', percentage: percentage, id: prod.id || '' };
+                                  return { name: data.name || itemId, image: data.image || '', percentage: percentage, id: itemId };
                                 });
                                 
                                 if (db) {
@@ -2591,13 +2592,13 @@ if (isThisMonth && ['confirmed', 'shipped', 'completed'].includes(order.status))
                             </div>
                             {topItems.length === 0 ? <p className="text-sm text-stone-400 text-center py-6">本月尚無銷售數據</p> : (
                               <div className="space-y-4">
-                                {topItems.map(([name, data], idx) => {
+                                {topItems.map(([itemId, data], idx) => {
                                   const maxQty = topItems[0][1].qty;
                                   const percentage = Math.round((data.qty / maxQty) * 100);
                                   return (
-                                    <div key={name} className="space-y-1.5">
+                                    <div key={itemId} className="space-y-1.5">
                                       <div className="flex justify-between text-sm">
-                                        <span className="font-bold text-stone-700 truncate pr-2"><span className="text-stone-400 mr-1">#{idx + 1}</span> {name}</span>
+                                        <span className="font-bold text-stone-700 truncate pr-2"><span className="text-stone-400 mr-1">#{idx + 1}</span> {data.name || itemId}</span>
                                         <span className="font-bold text-indigo-600 shrink-0">{data.qty} 件</span>
                                       </div>
                                       {/* 簡單的 Tailwind 進度條 */}
