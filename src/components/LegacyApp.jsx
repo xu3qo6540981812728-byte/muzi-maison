@@ -78,7 +78,7 @@ const STATUS_MAP = {
   giftProductId: '' // 預設送的商品品號（空字串代表不送或尚未設定）
 };
 
-    function App({ routeMode = 'home' }) {
+    function App({ routeMode = 'home', standaloneAdminPage = false }) {
       // 🌟 全局載入狀態，防止畫面閃現
       const [isAppLoading, setIsAppLoading] = useState(true);
       const [adminOrderingFor, setAdminOrderingFor] = useState(null);
@@ -176,8 +176,6 @@ const [catalogUrl, setCatalogUrl] = useState(''); // 存放 PDF 的網址
 const [tableProducts, setTableProducts] = useState([]);
 const [publicTopSellers, setPublicTopSellers] = useState({ items: [], label: '本月' });
       const navigate = useNavigate()
-      const isCustomersRoute = routeMode === 'admin-customers'
-      const isProductsRoute = routeMode === 'admin-products'
 
       useEffect(() => {
         // 每次路由切換先清空路由型頁面狀態，避免殘留互相覆蓋
@@ -1826,6 +1824,8 @@ const uploadTask = await storageRef.put(blob, metadata);
       return (
         <div className="max-w-md md:max-w-4xl lg:max-w-6xl mx-auto bg-[#Fdfbf7] min-h-screen relative font-sans text-stone-800 shadow-xl overflow-hidden flex flex-col transition-all">
           
+          {!standaloneAdminPage && (
+          <>
           {/* Sidebar */}
           <div className={`fixed inset-0 bg-black/50 z-[60] transition-opacity duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setSidebarOpen(false)}>
             <div className={`absolute left-0 top-0 bottom-0 w-64 bg-[#Fdfbf7] shadow-xl transform transition-transform duration-300 flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`} onClick={e => e.stopPropagation()}>
@@ -2145,6 +2145,8 @@ const uploadTask = await storageRef.put(blob, metadata);
                 <div className="text-lg font-bold">${cartData.currentTotal}</div>
               </Link>
             </div>
+          )}
+          </>
           )}
 
           {/* 購物車/結帳 */}
@@ -2680,8 +2682,8 @@ if (isThisMonth && ['confirmed', 'shipped', 'completed'].includes(order.status))
 
           {/* 管理員客戶管理 */}
           {showAdminCustomers && isAdminMode && (
-            <div className={isCustomersRoute ? "relative z-30 px-4 md:px-10 py-6 flex-1" : "fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4 md:px-10 py-6"}>
-              <div className={`bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-6xl h-full flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100 ${isCustomersRoute ? '' : ''}`}>
+            <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4 md:px-10 py-6">
+              <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-6xl h-full flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
                 <button onClick={() => {setShowAdminCustomers(false); setSelectedCustomer(null); setIsEditingAdminCustomer(false); setIsMergeMode(false); setMergeSelection([]); setIsNewCustomer(false); setShowDeletedCustomers(false); navigate('/');}} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full"><X size={24} /></button>
                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 border-b border-stone-200 pb-3 gap-4">
                   <h2 className="text-xl md:text-2xl font-bold text-stone-800 flex items-center gap-2"><UsersIcon size={24} className="text-blue-600"/> 客戶管理中心</h2>
@@ -2832,7 +2834,7 @@ if (isThisMonth && ['confirmed', 'shipped', 'completed'].includes(order.status))
 
           {/* Excel 表單式：商品總覽編輯 */}
           {showProductTable && isAdminMode && (
-            <div className={isProductsRoute ? "relative z-30 px-2 md:px-6 py-4 flex-1" : "fixed inset-0 z-[45] flex justify-center items-center bg-black/60 backdrop-blur-sm px-2 md:px-6 py-4"}>
+            <div className="fixed inset-0 z-[45] flex justify-center items-center bg-black/60 backdrop-blur-sm px-2 md:px-6 py-4">
               <div className="bg-[#Fdfbf7] p-4 md:p-6 rounded-3xl shadow-2xl w-full h-full max-h-[95vh] flex flex-col relative border border-stone-100 overflow-hidden animate-in zoom-in-95 duration-200">
                 <button onClick={() => { setShowProductTable(false); navigate('/'); }} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-200 p-1.5 rounded-full z-10 bg-stone-100"><X size={20} /></button>
                 
