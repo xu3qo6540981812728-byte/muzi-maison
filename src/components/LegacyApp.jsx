@@ -96,6 +96,7 @@ const STATUS_MAP = {
       const [showAdminOrders, setShowAdminOrders] = useState(false);
       const [showAdminCustomers, setShowAdminCustomers] = useState(false);
       const [showAdminDashboard, setShowAdminDashboard] = useState(false);
+      const [showAdminLogs, setShowAdminLogs] = useState(false);
       const [showDeletedCustomers, setShowDeletedCustomers] = useState(false); 
       const [showAboutModal, setShowAboutModal] = useState(false);
       const [isEditingAbout, setIsEditingAbout] = useState(false);
@@ -163,6 +164,7 @@ const [cloudSearchResult, setCloudSearchResult] = useState(null);
 const [allUsers, setAllUsers] = useState([]); 
 const [orderLimit, setOrderLimit] = useState(50); 
 const [userLimit, setUserLimit] = useState(50); 
+const [adminLogs, setAdminLogs] = useState([]);
       const [monthlyStats, setMonthlyStats] = useState({ monthlyRevenue: 0, orderCount: 0 });
 
       const [editingProduct, setEditingProduct] = useState(null); 
@@ -177,6 +179,28 @@ const [tableProducts, setTableProducts] = useState([]);
 const [publicTopSellers, setPublicTopSellers] = useState({ items: [], label: '本月' });
       const navigate = useNavigate()
       const isAdminRouteMode = routeMode.startsWith('admin-')
+      const requireAdminAccess = () => {
+        if (!currentUser || !isAdminMode) {
+          alert('此功能僅限管理員使用')
+          navigate('/')
+          return false
+        }
+        return true
+      }
+      const writeAdminLog = async (action, detail = {}) => {
+        if (!db || !currentUser || !isAdminMode) return
+        try {
+          await db.collection('admin_logs').add({
+            action,
+            detail,
+            adminUid: currentUser.uid,
+            adminEmail: currentUser.email || '',
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          })
+        } catch (error) {
+          console.error('寫入管理操作紀錄失敗', error)
+        }
+      }
       const productFromRoute = useMemo(() => {
         if (routeMode !== 'product' || !routeProductId) return null
         return products.find((p) => p.id === routeProductId) || null
@@ -211,6 +235,7 @@ const [publicTopSellers, setPublicTopSellers] = useState({ items: [], label: '�
         setMainDisplayImg('')
         setShowMemberProfile(false)
         setShowAdminDashboard(false)
+        setShowAdminLogs(false)
         setShowAdminOrders(false)
         setShowAdminCustomers(false)
         setShowProductTable(false)
@@ -227,20 +252,18 @@ const [publicTopSellers, setPublicTopSellers] = useState({ items: [], label: '�
         } else if (routeMode === 'cart') {
           setIsCartOpen(true)
         } else if (routeMode === 'admin-dashboard') {
-          setIsAdminMode(true)
-          setShowAdminDashboard(true)
+          if (isAdminMode) setShowAdminDashboard(true)
         } else if (routeMode === 'admin-orders') {
-          setIsAdminMode(true)
-          setShowAdminOrders(true)
+          if (isAdminMode) setShowAdminOrders(true)
         } else if (routeMode === 'admin-customers') {
-          setIsAdminMode(true)
-          setShowAdminCustomers(true)
+          if (isAdminMode) setShowAdminCustomers(true)
         } else if (routeMode === 'admin-products') {
-          setIsAdminMode(true)
-          setTableProducts(JSON.parse(JSON.stringify(products)))
-          setShowProductTable(true)
+          if (isAdminMode) {
+            setTableProducts(JSON.parse(JSON.stringify(products)))
+            setShowProductTable(true)
+          }
         }
-      }, [routeMode, products])
+      }, [routeMode, products, isAdminMode])
       // ======== 【防護機制區塊】禁用右鍵與 F12 ========
       useEffect(() => {
         const handleContextMenu = (e) => {
@@ -276,6 +299,7 @@ useEffect(() => {
     sidebarOpen ||
     showAdminOrders ||
     showAdminCustomers ||
+    showAdminLogs ||
     showProductTable ||
     showCatalogModal;
   // 2. 如果有彈窗開啟，就在瀏覽器塞入一個「假歷史紀錄」
@@ -297,6 +321,7 @@ useEffect(() => {
       // 管理員相關彈窗
       if (showAdminOrders) setShowAdminOrders(false);
       if (showAdminCustomers) { setShowAdminCustomers(false); setSelectedCustomer(null); }
+      if (showAdminLogs) setShowAdminLogs(false);
       if (showProductTable) setShowProductTable(false);
       if (showCatalogModal) setShowCatalogModal(false);
       if (showConfigModal) setShowConfigModal(false);
@@ -319,7 +344,7 @@ useEffect(() => {
 }, [
   // 必須將所有會觸發攔截的 state 放進 dependency array，讓 useEffect 能抓到最新狀態
   isCartOpen, editingProduct, showMemberProfile, showLoginModal, sidebarOpen,
-  showAdminOrders, showAdminCustomers, showProductTable, showConfigModal,
+  showAdminOrders, showAdminCustomers, showAdminLogs, showProductTable, showConfigModal,
   showCategoryManager, showContactModal, showAboutModal, showAnnouncementModal, showAnnounceConfig, showCatalogModal, showAdminDashboard
 ]);
 // =======================================================
@@ -338,18 +363,20 @@ useEffect(() => {
                 return;
               }
               if (userData.role === 'customer') {
-                setIsAdminMode(isAdminRouteMode ? true : false);
+                setIsAdminMode(false);
               } else {
                 setIsAdminMode(true);
               }
+              setUserProfile(userData);
             } else {
-              setIsAdminMode(true);
+              setIsAdminMode(false);
+              setUserProfile(null);
             }
             setCurrentUser(user);
           } else {
             setCurrentUser(null);
             setUserProfile(null);
-            setIsAdminMode(isAdminRouteMode ? true : false);
+            setIsAdminMode(false);
             setAdminOrderingFor(null);
           }
         });
@@ -440,6 +467,7 @@ useEffect(() => {
         let unsubscribeOrders = () => {};
         let unsubscribeUsers = () => {};
         let unsubscribeProfile = () => {};
+        let unsubscribeAdminLogs = () => {};
 
         if (isAdminMode) {
           unsubscribeOrders = db.collection('orders').orderBy('createdAt', 'desc').limit(50).onSnapshot(snapshot => {
@@ -460,6 +488,10 @@ useEffect(() => {
           unsubscribeUsers = db.collection('users').where('role', 'in', ['customer', 'deleted']).limit(userLimit).onSnapshot(snapshot => {
             const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setAllUsers(users);
+          });
+          unsubscribeAdminLogs = db.collection('admin_logs').orderBy('createdAt', 'desc').limit(100).onSnapshot(snapshot => {
+            const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setAdminLogs(logs);
           });
         }
         else if (currentUser) {
@@ -497,14 +529,25 @@ useEffect(() => {
             }, error => {
                console.error("讀取訂單失敗", error);
             });
+          setAdminLogs([]);
+        } else {
+          setAdminLogs([]);
         }
 
         return () => {
           unsubscribeOrders();
           unsubscribeUsers();
           unsubscribeProfile();
+          unsubscribeAdminLogs();
         };
       }, [currentUser, isAdminMode, orderLimit, userLimit, isAdminRouteMode]);
+
+      useEffect(() => {
+        if (!isAdminRouteMode || isAppLoading) return
+        if (!currentUser || !isAdminMode) {
+          navigate('/')
+        }
+      }, [isAdminRouteMode, isAppLoading, currentUser, isAdminMode, navigate])
 
       useEffect(() => {
         if (selectedCustomer) {
@@ -921,6 +964,7 @@ try {
       };
 
       const updateOrderStatus = async (order, newStatus) => { 
+         if (!requireAdminAccess()) return;
          if (!db) return;
          const batch = db.batch();
          const orderRef = db.collection('orders').doc(order.id);
@@ -973,6 +1017,11 @@ try {
          // ==========================================
 
          await batch.commit();
+         await writeAdminLog('order_status_updated', {
+           orderId: order.id,
+           fromStatus: order.status,
+           toStatus: newStatus
+         })
 
          // 🌟 修正2：消除視覺假死！手動更新沒有即時連線的「舊訂單」與「搜尋結果」的畫面狀態
          setOldOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: newStatus } : o));
@@ -982,6 +1031,7 @@ try {
       };
       
       const saveTrackingNumber = async (orderId) => {
+        if (!requireAdminAccess()) return;
         if (db) { 
           await db.collection('orders').doc(orderId).update({ trackingNumber: trackingInputs[orderId] }); 
           alert("出貨單號已儲存！"); 
@@ -991,6 +1041,7 @@ try {
       };
       
       const saveOrderNote = async (orderId) => {
+        if (!requireAdminAccess()) return;
         if (db) { 
           const newNote = adminNoteInputs[orderId] !== undefined ? adminNoteInputs[orderId] : '';
           await db.collection('orders').doc(orderId).update({ orderNote: newNote }); 
@@ -1001,6 +1052,7 @@ try {
       };
 
       const saveAdminDiscount = async (order) => {
+         if (!requireAdminAccess()) return;
          const discount = Number(adminDiscountInputs[order.id]) || 0;
          const diff = discount - (order.adminDiscount || 0);
          const newFinalPrice = order.totals.finalPrice - diff;
@@ -1013,6 +1065,7 @@ try {
       };
 
       const deleteOrder = async (orderId) => {
+        if (!requireAdminAccess()) return;
         // 🌟 修正1：擴大搜尋範圍，確保不管在新單、舊單還是搜尋結果中，都能找到這張單
         const currentOrders = [...allOrders, ...oldOrders, ...(cloudSearchResult ? [cloudSearchResult] : [])];
         const orderToDelete = currentOrders.find(o => o.id === orderId);
@@ -1479,6 +1532,7 @@ const uploadTask = await storageRef.put(blob, metadata);
 
       // --- 以下為新增：刪除型錄的功能 ---
       const handleDeleteCatalog = async () => {
+        if (!requireAdminAccess()) return;
         if (!window.confirm("確定要刪除目前的產品型錄嗎？客戶將無法再下載。")) return;
         if (db) {
           await db.collection('settings').doc('catalog').set({ url: '' }, { merge: true });
@@ -1487,22 +1541,29 @@ const uploadTask = await storageRef.put(blob, metadata);
       };
       // ------------------------------------------
       
-      const onLogoChange = (e) => handleImageUpload(e.target.files[0], (img) => db ? db.collection('settings').doc('store').set({ logo: img }, { merge: true }) : setLogo(img), true);
+      const onLogoChange = (e) => {
+        if (!requireAdminAccess()) return;
+        handleImageUpload(e.target.files[0], (img) => db ? db.collection('settings').doc('store').set({ logo: img }, { merge: true }) : setLogo(img), true);
+      };
       const openProductDetail = (product) => { setEditingProduct({ intro: '', ingredients: '', notices: '', extraImages: [], isPromo: false, isAddon: false, providesFreeAddon: false, isNew: false, isFreeShipping: true, unit: product.unit || '', cost: 0, ...product }); setMainDisplayImg(product.image || ''); };
       const handleAddProduct = () => { setEditingProduct({ id: '', name: '', desc: '', weight: '', price: 0, cost: 0, category: adminCategoryNames[0] || '精選商品', image: '', intro: '', ingredients: '', notices: '', extraImages: [], isPromo: false, isAddon: false, providesFreeAddon: false, isNew: true, isFreeShipping: true, unit: '' }); setMainDisplayImg(''); };
       
       const saveProductDetail = async () => {
+        if (!requireAdminAccess()) return;
         if (editingProduct.isNew && !editingProduct.id.trim()) return alert("請輸入「商品品號」！");
         const prodData = { ...editingProduct, id: editingProduct.id.trim(), price: Number(editingProduct.price) || 0, cost: Number(editingProduct.cost) || 0 };
         delete prodData.isNew;
         if (db) { try { await db.collection('products').doc(prodData.id).set(prodData); alert("商品儲存成功！"); } catch (error) { alert("儲存失敗！可能是圖片檔案過大超過限制。"); return; } }
+        await writeAdminLog('product_saved', { productId: prodData.id, productName: prodData.name || '' })
         setEditingProduct(null); 
       };
       
       const handleDeleteProduct = async () => {
+        if (!requireAdminAccess()) return;
         if (!window.confirm(`確定刪除「${editingProduct.name}」嗎？無法復原喔！`)) return;
         try {
           if (db) await db.collection('products').doc(editingProduct.id).delete();
+          await writeAdminLog('product_deleted', { productId: editingProduct.id, productName: editingProduct.name || '' })
           setEditingProduct(null);
           alert("刪除成功！");
         } catch (error) {
@@ -1511,6 +1572,7 @@ const uploadTask = await storageRef.put(blob, metadata);
       };
 
       const saveCategoriesToDB = async (newList) => {
+         if (!requireAdminAccess()) return;
          setCategoriesList(newList);
          if (db) await db.collection('settings').doc('categories').set({ list: newList });
       };
@@ -1531,6 +1593,7 @@ const uploadTask = await storageRef.put(blob, metadata);
 
       // --- 編輯分類名稱並連動更新商品 ---
       const handleEditCategoryName = async (index, oldName) => {
+        if (!requireAdminAccess()) return;
         // 跳出對話框讓使用者輸入新名稱
         const newName = window.prompt("請輸入新的分類名稱：", oldName);
         
@@ -1598,6 +1661,7 @@ const uploadTask = await storageRef.put(blob, metadata);
       };
 
       const saveTableItem = async (index) => {
+        if (!requireAdminAccess()) return;
         const item = tableProducts[index];
         if (!item.id || !item.id.trim()) return alert("請輸入「商品品號」！");
         if (!window.confirm(`確定要儲存「${item.name || item.id}」的修改嗎？`)) return;
@@ -1616,6 +1680,7 @@ const uploadTask = await storageRef.put(blob, metadata);
       };
       // --- 批次全部儲存功能 ---
       const saveAllTableItems = async () => {
+        if (!requireAdminAccess()) return;
         // 1. 先檢查有沒有新增的商品忘記填寫品號
         const invalidItem = tableProducts.find(item => !item.id || !item.id.trim());
         if (invalidItem) return alert("有商品未填寫「品號」，請檢查後再儲存！");
@@ -1654,6 +1719,7 @@ const uploadTask = await storageRef.put(blob, metadata);
       };
 
       const deleteTableItem = async (index) => {
+        if (!requireAdminAccess()) return;
         const item = tableProducts[index];
         if (!window.confirm(`確定要刪除「${item.name || item.id}」嗎？\n⚠️ 警告：刪除後無法復原喔！`)) return;
 
@@ -1676,6 +1742,7 @@ const uploadTask = await storageRef.put(blob, metadata);
       };
       // --- 批次匯入 CSV 功能 (方案 A：覆蓋更新 + 自動註冊分類) ---
       const handleCSVImport = async (e) => {
+        if (!requireAdminAccess()) return;
         const file = e.target.files[0];
         if (!file) return;
 
@@ -1787,6 +1854,7 @@ const uploadTask = await storageRef.put(blob, metadata);
       // ------------------------------------------
 
      const saveSystemConfig = async () => {
+  if (!requireAdminAccess()) return;
   const configToSave = { 
     shippingFee: Number(tempConfig.shippingFee)||0, 
     freeShippingThreshold: Number(tempConfig.freeShippingThreshold)||0, 
@@ -1798,20 +1866,24 @@ const uploadTask = await storageRef.put(blob, metadata);
     giftProductId: tempConfig.giftProductId || '' // 加入贈品品號
   };
   if (db) await db.collection('settings').doc('config').set(configToSave, { merge: true });
+  await writeAdminLog('system_config_updated', { keys: Object.keys(configToSave) })
   setStoreConfig(configToSave); setShowConfigModal(false);
 };
 
       const saveContactInfo = async () => {
+        if (!requireAdminAccess()) return;
         if (db) await db.collection('settings').doc('contact').set(contactData, { merge: true });
         setShowContactModal(false);
       };
 
       const saveAboutInfo = async () => {
+        if (!requireAdminAccess()) return;
         if (db) { try { await db.collection('settings').doc('about').set(tempAboutData, { merge: true }); alert('「關於我們」已成功儲存！'); } catch (error) { alert('儲存失敗！可能是圖片過大。'); return; } }
         setIsEditingAbout(false);
       };
 
       const saveAnnouncement = async () => {
+         if (!requireAdminAccess()) return;
          let newList = [...announcements];
          if (tempAnnounce.id) {
             newList = newList.map(a => a.id === tempAnnounce.id ? tempAnnounce : a);
@@ -1822,12 +1894,14 @@ const uploadTask = await storageRef.put(blob, metadata);
       };
 
       const deleteAnnouncement = async (id) => {
+         if (!requireAdminAccess()) return;
          if(!window.confirm('確定刪除此公告？')) return;
          const newList = announcements.filter(a => a.id !== id);
          if (db) await db.collection('settings').doc('announcements').set({ list: newList });
       };
 
       const moveAnnounce = async (index, direction) => {
+         if (!requireAdminAccess()) return;
          if (direction === -1 && index === 0) return;
          if (direction === 1 && index === announcements.length - 1) return;
          const newList = [...announcements];
@@ -2026,7 +2100,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                   <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
                     <h1 className="text-xl font-bold tracking-wider text-stone-700">木子家</h1>
                     {isAdminMode && !adminOrderingFor ? (
-                      <input type="text" value={storeSlogan} onChange={e => { setStoreSlogan(e.target.value); if(db) db.collection('settings').doc('store').set({slogan: e.target.value}, {merge:true}); }} className="text-xs text-stone-500 bg-stone-100 border border-stone-200 rounded px-1 py-0.5 outline-none focus:border-amber-400 w-48" placeholder="輸入品牌標語..." />
+                      <input type="text" value={storeSlogan} onChange={e => { if (!requireAdminAccess()) return; setStoreSlogan(e.target.value); if(db) db.collection('settings').doc('store').set({slogan: e.target.value}, {merge:true}); }} className="text-xs text-stone-500 bg-stone-100 border border-stone-200 rounded px-1 py-0.5 outline-none focus:border-amber-400 w-48" placeholder="輸入品牌標語..." />
                     ) : (
                       <span className="text-xs text-stone-500 font-medium">{storeSlogan}</span>
                     )}
@@ -2460,7 +2534,7 @@ const uploadTask = await storageRef.put(blob, metadata);
             />
           )}
 
-          {showAdminDashboard && (isAdminMode || isAdminRouteMode) && (
+          {showAdminDashboard && isAdminMode && (
             <AdminDashboardModal
               onClose={() => {
                 setShowAdminDashboard(false)
@@ -2468,6 +2542,9 @@ const uploadTask = await storageRef.put(blob, metadata);
               }}
               onGoToOrders={() => {
                 navigate('/admin/orders')
+              }}
+              onOpenLogs={() => {
+                setShowAdminLogs(true)
               }}
               allOrders={allOrders}
               allUsers={allUsers}
@@ -2478,7 +2555,42 @@ const uploadTask = await storageRef.put(blob, metadata);
             />
           )}
 
-          {showAdminDashboard && (isAdminMode || isAdminRouteMode) && false && (
+          {showAdminLogs && isAdminMode && (
+            <div className="fixed inset-0 z-[65] flex justify-center items-center bg-black/50 backdrop-blur-sm px-4 md:px-10 py-6">
+              <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-4xl h-full flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
+                <button onClick={() => setShowAdminLogs(false)} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full">
+                  <X size={24} />
+                </button>
+                <h2 className="text-xl md:text-2xl font-bold text-stone-800 mb-5 flex items-center gap-2 border-b border-stone-200 pb-3">
+                  管理員操作紀錄
+                </h2>
+                <div className="flex-1 overflow-y-auto pr-1 space-y-2">
+                  {adminLogs.length === 0 ? (
+                    <div className="text-sm text-stone-400 text-center py-10">目前尚無操作紀錄</div>
+                  ) : (
+                    adminLogs.map((log) => (
+                      <div key={log.id} className="bg-white border border-stone-200 rounded-xl p-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="font-bold text-stone-700 text-sm">{log.action || 'unknown_action'}</p>
+                          <p className="text-xs text-stone-400 shrink-0">
+                            {log.createdAt?.toDate ? log.createdAt.toDate().toLocaleString() : '-'}
+                          </p>
+                        </div>
+                        <p className="text-xs text-stone-500 mt-1">管理員：{log.adminEmail || log.adminUid || '-'}</p>
+                        {log.detail && (
+                          <pre className="mt-2 text-xs text-stone-600 bg-stone-50 border border-stone-100 rounded-lg p-2 overflow-x-auto whitespace-pre-wrap">
+                            {JSON.stringify(log.detail, null, 2)}
+                          </pre>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showAdminDashboard && isAdminMode && false && (
             <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4 md:px-10 py-6">
               <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-5xl h-full flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
                 <button onClick={() => setShowAdminDashboard(false)} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full"><X size={24} /></button>
@@ -2572,6 +2684,7 @@ if (isThisMonth && ['confirmed', 'shipped', 'completed'].includes(order.status))
                                 🏆 本月熱銷排行榜 <span className="text-[10px] bg-stone-100 text-stone-500 px-2 py-1 rounded">排除已取消</span>
                               </h3>
                               <button onClick={() => {
+                                if (!requireAdminAccess()) return;
                                 // 1. 先算出「所有主商品的總銷售數量」當作正確的分母
                                 const totalItemsSold = Object.values(itemSales).reduce((sum, item) => sum + item.qty, 0);
 
@@ -2584,6 +2697,10 @@ if (isThisMonth && ['confirmed', 'shipped', 'completed'].includes(order.status))
                                 
                                 if (db) {
                                   db.collection('settings').doc('topSellers').set({ items: exportData, label: '本月' });
+                                  writeAdminLog('top_sellers_published', {
+                                    itemCount: exportData.length,
+                                    topItemId: exportData[0]?.id || ''
+                                  });
                                   alert('✅ 已成功將最新排行榜發佈至首頁！');
                                 }
                               }} className="text-xs bg-indigo-600 text-white font-bold px-3 py-1.5 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors flex items-center gap-1 active:scale-95">
@@ -2661,7 +2778,7 @@ if (isThisMonth && ['confirmed', 'shipped', 'completed'].includes(order.status))
           )}
           
           {/* 管理員訂單 */}
-          {showAdminOrders && (isAdminMode || isAdminRouteMode) && (
+          {showAdminOrders && isAdminMode && (
             <AdminOrdersModal
               onClose={() => {
                 setShowAdminOrders(false)
@@ -2697,7 +2814,7 @@ if (isThisMonth && ['confirmed', 'shipped', 'completed'].includes(order.status))
             />
           )}
 
-          {showAdminOrders && (isAdminMode || isAdminRouteMode) && false && (
+          {showAdminOrders && isAdminMode && false && (
             <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4 md:px-10 py-6">
               <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-6xl h-full flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
                 <button onClick={() => setShowAdminOrders(false)} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full"><X size={24} /></button>
@@ -2819,7 +2936,7 @@ if (isThisMonth && ['confirmed', 'shipped', 'completed'].includes(order.status))
           )}
 
           {/* 管理員客戶管理 */}
-          {showAdminCustomers && (isAdminMode || isAdminRouteMode) && (
+          {showAdminCustomers && isAdminMode && (
             <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4 md:px-10 py-6">
               <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-6xl h-full flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
                 <button onClick={() => {setShowAdminCustomers(false); setSelectedCustomer(null); setIsEditingAdminCustomer(false); setIsMergeMode(false); setMergeSelection([]); setIsNewCustomer(false); setShowDeletedCustomers(false); navigate('/');}} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full"><X size={24} /></button>
@@ -2971,7 +3088,7 @@ if (isThisMonth && ['confirmed', 'shipped', 'completed'].includes(order.status))
           )}
 
           {/* Excel 表單式：商品總覽編輯 */}
-          {showProductTable && (isAdminMode || isAdminRouteMode) && (
+          {showProductTable && isAdminMode && (
             <div className="fixed inset-0 z-[45] flex justify-center items-center bg-black/60 backdrop-blur-sm px-2 md:px-6 py-4">
               <div className="bg-[#Fdfbf7] p-4 md:p-6 rounded-3xl shadow-2xl w-full h-full max-h-[95vh] flex flex-col relative border border-stone-100 overflow-hidden animate-in zoom-in-95 duration-200">
                 <button onClick={() => { setShowProductTable(false); navigate('/'); }} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-200 p-1.5 rounded-full z-10 bg-stone-100"><X size={20} /></button>

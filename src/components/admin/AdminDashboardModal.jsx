@@ -3,6 +3,7 @@ import { ArrowUp, ClipboardList, TrendingUp, X } from '../Icons'
 export default function AdminDashboardModal({
   onClose,
   onGoToOrders,
+  onOpenLogs,
   allOrders,
   allUsers,
   products,
@@ -23,6 +24,14 @@ export default function AdminDashboardModal({
         <h2 className="text-xl md:text-2xl font-bold text-stone-800 mb-6 flex items-center gap-2 border-b border-stone-200 pb-3">
           <TrendingUp size={24} className="text-indigo-600" /> 營運數據儀表板
         </h2>
+        <div className="mb-4 flex justify-end">
+          <button
+            onClick={onOpenLogs}
+            className="text-xs bg-stone-800 text-white font-bold px-3 py-1.5 rounded-lg shadow-sm hover:bg-stone-900 transition-colors"
+          >
+            查看管理操作紀錄
+          </button>
+        </div>
 
         <div className="flex-1 overflow-y-auto space-y-6 pr-2">
           {(() => {
