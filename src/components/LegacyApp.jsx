@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { jsPDF } from 'jspdf'
 import html2canvas from 'html2canvas'
 import firebase, { auth, db, storage } from '../config/firebase'
@@ -77,7 +78,7 @@ const STATUS_MAP = {
   giftProductId: '' // 預設送的商品品號（空字串代表不送或尚未設定）
 };
 
-    function App() {
+    function App({ routeMode = 'home' }) {
       // 🌟 全局載入狀態，防止畫面閃現
       const [isAppLoading, setIsAppLoading] = useState(true);
       const [adminOrderingFor, setAdminOrderingFor] = useState(null);
@@ -174,6 +175,29 @@ const [userLimit, setUserLimit] = useState(50);
 const [catalogUrl, setCatalogUrl] = useState(''); // 存放 PDF 的網址
 const [tableProducts, setTableProducts] = useState([]);
 const [publicTopSellers, setPublicTopSellers] = useState({ items: [], label: '本月' });
+      const navigate = useNavigate()
+
+      useEffect(() => {
+        if (routeMode === 'member') {
+          setShowMemberProfile(true)
+          setIsEditingProfile(false)
+        } else if (routeMode === 'cart') {
+          setIsCartOpen(true)
+        } else if (routeMode === 'admin-dashboard') {
+          setIsAdminMode(true)
+          setShowAdminDashboard(true)
+        } else if (routeMode === 'admin-orders') {
+          setIsAdminMode(true)
+          setShowAdminOrders(true)
+        } else if (routeMode === 'admin-customers') {
+          setIsAdminMode(true)
+          setShowAdminCustomers(true)
+        } else if (routeMode === 'admin-products') {
+          setIsAdminMode(true)
+          setTableProducts(JSON.parse(JSON.stringify(products)))
+          setShowProductTable(true)
+        }
+      }, [routeMode])
       // ======== 【防護機制區塊】禁用右鍵與 F12 ========
       useEffect(() => {
         const handleContextMenu = (e) => {
@@ -1803,16 +1827,16 @@ const uploadTask = await storageRef.put(blob, metadata);
                      <li className="my-2 border-t border-stone-200"></li>
                      
                      {currentUser && !isAdminMode && (
-                        <li><button onClick={() => { setSidebarOpen(false); setShowMemberProfile(true); setIsEditingProfile(false); }} className="w-full text-left px-6 py-3 hover:bg-stone-100 font-bold text-stone-800 flex items-center gap-3"><UserIcon size={18}/>會員中心</button></li>
+                        <li><Link to="/member" onClick={() => setSidebarOpen(false)} className="w-full text-left px-6 py-3 hover:bg-stone-100 font-bold text-stone-800 flex items-center gap-3"><UserIcon size={18}/>會員中心</Link></li>
                      )}
                      
                      {isAdminMode && (
                         <>
                            <li className="px-6 py-2 text-xs font-bold text-stone-400 uppercase tracking-widest mt-2">管理員專區</li>
-                          <li><button onClick={() => { setSidebarOpen(false); setShowAdminDashboard(true); }} className="w-full text-left px-6 py-3 hover:bg-indigo-50 font-medium text-indigo-700 flex items-center gap-3"><TrendingUp size={18}/>營運儀表板</button></li> 
-                          <li><button onClick={() => { setSidebarOpen(false); setShowAdminCustomers(true); }} className="w-full text-left px-6 py-3 hover:bg-blue-50 font-medium text-blue-700 flex items-center gap-3"><UsersIcon size={18}/>客戶管理</button></li>
-                           <li><button onClick={() => { setSidebarOpen(false); setShowAdminOrders(true); }} className="w-full text-left px-6 py-3 hover:bg-amber-50 font-medium text-amber-700 flex items-center gap-3"><ClipboardList size={18}/>訂單管理</button></li>
-                          <li><button onClick={() => { setSidebarOpen(false); setTableProducts(JSON.parse(JSON.stringify(products))); setShowProductTable(true); }} className="w-full text-left px-6 py-3 hover:bg-emerald-50 font-medium text-emerald-700 flex items-center gap-3"><ClipboardList size={18}/>商品總覽編輯(表單)</button></li>
+                          <li><Link to="/admin/dashboard" onClick={() => setSidebarOpen(false)} className="w-full text-left px-6 py-3 hover:bg-indigo-50 font-medium text-indigo-700 flex items-center gap-3"><TrendingUp size={18}/>營運儀表板</Link></li> 
+                          <li><Link to="/admin/customers" onClick={() => setSidebarOpen(false)} className="w-full text-left px-6 py-3 hover:bg-blue-50 font-medium text-blue-700 flex items-center gap-3"><UsersIcon size={18}/>客戶管理</Link></li>
+                           <li><Link to="/admin/orders" onClick={() => setSidebarOpen(false)} className="w-full text-left px-6 py-3 hover:bg-amber-50 font-medium text-amber-700 flex items-center gap-3"><ClipboardList size={18}/>訂單管理</Link></li>
+                          <li><Link to="/admin/products" onClick={() => setSidebarOpen(false)} className="w-full text-left px-6 py-3 hover:bg-emerald-50 font-medium text-emerald-700 flex items-center gap-3"><ClipboardList size={18}/>商品總覽編輯(表單)</Link></li>
                            <li><button onClick={() => { setSidebarOpen(false); setTempConfig(storeConfig); setShowConfigModal(true); }} className="w-full text-left px-6 py-3 hover:bg-rose-50 font-medium text-rose-700 flex items-center gap-3"><SettingsIcon size={18}/>系統設定</button></li>
                            <li><button onClick={() => { setSidebarOpen(false); setTempAnnounce({}); setIsEditingAnnounce(false); setShowAnnounceConfig(true); }} className="w-full text-left px-6 py-3 hover:bg-purple-50 font-medium text-purple-700 flex items-center gap-3"><Megaphone size={18}/>公告設定</button></li>
                         </>
@@ -1859,9 +1883,9 @@ const uploadTask = await storageRef.put(blob, metadata);
               </div>
               <div className="flex items-center gap-2">
                 {currentUser && !isAdminMode && (
-                  <button onClick={() => { setShowMemberProfile(true); setIsEditingProfile(false); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-stone-800 text-white hover:bg-stone-700 transition-colors shadow-sm">
+                  <Link to="/member" className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-stone-800 text-white hover:bg-stone-700 transition-colors shadow-sm">
                     <UserIcon size={14} /> 我的帳號
-                  </button>
+                  </Link>
                 )}
                 {!currentUser && !adminOrderingFor && (
                   <button onClick={() => { setLoginMode('customer'); setShowLoginModal(true); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-colors shadow-sm bg-stone-100 text-stone-500 hover:bg-stone-200">
@@ -2100,17 +2124,20 @@ const uploadTask = await storageRef.put(blob, metadata);
           {/* 購物車懸浮按鈕 */}
           {cartData.totalQty > 0 && (!isAdminMode || adminOrderingFor) && !editingProduct && (
             <div className="fixed bottom-0 left-0 right-0 max-w-md md:max-w-4xl lg:max-w-6xl mx-auto p-4 bg-gradient-to-t from-white via-white to-transparent pointer-events-none z-10">
-              <button onClick={() => setIsCartOpen(true)} className="w-full bg-stone-800 text-white rounded-2xl p-4 flex items-center justify-between shadow-xl pointer-events-auto active:scale-95 transition-transform">
+              <Link to="/cart" className="w-full bg-stone-800 text-white rounded-2xl p-4 flex items-center justify-between shadow-xl pointer-events-auto active:scale-95 transition-transform">
                 <div className="flex items-center gap-3"><div className="relative"><ShoppingCart size={24} /><span className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">{cartData.totalQty}</span></div><span className="font-medium">查看購物車</span></div>
                 <div className="text-lg font-bold">${cartData.currentTotal}</div>
-              </button>
+              </Link>
             </div>
           )}
 
           {/* 購物車/結帳 */}
           <CartDrawer
             isOpen={isCartOpen}
-            onClose={() => setIsCartOpen(false)}
+            onClose={() => {
+              setIsCartOpen(false)
+              navigate('/')
+            }}
             cartData={cartData}
             cart={cart}
             addonProducts={addonProducts}
@@ -2256,7 +2283,10 @@ const uploadTask = await storageRef.put(blob, metadata);
 {/* 營運儀表板 (Dashboard) */}
           {showMemberProfile && currentUser && !isAdminMode && (
             <MemberProfileModal
-              onClose={() => setShowMemberProfile(false)}
+              onClose={() => {
+                setShowMemberProfile(false)
+                navigate('/')
+              }}
               isEditingProfile={isEditingProfile}
               setIsEditingProfile={setIsEditingProfile}
               userProfile={userProfile}
@@ -2277,10 +2307,12 @@ const uploadTask = await storageRef.put(blob, metadata);
 
           {showAdminDashboard && isAdminMode && (
             <AdminDashboardModal
-              onClose={() => setShowAdminDashboard(false)}
-              onGoToOrders={() => {
+              onClose={() => {
                 setShowAdminDashboard(false)
-                setShowAdminOrders(true)
+                navigate('/')
+              }}
+              onGoToOrders={() => {
+                navigate('/admin/orders')
               }}
               allOrders={allOrders}
               allUsers={allUsers}
@@ -2475,7 +2507,10 @@ if (isThisMonth && ['confirmed', 'shipped', 'completed'].includes(order.status))
           {/* 管理員訂單 */}
           {showAdminOrders && isAdminMode && (
             <AdminOrdersModal
-              onClose={() => setShowAdminOrders(false)}
+              onClose={() => {
+                setShowAdminOrders(false)
+                navigate('/')
+              }}
               handlePrintConfirmedOrders={handlePrintConfirmedOrders}
               orderSearchId={orderSearchId}
               setOrderSearchId={setOrderSearchId}
