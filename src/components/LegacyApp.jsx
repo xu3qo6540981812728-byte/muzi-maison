@@ -183,6 +183,28 @@ const [publicTopSellers, setPublicTopSellers] = useState({ items: [], label: '�
       }, [routeMode, routeProductId, products])
 
       useEffect(() => {
+        if (routeMode !== 'product' || !productFromRoute) return
+        setEditingProduct((prev) => {
+          if (prev && prev.id === productFromRoute.id) return prev
+          return {
+            intro: '',
+            ingredients: '',
+            notices: '',
+            extraImages: [],
+            isPromo: false,
+            isAddon: false,
+            providesFreeAddon: false,
+            isNew: false,
+            isFreeShipping: true,
+            unit: productFromRoute.unit || '',
+            cost: 0,
+            ...productFromRoute
+          }
+        })
+        setMainDisplayImg(productFromRoute.image || '')
+      }, [routeMode, productFromRoute])
+
+      useEffect(() => {
         // 每次路由切換先清空路由型頁面狀態，避免殘留互相覆蓋
         setIsCartOpen(false)
         setShowMemberProfile(false)
@@ -1837,56 +1859,96 @@ const uploadTask = await storageRef.put(blob, metadata);
           )
         }
 
-        return (
-          <div className="min-h-screen bg-[#Fdfbf7] p-4 md:p-8">
-            <div className="max-w-4xl mx-auto bg-white rounded-3xl border border-stone-200 shadow-sm overflow-hidden">
-              <div className="p-4 border-b border-stone-100 flex items-center justify-between">
-                <Link to="/" className="text-sm font-bold text-stone-600 hover:text-stone-900">← 返回首頁</Link>
-                <span className="text-xs bg-stone-100 text-stone-500 px-2 py-1 rounded">品號：{productFromRoute.id}</span>
-              </div>
-              <div className="grid md:grid-cols-2 gap-0">
-                <div className="bg-stone-100">
-                  <img src={productFromRoute.image} alt={productFromRoute.name} className="w-full h-full object-cover min-h-[320px]" />
-                </div>
-                <div className="p-6 md:p-8">
-                  <h1 className="text-3xl font-black text-stone-800 mb-2">{productFromRoute.name}</h1>
-                  {productFromRoute.desc && <p className="text-stone-500 mb-4">{productFromRoute.desc}</p>}
-                  {productFromRoute.weight && (
-                    <p className="inline-block mb-3 px-2 py-1 rounded bg-stone-100 text-stone-500 text-xs font-bold">
-                      重量：{productFromRoute.weight}
-                    </p>
-                  )}
-                  <p className="text-3xl font-black text-amber-600 mb-6">
-                    ${productFromRoute.price}
-                    {productFromRoute.unit && <span className="text-sm text-stone-400 font-normal"> / {productFromRoute.unit}</span>}
-                  </p>
-                  <div className="flex items-center gap-3">
-                    <button onClick={() => updateCart(productFromRoute.id, -1)} className="bg-stone-100 px-3 py-2 rounded-lg font-bold">-</button>
-                    <span className="w-10 text-center font-bold">{cart[productFromRoute.id] || 0}</span>
-                    <button onClick={() => updateCart(productFromRoute.id, 1)} className="bg-amber-500 text-white px-3 py-2 rounded-lg font-bold">+</button>
-                    <Link to="/cart" className="ml-auto bg-stone-800 text-white px-4 py-2 rounded-lg font-bold">前往購物車</Link>
-                  </div>
+        const routeProduct = editingProduct && editingProduct.id === productFromRoute.id
+          ? editingProduct
+          : productFromRoute
+        const galleryImages = [routeProduct.image, ...(routeProduct.extraImages || [])].filter(Boolean)
+        const currentImage = mainDisplayImg || routeProduct.image
 
-                  <div className="mt-8 space-y-5">
-                    {productFromRoute.intro && (
-                      <div>
-                        <h3 className="font-bold text-stone-700 mb-1">產品介紹</h3>
-                        <p className="text-sm text-stone-600 whitespace-pre-wrap">{productFromRoute.intro}</p>
-                      </div>
-                    )}
-                    {productFromRoute.ingredients && (
-                      <div>
-                        <h3 className="font-bold text-stone-700 mb-1">產品成分</h3>
-                        <p className="text-sm text-stone-600 whitespace-pre-wrap">{productFromRoute.ingredients}</p>
-                      </div>
-                    )}
-                    {productFromRoute.notices && (
-                      <div>
-                        <h3 className="font-bold text-stone-700 mb-1">注意事項</h3>
-                        <p className="text-sm text-rose-700 bg-rose-50 border border-rose-100 rounded-xl p-3 whitespace-pre-wrap">{productFromRoute.notices}</p>
+        return (
+          <div className="min-h-screen bg-[#Fdfbf7] p-2 md:p-6">
+            <div className="max-w-5xl mx-auto bg-[#Fdfbf7] w-full rounded-3xl h-[92vh] flex flex-col overflow-hidden shadow-2xl border border-stone-100">
+              <div className="flex items-center justify-between p-4 bg-white/80 backdrop-blur-md border-b border-stone-100 shadow-sm">
+                <Link to="/" className="text-sm font-bold text-stone-600 hover:text-stone-900">← 返回首頁</Link>
+                <h2 className="font-bold text-stone-800 flex-1 text-center truncate px-3">{routeProduct.name}</h2>
+                <span className="text-xs bg-stone-100 text-stone-500 px-2 py-1 rounded">品號：{routeProduct.id}</span>
+              </div>
+
+              <div className="flex-1 overflow-y-auto md:flex md:flex-row">
+                <div className="md:w-1/2 md:border-r border-stone-200 flex flex-col">
+                  <div className="w-full h-64 md:h-80 bg-stone-200 flex-shrink-0 relative">
+                    {currentImage ? (
+                      <img src={currentImage} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-stone-400 bg-stone-100">
+                        <ImageIcon size={48} opacity={0.5} />
                       </div>
                     )}
                   </div>
+                  {galleryImages.length > 0 && (
+                    <div className="flex gap-2 p-4 overflow-x-auto [&::-webkit-scrollbar]:hidden bg-white shadow-sm relative z-0">
+                      {galleryImages.map((img, idx) => (
+                        <img
+                          key={idx}
+                          src={img}
+                          onClick={() => setMainDisplayImg(img)}
+                          className={`w-16 h-16 object-cover rounded-lg cursor-pointer border-2 ${
+                            currentImage === img ? 'border-amber-500' : 'border-stone-200'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="md:w-1/2 p-5 space-y-5">
+                  <div>
+                    {routeProduct.isPromo && <span className="inline-block bg-rose-100 text-rose-600 text-[10px] font-bold px-2 py-0.5 rounded-md mb-2 mr-2 border border-rose-200">享任選優惠活動</span>}
+                    {routeProduct.isAddon && <span className="inline-block bg-purple-100 text-purple-600 text-[10px] font-bold px-2 py-0.5 rounded-md mb-2 border border-purple-200">可做為加購商品</span>}
+                    <div className="text-3xl font-bold text-amber-600 mb-1">
+                      ${routeProduct.price}{' '}
+                      {routeProduct.unit && <span className="text-sm font-normal text-stone-500">/{routeProduct.unit}</span>}
+                    </div>
+                    <h1 className="text-2xl font-bold text-stone-800">{routeProduct.name}</h1>
+                    {routeProduct.desc && <p className="text-sm text-stone-500 mt-1">{routeProduct.desc}</p>}
+                  </div>
+                  <hr className="border-stone-200" />
+
+                  {routeProduct.intro && (
+                    <div className="space-y-1.5">
+                      <h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 bg-amber-500 rounded-full"></span>產品介紹</h3>
+                      <p className="text-sm text-stone-600 whitespace-pre-wrap">{routeProduct.intro}</p>
+                    </div>
+                  )}
+                  {routeProduct.ingredients && (
+                    <div className="space-y-1.5">
+                      <h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 bg-emerald-500 rounded-full"></span>產品成分</h3>
+                      <p className="text-sm text-stone-600 whitespace-pre-wrap">{routeProduct.ingredients}</p>
+                    </div>
+                  )}
+                  {routeProduct.weight && (
+                    <div className="space-y-1.5">
+                      <h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 bg-blue-500 rounded-full"></span>產品重量</h3>
+                      <p className="text-sm text-stone-600">{routeProduct.weight}</p>
+                    </div>
+                  )}
+                  {routeProduct.notices && (
+                    <div className="space-y-1.5">
+                      <h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 bg-rose-500 rounded-full"></span>注意事項</h3>
+                      <div className="bg-rose-50 text-rose-700 p-3 rounded-xl text-sm whitespace-pre-wrap">{routeProduct.notices}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="p-4 bg-white border-t border-stone-200">
+                <div className="flex gap-4">
+                  <div className="flex items-center gap-4 bg-stone-50 rounded-xl px-4 py-3 border border-stone-200 flex-1 justify-center">
+                    <button onClick={() => updateCart(routeProduct.id, -1)} className="p-1 text-stone-500"><Minus size={18} /></button>
+                    <span className="w-6 text-center text-lg font-bold">{cart[routeProduct.id] || 0}</span>
+                    <button onClick={() => updateCart(routeProduct.id, 1)} className="p-1 text-amber-600"><Plus size={18} /></button>
+                  </div>
+                  <Link to="/cart" className="flex-[1.5] bg-amber-500 text-white font-bold py-3.5 rounded-xl shadow-lg text-center active:scale-95 transition-transform">前往購物車</Link>
                 </div>
               </div>
             </div>
