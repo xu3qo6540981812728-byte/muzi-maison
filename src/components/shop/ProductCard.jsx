@@ -10,6 +10,10 @@ export default function ProductCard({
   onUpdateCart
 }) {
   const isEditableAdmin = isAdminMode && !adminOrderingFor
+  const rememberHomeScroll = () => {
+    if (typeof window === 'undefined') return
+    window.sessionStorage.setItem('muzi_home_scroll_y', String(window.scrollY || 0))
+  }
 
   return (
     <div className="bg-white rounded-2xl p-3 shadow-sm flex gap-4 border border-stone-100 relative group overflow-hidden">
@@ -36,6 +40,7 @@ export default function ProductCard({
       ) : (
         <Link
           to={`/product/${product.id}`}
+          onClick={rememberHomeScroll}
           className="relative block w-24 h-24 rounded-xl shrink-0 overflow-hidden cursor-pointer hover:ring-2 hover:ring-amber-400 transition-all"
         >
           <img src={product.image} alt={product.name} loading="lazy" decoding="async" fetchPriority="low" className="w-full h-full object-cover" />
@@ -67,7 +72,7 @@ export default function ProductCard({
             </span>
           </div>
         ) : (
-          <Link to={`/product/${product.id}`} className="cursor-pointer block">
+          <Link to={`/product/${product.id}`} onClick={rememberHomeScroll} className="cursor-pointer block">
             <h3 className="font-bold text-stone-800 leading-tight flex items-center justify-between">
               {product.name} <ChevronRight size={16} className="text-stone-300" />
             </h3>

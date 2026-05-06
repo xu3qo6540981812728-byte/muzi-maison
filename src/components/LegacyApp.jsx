@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { jsPDF } from 'jspdf'
 import html2canvas from 'html2canvas'
@@ -180,6 +180,10 @@ const [tableProducts, setTableProducts] = useState([]);
 const [publicTopSellers, setPublicTopSellers] = useState({ items: [], label: '本月' });
       const navigate = useNavigate()
       const isAdminRouteMode = routeMode.startsWith('admin-')
+      const rememberHomeScroll = () => {
+        if (typeof window === 'undefined') return
+        window.sessionStorage.setItem('muzi_home_scroll_y', String(window.scrollY || 0))
+      }
       const requireAdminAccess = () => {
         if (!currentUser || !isAdminMode) {
           alert('此功能僅限管理員使用')
@@ -419,6 +423,15 @@ const [publicTopSellers, setPublicTopSellers] = useState({ items: [], label: '�
           }
         }
       }, [routeMode, products, isAdminMode])
+
+      useLayoutEffect(() => {
+        if (routeMode !== 'home') return
+        const saved = window.sessionStorage.getItem('muzi_home_scroll_y')
+        if (saved === null) return
+        const top = Number(saved)
+        window.sessionStorage.removeItem('muzi_home_scroll_y')
+        window.scrollTo(0, Number.isFinite(top) ? top : 0)
+      }, [routeMode])
       // ======== 【防護機制區塊】禁用右鍵與 F12 ========
       useEffect(() => {
         const handleContextMenu = (e) => {
@@ -2404,7 +2417,7 @@ const uploadTask = await storageRef.put(blob, metadata);
       }
 
       return (
-        <div className="max-w-md md:max-w-4xl lg:max-w-6xl mx-auto bg-[#Fdfbf7] min-h-screen relative font-sans text-stone-800 shadow-xl overflow-hidden flex flex-col transition-all">
+        <div className="max-w-md md:max-w-4xl lg:max-w-6xl mx-auto bg-[#Fdfbf7] min-h-screen relative font-sans text-stone-800 shadow-xl overflow-hidden flex flex-col">
           
           {!standaloneAdminPage && (
           <>
@@ -2525,7 +2538,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                 {/* 頒獎台設計 (Top 3) */}
                 <div className="flex justify-center items-end gap-4 md:gap-10 mb-8 mt-10">
                   {/* 第二名 */}
-                  <div onClick={() => navigate(`/product/${publicTopSellers.items[1].id}`)} className="flex flex-col items-center w-1/3 max-w-[130px] md:max-w-[160px] z-0 cursor-pointer group">
+                  <div onClick={() => { rememberHomeScroll(); navigate(`/product/${publicTopSellers.items[1].id}`) }} className="flex flex-col items-center w-1/3 max-w-[130px] md:max-w-[160px] z-0 cursor-pointer group">
                      <div className="relative w-20 h-20 md:w-28 md:h-28 mb-3">
                         <img src={publicTopSellers.items[1].image} loading="lazy" decoding="async" fetchPriority="low" className="w-full h-full object-cover rounded-full border-4 border-slate-200 shadow-md transition-transform duration-300 group-hover:scale-105" />
                         <div className="absolute -bottom-1 -right-1 bg-slate-400 text-white text-[11px] font-black w-7 h-7 rounded-full flex items-center justify-center border-2 border-white shadow-sm">2</div>
@@ -2537,7 +2550,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                   </div>
 
                   {/* 第一名 */}
-                  <div onClick={() => navigate(`/product/${publicTopSellers.items[0].id}`)} className="flex flex-col items-center w-1/3 max-w-[150px] md:max-w-[180px] z-10 cursor-pointer group">
+                  <div onClick={() => { rememberHomeScroll(); navigate(`/product/${publicTopSellers.items[0].id}`) }} className="flex flex-col items-center w-1/3 max-w-[150px] md:max-w-[180px] z-10 cursor-pointer group">
                      <div className="relative w-24 h-24 md:w-32 md:h-32 mb-3">
                         <img src={publicTopSellers.items[0].image} loading="lazy" decoding="async" fetchPriority="low" className="w-full h-full object-cover rounded-full border-4 border-amber-400 shadow-xl transition-transform duration-300 group-hover:scale-105" />
                         <div className="absolute -bottom-1 -right-1 bg-amber-500 text-white text-sm font-black w-8 h-8 rounded-full flex items-center justify-center border-2 border-white shadow-sm">1</div>
@@ -2549,7 +2562,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                   </div>
 
                   {/* 第三名 */}
-                  <div onClick={() => navigate(`/product/${publicTopSellers.items[2].id}`)} className="flex flex-col items-center w-1/3 max-w-[130px] md:max-w-[160px] z-0 cursor-pointer group">
+                  <div onClick={() => { rememberHomeScroll(); navigate(`/product/${publicTopSellers.items[2].id}`) }} className="flex flex-col items-center w-1/3 max-w-[130px] md:max-w-[160px] z-0 cursor-pointer group">
                      <div className="relative w-20 h-20 md:w-28 md:h-28 mb-3">
                         <img src={publicTopSellers.items[2].image} loading="lazy" decoding="async" fetchPriority="low" className="w-full h-full object-cover rounded-full border-4 border-orange-200 shadow-md transition-transform duration-300 group-hover:scale-105" />
                         <div className="absolute -bottom-1 -right-1 bg-orange-400 text-white text-[11px] font-black w-7 h-7 rounded-full flex items-center justify-center border-2 border-white shadow-sm">3</div>
@@ -2565,7 +2578,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                 {publicTopSellers.items.length > 3 && (
                   <div className="space-y-2 pt-4 border-t border-stone-100">
                      {publicTopSellers.items.slice(3, 5).map((item, index) => (
-                       <div key={item.id || `${item.name}-${index}`} onClick={() => navigate(`/product/${item.id}`)} className="flex items-center gap-3 bg-stone-50/50 p-2 rounded-xl border border-stone-100 hover:bg-amber-50 cursor-pointer transition-all duration-300 group">
+                       <div key={item.id || `${item.name}-${index}`} onClick={() => { rememberHomeScroll(); navigate(`/product/${item.id}`) }} className="flex items-center gap-3 bg-stone-50/50 p-2 rounded-xl border border-stone-100 hover:bg-amber-50 cursor-pointer transition-all duration-300 group">
                            <span className="text-stone-300 font-black w-4 text-center group-hover:text-amber-400 transition-colors">{index + 4}</span>
                            <img src={item.image} loading="lazy" decoding="async" fetchPriority="low" className="w-10 h-10 object-cover rounded-lg shadow-sm transition-transform duration-300 group-hover:scale-105" />
                            <span className="flex-1 text-sm font-bold text-stone-700 truncate group-hover:text-amber-700 transition-colors">{item.name}</span>
