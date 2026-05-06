@@ -137,6 +137,7 @@ const STATUS_MAP = {
       const [products, setProducts] = useState(defaultProducts);
       const [storeConfig, setStoreConfig] = useState(defaultStoreConfig);
       const [cart, setCart] = useState({});
+      const [checkoutSuccessInfo, setCheckoutSuccessInfo] = useState(null);
       const [isCartOpen, setIsCartOpen] = useState(false);
       const [activeCategory, setActiveCategory] = useState('全部');
       const [deliveryMethod, setDeliveryMethod] = useState('delivery');
@@ -354,6 +355,33 @@ const [publicTopSellers, setPublicTopSellers] = useState({ items: [], label: '�
         })
         setMainDisplayImg(productFromRoute.image || '')
       }, [routeMode, productFromRoute])
+
+      useEffect(() => {
+        try {
+          const savedCart = localStorage.getItem('muzi_cart_v1')
+          if (savedCart) setCart(JSON.parse(savedCart))
+        } catch (error) {
+          console.error('讀取購物車快取失敗', error)
+        }
+      }, [])
+
+      useEffect(() => {
+        try {
+          localStorage.setItem('muzi_cart_v1', JSON.stringify(cart))
+        } catch (error) {
+          console.error('儲存購物車快取失敗', error)
+        }
+      }, [cart])
+
+      useEffect(() => {
+        const handleBeforeUnload = (e) => {
+          if (Object.keys(cart || {}).length <= 0) return
+          e.preventDefault()
+          e.returnValue = ''
+        }
+        window.addEventListener('beforeunload', handleBeforeUnload)
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+      }, [cart])
 
       useEffect(() => {
         // 每次路由切換先清空路由型頁面狀態，避免殘留互相覆蓋
@@ -1092,9 +1120,49 @@ try {
            setShowAdminOrders(true);
         } else {
            alert("訂單已成功送出！請於您的訂單列表複製明細並加 LINE 通知我們喔！");
+           setCheckoutSuccessInfo({
+             orderId,
+             customerName: customerInfo.name,
+             customerPhone: customerInfo.phone,
+             address: customerInfo.address,
+             deliveryMethod,
+             totalPrice: cartData.finalPrice,
+             bankCode: checkoutBankCode || '',
+             lineLink: contactData.lineLink || ''
+           })
            setShowMemberProfile(true);
         }
       };
+
+      const handleCopyCheckoutTemplate = () => {
+        if (!checkoutSuccessInfo) return
+        const template = [
+          '【木子家 MUZI MAISON 訂單回報】',
+          `訂單編號：${checkoutSuccessInfo.orderId}`,
+          `訂購人：${checkoutSuccessInfo.customerName}`,
+          `聯絡電話：${checkoutSuccessInfo.customerPhone}`,
+          `取貨方式：${checkoutSuccessInfo.deliveryMethod === 'delivery' ? '宅配' : '自取'}`,
+          `地址：${checkoutSuccessInfo.address}`,
+          `總金額：$${checkoutSuccessInfo.totalPrice}`,
+          `匯款後五碼：${checkoutSuccessInfo.bankCode || '（尚未填寫）'}`
+        ].join('\n')
+        const copyFallback = (t) => {
+          const ta = document.createElement('textarea')
+          ta.value = t
+          ta.style.position = 'fixed'
+          ta.style.left = '-999999px'
+          document.body.appendChild(ta)
+          ta.select()
+          try { document.execCommand('copy') } catch (e) {}
+          ta.remove()
+        }
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(template).catch(() => copyFallback(template))
+        } else {
+          copyFallback(template)
+        }
+        alert('已複製「訂單編號 + 後五碼」回報模板')
+      }
 
       const handleCopyOrder = (order) => {
         const currentBankCode = bankCodeInputs[order.id] || order.bankAccountLast5;
@@ -2673,6 +2741,7 @@ const uploadTask = await storageRef.put(blob, metadata);
             cartData={cartData}
             cart={cart}
             addonProducts={addonProducts}
+            products={products}
             updateCart={updateCart}
             storeConfig={storeConfig}
             deliveryMethod={deliveryMethod}
@@ -2826,6 +2895,7 @@ const uploadTask = await storageRef.put(blob, metadata);
               setCustomerInfo={setCustomerInfo}
               handleUpdateMyProfile={handleUpdateMyProfile}
               myOrders={myOrders}
+              products={products}
               statusMap={STATUS_MAP}
               contactData={contactData}
               copiedOrderId={copiedOrderId}
@@ -2834,7 +2904,39 @@ const uploadTask = await storageRef.put(blob, metadata);
               setBankCodeInputs={setBankCodeInputs}
               submitBankCode={submitBankCode}
               requestCancelOrder={requestCancelOrder}
+              onQuickReorder={(productId) => navigate(`/product/${productId}`)}
             />
+          )}
+
+          {checkoutSuccessInfo && (
+            <div className="fixed inset-0 z-[70] flex justify-center items-center bg-black/50 backdrop-blur-sm px-4">
+              <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-5 border border-stone-200">
+                <h3 className="text-lg font-black text-stone-800 mb-2">訂單送出成功</h3>
+                <p className="text-sm text-stone-600 mb-4">
+                  建議先複製回報模板，再前往 LINE 貼上，對帳會更快。
+                </p>
+                <div className="bg-stone-50 border border-stone-200 rounded-lg p-3 text-sm text-stone-700 mb-4">
+                  訂單編號：<span className="font-bold">{checkoutSuccessInfo.orderId}</span>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={handleCopyCheckoutTemplate} className="flex-1 bg-stone-800 text-white py-2.5 rounded-lg font-bold">
+                    複製回報模板
+                  </button>
+                  {checkoutSuccessInfo.lineLink ? (
+                    <a href={checkoutSuccessInfo.lineLink} target="_blank" rel="noreferrer" className="flex-1 bg-[#06C755] text-white py-2.5 rounded-lg font-bold text-center">
+                      前往 LINE
+                    </a>
+                  ) : (
+                    <button className="flex-1 bg-stone-300 text-white py-2.5 rounded-lg font-bold" disabled>
+                      LINE 未設定
+                    </button>
+                  )}
+                </div>
+                <button onClick={() => setCheckoutSuccessInfo(null)} className="w-full mt-3 text-stone-500 text-sm">
+                  我知道了
+                </button>
+              </div>
+            </div>
           )}
 
           {showAdminDashboard && isAdminMode && (

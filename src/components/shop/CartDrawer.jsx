@@ -11,6 +11,7 @@ import {
   UserIcon,
   X
 } from '../Icons'
+import { Link } from 'react-router-dom'
 
 export default function CartDrawer({
   isOpen,
@@ -32,9 +33,22 @@ export default function CartDrawer({
   checkoutBankCode,
   setCheckoutBankCode,
   onRequireLogin,
-  handleCheckout
+  handleCheckout,
+  products
 }) {
   if (!isOpen) return null
+  const remainingToFreeShipping = Math.max(0, storeConfig.freeShippingThreshold - cartData.currentTotal)
+  const recommendedForFreeShipping =
+    remainingToFreeShipping > 0
+      ? (products || [])
+          .filter((p) => !p.isAddon)
+          .sort(
+            (a, b) =>
+              Math.abs((a.price || 0) - remainingToFreeShipping) -
+              Math.abs((b.price || 0) - remainingToFreeShipping)
+          )
+          .slice(0, 3)
+      : null
 
   return (
     <div className="fixed inset-0 z-50 flex justify-center items-end bg-black/50 backdrop-blur-sm sm:items-center">
@@ -245,6 +259,50 @@ export default function CartDrawer({
                   <span className="text-[10px]">免運費</span>
                 </label>
               </div>
+            </div>
+
+            <div className="mt-4 bg-white border border-stone-200 p-4 rounded-2xl space-y-2 text-sm">
+              <h4 className="font-bold text-stone-800">結帳資訊</h4>
+              <p className="text-stone-600">
+                宅配運費：${storeConfig.shippingFee}，滿 ${storeConfig.freeShippingThreshold} 免運
+              </p>
+              <p className="text-stone-600">
+                {remainingToFreeShipping > 0
+                  ? `目前還差 $${remainingToFreeShipping} 可享免運`
+                  : '已達免運門檻，恭喜免運！'}
+              </p>
+              {recommendedForFreeShipping && remainingToFreeShipping > 0 && recommendedForFreeShipping.length > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-2">
+                  <p className="text-amber-700 font-bold text-xs mb-2">免運推薦商品（可點擊查看）</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {recommendedForFreeShipping.map((p) => (
+                      <Link
+                        key={p.id}
+                        to={`/product/${p.id}`}
+                        onClick={onClose}
+                        className="bg-white border border-amber-100 rounded-lg p-2 hover:border-amber-300 flex gap-2 items-center"
+                      >
+                        <img
+                          src={p.image}
+                          alt={p.name}
+                          loading="lazy"
+                          decoding="async"
+                          fetchPriority="low"
+                          className="w-10 h-10 rounded-md object-cover bg-stone-100 shrink-0"
+                        />
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-stone-700 truncate">{p.name}</p>
+                          <p className="text-xs text-amber-700 font-bold mt-1">${p.price}</p>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <p className="text-stone-600">出貨天數：接單後約 5-7 天出貨</p>
+              <p className="text-stone-600 whitespace-pre-wrap">
+                匯款說明：下單後可輸入後五碼，並將訂單編號回報 LINE 以加速對帳。
+              </p>
             </div>
 
             <div className="mt-4 bg-stone-50 p-4 rounded-2xl space-y-2">

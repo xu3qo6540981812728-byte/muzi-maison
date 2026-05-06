@@ -24,8 +24,27 @@ export default function MemberProfileModal({
   bankCodeInputs,
   setBankCodeInputs,
   submitBankCode,
-  requestCancelOrder
+  requestCancelOrder,
+  products,
+  onQuickReorder
 }) {
+  const quickReorderProducts = (() => {
+    const qtyMap = {}
+    myOrders.forEach((order) => {
+      ;(order.items || []).forEach((item) => {
+        if (item?.id) qtyMap[item.id] = (qtyMap[item.id] || 0) + (item.qty || 0)
+      })
+    })
+    return Object.entries(qtyMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([productId, qty]) => {
+        const product = (products || []).find((p) => p.id === productId)
+        return product ? { ...product, orderedQty: qty } : null
+      })
+      .filter(Boolean)
+  })()
+
   return (
     <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4 md:px-10 py-6">
       <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-4xl h-full flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
@@ -173,6 +192,22 @@ export default function MemberProfileModal({
           </div>
 
           <div className="md:w-2/3">
+            {quickReorderProducts.length > 0 && (
+              <div className="mb-4 bg-white border border-stone-200 rounded-2xl p-4">
+                <h3 className="font-bold text-stone-700 mb-3">熱門商品快速回購</h3>
+                <div className="flex flex-wrap gap-2">
+                  {quickReorderProducts.map((product) => (
+                    <button
+                      key={product.id}
+                      onClick={() => onQuickReorder(product.id)}
+                      className="text-xs bg-amber-50 border border-amber-200 text-amber-700 px-3 py-1.5 rounded-full font-bold hover:bg-amber-100"
+                    >
+                      {product.name}（歷史 {product.orderedQty} 件）
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <h3 className="font-bold text-stone-700 mb-3 border-b border-stone-200 pb-2">
               我的訂單紀錄
             </h3>
