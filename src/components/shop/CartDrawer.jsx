@@ -34,21 +34,47 @@ export default function CartDrawer({
   setCheckoutBankCode,
   onRequireLogin,
   handleCheckout,
-  products
+  products,
+  topSellers
 }) {
   if (!isOpen) return null
+  const productList = products || []
   const remainingToFreeShipping = Math.max(0, storeConfig.freeShippingThreshold - cartData.currentTotal)
-  const recommendedForFreeShipping =
-    remainingToFreeShipping > 0
-      ? (products || [])
-          .filter((p) => !p.isAddon)
-          .sort(
-            (a, b) =>
-              Math.abs((a.price || 0) - remainingToFreeShipping) -
-              Math.abs((b.price || 0) - remainingToFreeShipping)
-          )
-          .slice(0, 3)
-      : null
+  const recommendedForFreeShipping = (() => {
+    if (remainingToFreeShipping <= 0) return []
+    const selected = []
+    const selectedIds = new Set()
+    const tryPush = (p) => {
+      if (!p || selectedIds.has(p.id)) return
+      selected.push(p)
+      selectedIds.add(p.id)
+    }
+
+    const hotProducts = ((topSellers?.items || [])
+      .map((item) => productList.find((p) => p.id === item.id))
+      .filter((p) => p && !p.isAddon))
+
+    const cheapestHot = [...hotProducts].sort((a, b) => (a.price || 0) - (b.price || 0))[0]
+    const closestHot = [...hotProducts].sort(
+      (a, b) =>
+        Math.abs((a.price || 0) - remainingToFreeShipping) -
+        Math.abs((b.price || 0) - remainingToFreeShipping)
+    )[0]
+
+    tryPush(cheapestHot)
+    tryPush(closestHot)
+
+    const allByClosest = productList
+      .filter((p) => !p.isAddon)
+      .sort(
+        (a, b) =>
+          Math.abs((a.price || 0) - remainingToFreeShipping) -
+          Math.abs((b.price || 0) - remainingToFreeShipping)
+      )
+    allByClosest.forEach((p) => tryPush(p))
+
+    return selected.slice(0, 3)
+  })()
 
   return (
     <div className="fixed inset-0 z-50 flex justify-center items-end bg-black/50 backdrop-blur-sm sm:items-center">
@@ -271,10 +297,10 @@ export default function CartDrawer({
                   ? `目前還差 $${remainingToFreeShipping} 可享免運`
                   : '已達免運門檻，恭喜免運！'}
               </p>
-              {recommendedForFreeShipping && remainingToFreeShipping > 0 && recommendedForFreeShipping.length > 0 && (
+              {recommendedForFreeShipping.length > 0 && (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-2">
                   <p className="text-amber-700 font-bold text-xs mb-2">免運推薦商品（可點擊查看）</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 gap-2">
                     {recommendedForFreeShipping.map((p) => (
                       <Link
                         key={p.id}
@@ -291,7 +317,7 @@ export default function CartDrawer({
                           className="w-10 h-10 rounded-md object-cover bg-stone-100 shrink-0"
                         />
                         <div className="min-w-0">
-                          <p className="text-xs font-bold text-stone-700 truncate">{p.name}</p>
+                          <p className="text-xs font-bold text-stone-700 leading-tight break-words">{p.name}</p>
                           <p className="text-xs text-amber-700 font-bold mt-1">${p.price}</p>
                         </div>
                       </Link>

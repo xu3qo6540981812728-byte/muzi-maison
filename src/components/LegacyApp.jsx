@@ -2742,6 +2742,7 @@ const uploadTask = await storageRef.put(blob, metadata);
             cart={cart}
             addonProducts={addonProducts}
             products={products}
+            topSellers={publicTopSellers}
             updateCart={updateCart}
             storeConfig={storeConfig}
             deliveryMethod={deliveryMethod}
