@@ -1,13 +1,42 @@
 ﻿import LegacyApp from './components/LegacyApp'
-import { Navigate, Route, Routes, useParams } from 'react-router-dom'
+import { Navigate, Route, Routes, matchPath, useLocation } from 'react-router-dom'
 
-function ProductRoutePage() {
-  const { productId } = useParams()
+function RoutedLegacyApp() {
+  const { pathname } = useLocation()
+  const productMatch = matchPath('/product/:productId', pathname)
+
+  let routeMode = 'home'
+  let standaloneAdminPage = false
+  let routeProductId = null
+
+  if (productMatch?.params?.productId) {
+    routeMode = 'product'
+    routeProductId = productMatch.params.productId
+  } else if (pathname === '/member') {
+    routeMode = 'member'
+  } else if (pathname === '/cart') {
+    routeMode = 'cart'
+  } else if (pathname === '/admin/dashboard') {
+    routeMode = 'admin-dashboard'
+    standaloneAdminPage = true
+  } else if (pathname === '/admin/orders') {
+    routeMode = 'admin-orders'
+    standaloneAdminPage = true
+  } else if (pathname === '/admin/customers') {
+    routeMode = 'admin-customers'
+    standaloneAdminPage = true
+  } else if (pathname === '/admin/products') {
+    routeMode = 'admin-products'
+    standaloneAdminPage = true
+  } else if (pathname !== '/') {
+    return <Navigate to="/" replace />
+  }
+
   return (
     <LegacyApp
-      routeMode="product"
-      routeProductId={productId}
-      standaloneAdminPage
+      routeMode={routeMode}
+      routeProductId={routeProductId}
+      standaloneAdminPage={standaloneAdminPage}
     />
   )
 }
@@ -15,15 +44,7 @@ function ProductRoutePage() {
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<LegacyApp routeMode="home" />} />
-      <Route path="/product/:productId" element={<ProductRoutePage />} />
-      <Route path="/member" element={<LegacyApp routeMode="member" />} />
-      <Route path="/cart" element={<LegacyApp routeMode="cart" />} />
-      <Route path="/admin/dashboard" element={<LegacyApp routeMode="admin-dashboard" standaloneAdminPage />} />
-      <Route path="/admin/orders" element={<LegacyApp routeMode="admin-orders" standaloneAdminPage />} />
-      <Route path="/admin/customers" element={<LegacyApp routeMode="admin-customers" standaloneAdminPage />} />
-      <Route path="/admin/products" element={<LegacyApp routeMode="admin-products" standaloneAdminPage />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<RoutedLegacyApp />} />
     </Routes>
   )
 }
