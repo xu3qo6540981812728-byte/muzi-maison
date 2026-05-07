@@ -190,7 +190,7 @@ export default function CartDrawer({
                       className="bg-white border border-stone-200 rounded-xl p-2.5 flex gap-3 shadow-sm relative overflow-hidden"
                     >
                       <img
-                        src={addon.image || 'https://via.placeholder.com/150?text=Empty'}
+                        src={addon.thumbUrl || addon.image || 'https://via.placeholder.com/150?text=Empty'}
                         loading="lazy"
                         decoding="async"
                         fetchPriority="low"
@@ -309,7 +309,7 @@ export default function CartDrawer({
                         className="bg-white border border-amber-100 rounded-lg p-2 hover:border-amber-300 flex gap-2 items-center"
                       >
                         <img
-                          src={p.image}
+                          src={p.thumbUrl || p.image}
                           alt={p.name}
                           loading="lazy"
                           decoding="async"

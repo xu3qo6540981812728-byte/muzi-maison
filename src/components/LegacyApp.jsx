@@ -98,6 +98,8 @@ const STATUS_MAP = {
       const [showAdminCustomers, setShowAdminCustomers] = useState(false);
       const [showAdminDashboard, setShowAdminDashboard] = useState(false);
       const [showAdminLogs, setShowAdminLogs] = useState(false);
+      const [imageMigrationRunning, setImageMigrationRunning] = useState(false);
+      const [imageMigrationStatus, setImageMigrationStatus] = useState('');
       const [showDeletedCustomers, setShowDeletedCustomers] = useState(false); 
       const [showAboutModal, setShowAboutModal] = useState(false);
       const [isEditingAbout, setIsEditingAbout] = useState(false);
@@ -1917,6 +1919,104 @@ const uploadTask = await storageRef.put(blob, metadata);
       reader.readAsDataURL(file);
     };
 
+      const createAndUploadThumbFromUrl = async (imageUrl, folder = 'thumbs') => {
+        if (!imageUrl) return ''
+        if (!storage) throw new Error('Firebase Storage 尚未連接')
+
+        const sourceResp = await fetch(imageUrl)
+        if (!sourceResp.ok) throw new Error('無法下載原圖')
+        const sourceBlob = await sourceResp.blob()
+        let width = 0
+        let height = 0
+        let drawSource = null
+        if (typeof createImageBitmap === 'function') {
+          const bitmap = await createImageBitmap(sourceBlob)
+          width = bitmap.width
+          height = bitmap.height
+          drawSource = bitmap
+        } else {
+          const img = await new Promise((resolve, reject) => {
+            const objectUrl = URL.createObjectURL(sourceBlob)
+            const image = new Image()
+            image.onload = () => {
+              URL.revokeObjectURL(objectUrl)
+              resolve(image)
+            }
+            image.onerror = () => {
+              URL.revokeObjectURL(objectUrl)
+              reject(new Error('圖片解碼失敗'))
+            }
+            image.src = objectUrl
+          })
+          width = img.width
+          height = img.height
+          drawSource = img
+        }
+
+        const MAX_WIDTH = 480
+        if (width > MAX_WIDTH) {
+          height = Math.round((height * MAX_WIDTH) / width)
+          width = MAX_WIDTH
+        }
+
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        ctx.clearRect(0, 0, width, height)
+        ctx.drawImage(drawSource, 0, 0, width, height)
+
+        const thumbBlob = await new Promise((resolve) => {
+          canvas.toBlob((blob) => resolve(blob), 'image/webp', 0.78)
+        })
+        if (!thumbBlob) throw new Error('縮圖轉換失敗')
+
+        const thumbPath = `${folder}/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.webp`
+        const thumbRef = storage.ref().child(thumbPath)
+        const uploadTask = await thumbRef.put(thumbBlob, {
+          cacheControl: 'public, max-age=31536000, immutable',
+          contentType: 'image/webp'
+        })
+        return uploadTask.ref.getDownloadURL()
+      }
+
+      const handleMigrateExistingProductThumbs = async () => {
+        if (!requireAdminAccess()) return
+        if (imageMigrationRunning) return
+
+        const targets = (products || []).filter((p) => p?.id && p?.image && !p?.thumbUrl)
+        if (targets.length === 0) {
+          alert('目前沒有需要補齊縮圖的商品')
+          return
+        }
+        if (!window.confirm(`將為 ${targets.length} 項舊商品補齊縮圖，是否開始？`)) return
+
+        setImageMigrationRunning(true)
+        let success = 0
+        let failed = 0
+        try {
+          for (let i = 0; i < targets.length; i += 1) {
+            const item = targets[i]
+            setImageMigrationStatus(`處理中 ${i + 1}/${targets.length}：${item.name || item.id}`)
+            try {
+              const thumbUrl = await createAndUploadThumbFromUrl(item.image, 'products/thumbs')
+              if (db) {
+                await db.collection('products').doc(item.id).set({ thumbUrl }, { merge: true })
+              }
+              success += 1
+            } catch (error) {
+              console.error('縮圖補齊失敗', item.id, error)
+              failed += 1
+            }
+          }
+          await writeAdminLog('product_thumb_migration', { total: targets.length, success, failed })
+          setImageMigrationStatus(`完成：成功 ${success}，失敗 ${failed}`)
+          alert(`縮圖補齊完成：成功 ${success}，失敗 ${failed}`)
+        } finally {
+          setImageMigrationRunning(false)
+        }
+      }
+
       // --- 以下為新增：處理 PDF 檔案上傳的功能 ---
       const handleFileUpload = async (file) => {
         if (!requireAdminAccess()) return;
@@ -1975,7 +2075,18 @@ const uploadTask = await storageRef.put(blob, metadata);
         const prodData = { ...editingProduct, id: editingProduct.id.trim(), price: Number(editingProduct.price) || 0, cost: Number(editingProduct.cost) || 0 };
         delete prodData.isNew;
         const beforeProduct = products.find(p => p.id === prodData.id) || {}
-        if (db) { try { await db.collection('products').doc(prodData.id).set(prodData); alert("商品儲存成功！"); } catch (error) { alert("儲存失敗！可能是圖片檔案過大超過限制。"); return; } }
+        try {
+          if (prodData.image && !prodData.thumbUrl) {
+            prodData.thumbUrl = await createAndUploadThumbFromUrl(prodData.image, 'products/thumbs')
+          }
+          if (db) {
+            await db.collection('products').doc(prodData.id).set(prodData)
+          }
+          alert("商品儲存成功！")
+        } catch (error) {
+          alert("儲存失敗！可能是圖片檔案過大超過限制。")
+          return
+        }
         await writeAdminLog('product_saved', {
           productId: prodData.id,
           productName: prodData.name || '',
@@ -2667,7 +2778,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                   {/* 第二名 */}
                   <div onClick={() => { rememberHomeScroll(); navigate(`/product/${publicTopSellers.items[1].id}`) }} className="flex flex-col items-center w-1/3 max-w-[130px] md:max-w-[160px] z-0 cursor-pointer group">
                      <div className="relative w-20 h-20 md:w-28 md:h-28 mb-3">
-                        <img src={publicTopSellers.items[1].image} loading="lazy" decoding="async" fetchPriority="low" className="w-full h-full object-cover rounded-full border-4 border-slate-200 shadow-md transition-transform duration-300 group-hover:scale-105" />
+                        <img src={publicTopSellers.items[1].thumbUrl || publicTopSellers.items[1].image} loading="lazy" decoding="async" fetchPriority="low" className="w-full h-full object-cover rounded-full border-4 border-slate-200 shadow-md transition-transform duration-300 group-hover:scale-105" />
                         <div className="absolute -bottom-1 -right-1 bg-slate-400 text-white text-[11px] font-black w-7 h-7 rounded-full flex items-center justify-center border-2 border-white shadow-sm">2</div>
                      </div>
                      <span className="text-xs md:text-sm font-bold text-stone-700 w-full text-center px-1 group-hover:text-amber-600 transition-colors leading-snug break-words">{publicTopSellers.items[1].name}</span>
@@ -2679,7 +2790,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                   {/* 第一名 */}
                   <div onClick={() => { rememberHomeScroll(); navigate(`/product/${publicTopSellers.items[0].id}`) }} className="flex flex-col items-center w-1/3 max-w-[150px] md:max-w-[180px] z-10 cursor-pointer group">
                      <div className="relative w-24 h-24 md:w-32 md:h-32 mb-3">
-                        <img src={publicTopSellers.items[0].image} loading="lazy" decoding="async" fetchPriority="low" className="w-full h-full object-cover rounded-full border-4 border-amber-400 shadow-xl transition-transform duration-300 group-hover:scale-105" />
+                        <img src={publicTopSellers.items[0].thumbUrl || publicTopSellers.items[0].image} loading="lazy" decoding="async" fetchPriority="low" className="w-full h-full object-cover rounded-full border-4 border-amber-400 shadow-xl transition-transform duration-300 group-hover:scale-105" />
                         <div className="absolute -bottom-1 -right-1 bg-amber-500 text-white text-sm font-black w-8 h-8 rounded-full flex items-center justify-center border-2 border-white shadow-sm">1</div>
                      </div>
                      <span className="text-sm md:text-base font-black text-stone-800 w-full text-center px-1 group-hover:text-amber-600 transition-colors leading-snug break-words">{publicTopSellers.items[0].name}</span>
@@ -2691,7 +2802,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                   {/* 第三名 */}
                   <div onClick={() => { rememberHomeScroll(); navigate(`/product/${publicTopSellers.items[2].id}`) }} className="flex flex-col items-center w-1/3 max-w-[130px] md:max-w-[160px] z-0 cursor-pointer group">
                      <div className="relative w-20 h-20 md:w-28 md:h-28 mb-3">
-                        <img src={publicTopSellers.items[2].image} loading="lazy" decoding="async" fetchPriority="low" className="w-full h-full object-cover rounded-full border-4 border-orange-200 shadow-md transition-transform duration-300 group-hover:scale-105" />
+                        <img src={publicTopSellers.items[2].thumbUrl || publicTopSellers.items[2].image} loading="lazy" decoding="async" fetchPriority="low" className="w-full h-full object-cover rounded-full border-4 border-orange-200 shadow-md transition-transform duration-300 group-hover:scale-105" />
                         <div className="absolute -bottom-1 -right-1 bg-orange-400 text-white text-[11px] font-black w-7 h-7 rounded-full flex items-center justify-center border-2 border-white shadow-sm">3</div>
                      </div>
                      <span className="text-xs md:text-sm font-bold text-stone-700 w-full text-center px-1 group-hover:text-amber-600 transition-colors leading-snug break-words">{publicTopSellers.items[2].name}</span>
@@ -2707,7 +2818,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                      {publicTopSellers.items.slice(3, 5).map((item, index) => (
                        <div key={item.id || `${item.name}-${index}`} onClick={() => { rememberHomeScroll(); navigate(`/product/${item.id}`) }} className="flex items-center gap-3 bg-stone-50/50 p-2 rounded-xl border border-stone-100 hover:bg-amber-50 cursor-pointer transition-all duration-300 group">
                            <span className="text-stone-300 font-black w-4 text-center group-hover:text-amber-400 transition-colors">{index + 4}</span>
-                           <img src={item.image} loading="lazy" decoding="async" fetchPriority="low" className="w-10 h-10 object-cover rounded-lg shadow-sm transition-transform duration-300 group-hover:scale-105" />
+                           <img src={item.thumbUrl || item.image} loading="lazy" decoding="async" fetchPriority="low" className="w-10 h-10 object-cover rounded-lg shadow-sm transition-transform duration-300 group-hover:scale-105" />
                            <span className="flex-1 text-sm font-bold text-stone-700 truncate group-hover:text-amber-700 transition-colors">{item.name}</span>
                            <span className="text-xs font-black bg-white px-2 py-1 rounded shadow-sm text-stone-500 border border-stone-100 group-hover:border-amber-200 group-hover:text-amber-600 transition-colors">{item.percentage}%</span>
                         </div>
@@ -3102,6 +3213,9 @@ const uploadTask = await storageRef.put(blob, metadata);
               onOpenLogs={() => {
                 setShowAdminLogs(true)
               }}
+              onStartImageMigration={handleMigrateExistingProductThumbs}
+              imageMigrationRunning={imageMigrationRunning}
+              imageMigrationStatus={imageMigrationStatus}
               allOrders={allOrders}
               allUsers={allUsers}
               products={products}

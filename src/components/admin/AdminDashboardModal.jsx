@@ -4,6 +4,9 @@ export default function AdminDashboardModal({
   onClose,
   onGoToOrders,
   onOpenLogs,
+  onStartImageMigration,
+  imageMigrationRunning,
+  imageMigrationStatus,
   allOrders,
   allUsers,
   products,
@@ -24,7 +27,18 @@ export default function AdminDashboardModal({
         <h2 className="text-xl md:text-2xl font-bold text-stone-800 mb-6 flex items-center gap-2 border-b border-stone-200 pb-3">
           <TrendingUp size={24} className="text-indigo-600" /> 營運數據儀表板
         </h2>
-        <div className="mb-4 flex justify-end">
+        <div className="mb-4 flex justify-end gap-2">
+          <button
+            onClick={onStartImageMigration}
+            disabled={imageMigrationRunning}
+            className={`text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition-colors ${
+              imageMigrationRunning
+                ? 'bg-stone-300 text-white cursor-not-allowed'
+                : 'bg-emerald-600 text-white hover:bg-emerald-700'
+            }`}
+          >
+            {imageMigrationRunning ? '縮圖補齊中...' : '補齊舊商品縮圖'}
+          </button>
           <button
             onClick={onOpenLogs}
             className="text-xs bg-stone-800 text-white font-bold px-3 py-1.5 rounded-lg shadow-sm hover:bg-stone-900 transition-colors"
@@ -32,6 +46,11 @@ export default function AdminDashboardModal({
             查看管理操作紀錄
           </button>
         </div>
+        {imageMigrationStatus && (
+          <p className="mb-3 text-xs text-stone-500 bg-stone-100 border border-stone-200 rounded-lg px-3 py-2">
+            {imageMigrationStatus}
+          </p>
+        )}
 
         <div className="flex-1 overflow-y-auto space-y-6 pr-2">
           {(() => {
@@ -147,6 +166,7 @@ export default function AdminDashboardModal({
                             return {
                               name,
                               image: prod.image || '',
+                              thumbUrl: prod.thumbUrl || '',
                               percentage,
                               id: prod.id || ''
                             }
