@@ -191,9 +191,9 @@ export default function CartDrawer({
                     >
                       <img
                         src={addon.thumbUrl || addon.image || 'https://via.placeholder.com/150?text=Empty'}
-                        loading="lazy"
+                        loading="eager"
                         decoding="async"
-                        fetchPriority="low"
+                        fetchPriority="high"
                         className="w-14 h-14 object-cover rounded-lg shrink-0"
                       />
                       <div className="flex-1 flex flex-col justify-between py-0.5 min-w-0">
@@ -311,9 +311,9 @@ export default function CartDrawer({
                         <img
                           src={p.thumbUrl || p.image}
                           alt={p.name}
-                          loading="lazy"
+                          loading="eager"
                           decoding="async"
-                          fetchPriority="low"
+                          fetchPriority="high"
                           className="w-10 h-10 rounded-md object-cover bg-stone-100 shrink-0"
                         />
                         <div className="min-w-0">

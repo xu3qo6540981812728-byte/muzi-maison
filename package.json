@@ -6,15 +6,18 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "images:migrate": "node scripts/migrate-product-thumbs.mjs"
   },
   "dependencies": {
     "firebase": "^10.14.1",
+    "firebase-admin": "^13.5.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^2.5.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.30.1"
+    "react-router-dom": "^6.30.1",
+    "sharp": "^0.34.2"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",

@@ -2778,7 +2778,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                   {/* 第二名 */}
                   <div onClick={() => { rememberHomeScroll(); navigate(`/product/${publicTopSellers.items[1].id}`) }} className="flex flex-col items-center w-1/3 max-w-[130px] md:max-w-[160px] z-0 cursor-pointer group">
                      <div className="relative w-20 h-20 md:w-28 md:h-28 mb-3">
-                        <img src={publicTopSellers.items[1].thumbUrl || publicTopSellers.items[1].image} loading="lazy" decoding="async" fetchPriority="low" className="w-full h-full object-cover rounded-full border-4 border-slate-200 shadow-md transition-transform duration-300 group-hover:scale-105" />
+                        <img src={publicTopSellers.items[1].thumbUrl || publicTopSellers.items[1].image} loading="eager" decoding="async" fetchPriority="high" className="w-full h-full object-cover rounded-full border-4 border-slate-200 shadow-md transition-transform duration-300 group-hover:scale-105" />
                         <div className="absolute -bottom-1 -right-1 bg-slate-400 text-white text-[11px] font-black w-7 h-7 rounded-full flex items-center justify-center border-2 border-white shadow-sm">2</div>
                      </div>
                      <span className="text-xs md:text-sm font-bold text-stone-700 w-full text-center px-1 group-hover:text-amber-600 transition-colors leading-snug break-words">{publicTopSellers.items[1].name}</span>
@@ -2790,7 +2790,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                   {/* 第一名 */}
                   <div onClick={() => { rememberHomeScroll(); navigate(`/product/${publicTopSellers.items[0].id}`) }} className="flex flex-col items-center w-1/3 max-w-[150px] md:max-w-[180px] z-10 cursor-pointer group">
                      <div className="relative w-24 h-24 md:w-32 md:h-32 mb-3">
-                        <img src={publicTopSellers.items[0].thumbUrl || publicTopSellers.items[0].image} loading="lazy" decoding="async" fetchPriority="low" className="w-full h-full object-cover rounded-full border-4 border-amber-400 shadow-xl transition-transform duration-300 group-hover:scale-105" />
+                        <img src={publicTopSellers.items[0].thumbUrl || publicTopSellers.items[0].image} loading="eager" decoding="async" fetchPriority="high" className="w-full h-full object-cover rounded-full border-4 border-amber-400 shadow-xl transition-transform duration-300 group-hover:scale-105" />
                         <div className="absolute -bottom-1 -right-1 bg-amber-500 text-white text-sm font-black w-8 h-8 rounded-full flex items-center justify-center border-2 border-white shadow-sm">1</div>
                      </div>
                      <span className="text-sm md:text-base font-black text-stone-800 w-full text-center px-1 group-hover:text-amber-600 transition-colors leading-snug break-words">{publicTopSellers.items[0].name}</span>
@@ -2802,7 +2802,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                   {/* 第三名 */}
                   <div onClick={() => { rememberHomeScroll(); navigate(`/product/${publicTopSellers.items[2].id}`) }} className="flex flex-col items-center w-1/3 max-w-[130px] md:max-w-[160px] z-0 cursor-pointer group">
                      <div className="relative w-20 h-20 md:w-28 md:h-28 mb-3">
-                        <img src={publicTopSellers.items[2].thumbUrl || publicTopSellers.items[2].image} loading="lazy" decoding="async" fetchPriority="low" className="w-full h-full object-cover rounded-full border-4 border-orange-200 shadow-md transition-transform duration-300 group-hover:scale-105" />
+                        <img src={publicTopSellers.items[2].thumbUrl || publicTopSellers.items[2].image} loading="eager" decoding="async" fetchPriority="high" className="w-full h-full object-cover rounded-full border-4 border-orange-200 shadow-md transition-transform duration-300 group-hover:scale-105" />
                         <div className="absolute -bottom-1 -right-1 bg-orange-400 text-white text-[11px] font-black w-7 h-7 rounded-full flex items-center justify-center border-2 border-white shadow-sm">3</div>
                      </div>
                      <span className="text-xs md:text-sm font-bold text-stone-700 w-full text-center px-1 group-hover:text-amber-600 transition-colors leading-snug break-words">{publicTopSellers.items[2].name}</span>
@@ -2818,7 +2818,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                      {publicTopSellers.items.slice(3, 5).map((item, index) => (
                        <div key={item.id || `${item.name}-${index}`} onClick={() => { rememberHomeScroll(); navigate(`/product/${item.id}`) }} className="flex items-center gap-3 bg-stone-50/50 p-2 rounded-xl border border-stone-100 hover:bg-amber-50 cursor-pointer transition-all duration-300 group">
                            <span className="text-stone-300 font-black w-4 text-center group-hover:text-amber-400 transition-colors">{index + 4}</span>
-                           <img src={item.thumbUrl || item.image} loading="lazy" decoding="async" fetchPriority="low" className="w-10 h-10 object-cover rounded-lg shadow-sm transition-transform duration-300 group-hover:scale-105" />
+                           <img src={item.thumbUrl || item.image} loading="eager" decoding="async" fetchPriority="high" className="w-10 h-10 object-cover rounded-lg shadow-sm transition-transform duration-300 group-hover:scale-105" />
                            <span className="flex-1 text-sm font-bold text-stone-700 truncate group-hover:text-amber-700 transition-colors">{item.name}</span>
                            <span className="text-xs font-black bg-white px-2 py-1 rounded shadow-sm text-stone-500 border border-stone-100 group-hover:border-amber-200 group-hover:text-amber-600 transition-colors">{item.percentage}%</span>
                         </div>
@@ -2840,7 +2840,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                   {mergedCategories.find(c => c.name === category)?.isHidden && <span className="text-xs font-normal text-stone-400 bg-stone-100 px-2 py-0.5 rounded ml-2">隱藏分類</span>}
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                  {displayedProducts.filter(p => p.category === category).map(product => (
+                  {displayedProducts.filter(p => p.category === category).map((product) => (
                     <ProductCard
                       key={product.id}
                       product={product}
@@ -2875,7 +2875,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                       <div className="relative shrink-0 group">
                         {editingProduct.image ? (
                            <>
-                             <img src={editingProduct.image} loading="lazy" decoding="async" fetchPriority="low" onClick={() => setMainDisplayImg(editingProduct.image)} className={`w-16 h-16 object-cover rounded-lg cursor-pointer border-2 ${mainDisplayImg === editingProduct.image ? 'border-amber-500' : 'border-stone-200'}`} />
+                             <img src={editingProduct.image} loading="eager" decoding="async" fetchPriority="high" onClick={() => setMainDisplayImg(editingProduct.image)} className={`w-16 h-16 object-cover rounded-lg cursor-pointer border-2 ${mainDisplayImg === editingProduct.image ? 'border-amber-500' : 'border-stone-200'}`} />
                              {isAdminMode && !adminOrderingFor && (
                                 <button onClick={() => { setEditingProduct({...editingProduct, image: ''}); if(mainDisplayImg === editingProduct.image) setMainDisplayImg(''); }} className="absolute -top-1 -right-1 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center shadow-md z-10"><X size={12} /></button>
                              )}
@@ -2891,7 +2891,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                       {/* ======== 額外圖片 ======== */}
                       {(editingProduct.extraImages || []).map((img, idx) => (
                         <div key={idx} className="relative shrink-0 group">
-                          <img src={img} loading="lazy" decoding="async" fetchPriority="low" onClick={() => setMainDisplayImg(img)} className={`w-16 h-16 object-cover rounded-lg cursor-pointer border-2 ${mainDisplayImg === img ? 'border-amber-500' : 'border-stone-200'}`} />
+                         <img src={img} loading="eager" decoding="async" fetchPriority="high" onClick={() => setMainDisplayImg(img)} className={`w-16 h-16 object-cover rounded-lg cursor-pointer border-2 ${mainDisplayImg === img ? 'border-amber-500' : 'border-stone-200'}`} />
                           {isAdminMode && !adminOrderingFor && <button onClick={() => { const newExtra = [...editingProduct.extraImages]; newExtra.splice(idx, 1); setEditingProduct({...editingProduct, extraImages: newExtra}); if(mainDisplayImg === img) setMainDisplayImg(editingProduct.image); }} className="absolute -top-1 -right-1 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center shadow-md z-10"><X size={12} /></button>}
                         </div>
                       ))}
