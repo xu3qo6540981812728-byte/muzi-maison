@@ -1258,7 +1258,16 @@ try {
         if (db) { await db.collection('orders').doc(orderId).update({ bankAccountLast5: code, status: 'confirming' }); alert("已送出匯款後五碼，請稍候管理員確認！"); }
       };
 
-      const requestCancelOrder = async (orderId) => {
+      const requestCancelOrder = async (orderOrId) => {
+        const orderId = typeof orderOrId === 'string' ? orderOrId : orderOrId?.id
+        const orderStatus =
+          typeof orderOrId === 'string'
+            ? (myOrders.find((o) => o.id === orderOrId)?.status || '')
+            : (orderOrId?.status || '')
+        if (orderStatus && orderStatus !== 'pending') {
+          alert('訂單進入「確認中」或之後狀態後，無法再申請取消')
+          return
+        }
         if (!window.confirm("確定要申請取消此訂單嗎？（需等待管理員同意）")) return;
         if (db) { await db.collection('orders').doc(orderId).update({ status: 'cancel_requested' }); alert("已送出取消申請！"); }
       };
@@ -3066,7 +3075,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                       <div className="space-y-4">
                         {myOrders.map(order => {
                           const statusInfo = STATUS_MAP[order.status] || STATUS_MAP['pending'];
-                          const isCancellable = ['pending', 'confirming', 'confirmed'].includes(order.status);
+                          const isCancellable = order.status === 'pending';
                           return (
                             <div key={order.id} className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm text-sm relative">
                               {['pending', 'confirming'].includes(order.status) && <div className="absolute top-0 left-0 w-full h-1 bg-[#06C755] rounded-t-2xl"></div>}
@@ -3112,7 +3121,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                               {order.status === 'confirmed' && <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs font-bold text-blue-700 text-center">💡 為保持良好賞味，商品皆為接單製作，接單後5~7天出貨，感謝您的耐心等候！</div>}
 
                               <div className="flex justify-between items-end mt-4 pt-3 border-t border-stone-100">
-                                {isCancellable ? <button onClick={() => requestCancelOrder(order.id)} className="text-xs text-stone-400 hover:text-rose-500 font-bold transition-colors underline mb-1">申請取消訂單</button> : <div></div>}
+                                {isCancellable ? <button onClick={() => requestCancelOrder(order)} className="text-xs text-stone-400 hover:text-rose-500 font-bold transition-colors underline mb-1">申請取消訂單</button> : <div></div>}
                                 <div className="text-right text-xs text-stone-500 space-y-1">
                                   <div>商品小計：${order.totals.itemsBaseTotal}</div>
                                   {order.totals.discountAmount > 0 && <div className="text-rose-500">活動折抵：-${order.totals.discountAmount}</div>}
