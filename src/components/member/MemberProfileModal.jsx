@@ -255,7 +255,7 @@ export default function MemberProfileModal({
                 {myOrders.map((order) => {
                   const statusInfo =
                     statusMap?.[order.status] || statusMap?.pending
-                  const isCancellable = ['pending', 'confirming', 'confirmed'].includes(order.status)
+                  const isCancellable = order.status === 'pending'
                   const nextStepText =
                     order.status === 'pending'
                       ? '下一步：請匯款 + 填後五碼 + LINE 回報'
@@ -455,7 +455,7 @@ export default function MemberProfileModal({
                       <div className="flex justify-between items-end mt-4 pt-3 border-t border-stone-100">
                         {isCancellable ? (
                           <button
-                            onClick={() => requestCancelOrder(order.id)}
+                            onClick={() => requestCancelOrder(order)}
                             className="text-xs text-stone-400 hover:text-rose-500 font-bold transition-colors underline mb-1"
                           >
                             申請取消訂單
