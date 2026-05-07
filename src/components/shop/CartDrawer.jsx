@@ -361,18 +361,17 @@ export default function CartDrawer({
 
           <div className="md:w-1/2 md:border-l border-stone-200 md:pl-8 flex flex-col mt-6 md:mt-0">
             {!currentUser && !adminOrderingFor ? (
-              <div className="flex-1 flex flex-col items-center justify-center bg-amber-50 border border-amber-200 p-6 rounded-2xl text-center h-full">
-                <UserIcon size={48} className="text-amber-500 mb-4 opacity-50" />
-                <h3 className="text-lg font-bold text-amber-800 mb-2">會員專屬服務</h3>
-                <p className="text-sm text-amber-700 mb-6 leading-relaxed">
-                  為了給您更好的服務與後續訂單追蹤，木子家MUZI MAISON目前
-                  <span className="font-bold text-rose-600">僅開放會員訂購</span>喔！
+              <div className="flex-1 flex flex-col items-center justify-center bg-white border border-stone-200 p-6 rounded-2xl text-center h-full">
+                <UserIcon size={48} className="text-stone-400 mb-4 opacity-60" />
+                <h3 className="text-lg font-bold text-stone-800 mb-2">請選擇結帳方式</h3>
+                <p className="text-sm text-stone-500 mb-6 leading-relaxed">
+                  已是會員可登入結帳；非會員也可快速結帳（下一步會請你填寫必要資料）。
                 </p>
                 <button
                   onClick={onRequireLogin}
-                  className="w-full bg-amber-500 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform flex justify-center items-center gap-2"
+                  className="w-full bg-stone-800 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform flex justify-center items-center gap-2"
                 >
-                  <Lock size={18} /> 前往登入 / 免費註冊
+                  <Lock size={18} /> 前往結帳
                 </button>
               </div>
             ) : (

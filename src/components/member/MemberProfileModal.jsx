@@ -4,6 +4,8 @@ import {
   CreditCard,
   EditIcon,
   MessageCircle,
+  Minus,
+  Plus,
   UserIcon,
   X
 } from '../Icons'
@@ -26,7 +28,11 @@ export default function MemberProfileModal({
   submitBankCode,
   requestCancelOrder,
   products,
-  onQuickReorder
+  onQuickReorder,
+  onReorderLastOrder,
+  cart,
+  onAdjustQuickReorder,
+  onGoToCartFromQuickReorder
 }) {
   const quickReorderProducts = (() => {
     const qtyMap = {}
@@ -192,20 +198,49 @@ export default function MemberProfileModal({
           </div>
 
           <div className="md:w-2/3">
+            {myOrders.length > 0 && (
+              <div className="mb-4 flex gap-2">
+                <button
+                  onClick={onReorderLastOrder}
+                  className="flex-1 bg-stone-800 text-white font-bold py-2.5 rounded-xl shadow-sm hover:bg-stone-700"
+                >
+                  上次訂單一鍵重購
+                </button>
+              </div>
+            )}
             {quickReorderProducts.length > 0 && (
               <div className="mb-4 bg-white border border-stone-200 rounded-2xl p-4">
                 <h3 className="font-bold text-stone-700 mb-3">熱門商品快速回購</h3>
                 <div className="flex flex-wrap gap-2">
                   {quickReorderProducts.map((product) => (
-                    <button
+                    <div
                       key={product.id}
-                      onClick={() => onQuickReorder(product.id)}
-                      className="text-xs bg-amber-50 border border-amber-200 text-amber-700 px-3 py-1.5 rounded-full font-bold hover:bg-amber-100"
+                      className="w-full bg-amber-50 border border-amber-200 text-amber-800 px-3 py-2 rounded-xl flex items-center justify-between gap-3"
                     >
-                      {product.name}（歷史 {product.orderedQty} 件）
-                    </button>
+                      <button
+                        onClick={() => onQuickReorder(product.id)}
+                        className="text-xs font-bold hover:text-amber-900 text-left min-w-0 truncate"
+                      >
+                        {product.name}（歷史 {product.orderedQty} 件）
+                      </button>
+                      <div className="flex items-center gap-2 bg-white border border-amber-200 rounded-full px-2 py-1 shrink-0">
+                        <button onClick={() => onAdjustQuickReorder(product.id, -1)} className="text-stone-500 p-0.5">
+                          <Minus size={12} />
+                        </button>
+                        <span className="text-xs font-bold w-4 text-center">{cart?.[product.id] || 0}</span>
+                        <button onClick={() => onAdjustQuickReorder(product.id, 1)} className="text-amber-700 p-0.5">
+                          <Plus size={12} />
+                        </button>
+                      </div>
+                    </div>
                   ))}
                 </div>
+                <button
+                  onClick={onGoToCartFromQuickReorder}
+                  className="mt-3 w-full bg-stone-800 text-white text-sm font-bold py-2.5 rounded-xl shadow-sm hover:bg-stone-700"
+                >
+                  進入購物車
+                </button>
               </div>
             )}
             <h3 className="font-bold text-stone-700 mb-3 border-b border-stone-200 pb-2">
@@ -221,6 +256,14 @@ export default function MemberProfileModal({
                   const statusInfo =
                     statusMap?.[order.status] || statusMap?.pending
                   const isCancellable = ['pending', 'confirming', 'confirmed'].includes(order.status)
+                  const nextStepText =
+                    order.status === 'pending'
+                      ? '下一步：請匯款 + 填後五碼 + LINE 回報'
+                      : order.status === 'confirming'
+                        ? '下一步：等待對帳確認'
+                        : order.status === 'confirmed'
+                          ? '下一步：預計 5-7 天出貨'
+                          : ''
 
                   return (
                     <div
@@ -263,6 +306,11 @@ export default function MemberProfileModal({
                           )}
                         </div>
                       </div>
+                      {nextStepText && (
+                        <div className="mb-3 text-xs font-bold text-stone-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                          {nextStepText}
+                        </div>
+                      )}
 
                       <div className="text-stone-600 text-xs space-y-1.5 mb-4 bg-stone-50 p-3 rounded-lg">
                         {order.items.map((item, i) => (

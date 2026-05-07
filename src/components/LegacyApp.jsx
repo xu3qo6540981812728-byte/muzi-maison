@@ -91,6 +91,7 @@ const STATUS_MAP = {
       const [showLoginModal, setShowLoginModal] = useState(false);
       const [loginMode, setLoginMode] = useState('customer');
       const [isRegistering, setIsRegistering] = useState(false);
+      const [showCheckoutEntryChoice, setShowCheckoutEntryChoice] = useState(false);
       
       const [showMemberProfile, setShowMemberProfile] = useState(false);
       const [showAdminOrders, setShowAdminOrders] = useState(false);
@@ -137,6 +138,7 @@ const STATUS_MAP = {
       const [products, setProducts] = useState(defaultProducts);
       const [storeConfig, setStoreConfig] = useState(defaultStoreConfig);
       const [cart, setCart] = useState({});
+      const [lastPlacedOrderForReorder, setLastPlacedOrderForReorder] = useState(null);
       const [checkoutSuccessInfo, setCheckoutSuccessInfo] = useState(null);
       const [isCartOpen, setIsCartOpen] = useState(false);
       const [activeCategory, setActiveCategory] = useState('全部');
@@ -927,12 +929,31 @@ mainProductQty += item.qty;
           setSidebarOpen(false);
         }
       };
+      const closeLoginModal = () => {
+        setShowLoginModal(false)
+        setEmailInput('')
+        setPasswordInput('')
+        setIsRegistering(false)
+        if (routeMode === 'cart') {
+          setIsCartOpen(true)
+        }
+      }
+      const openCheckoutEntryChoice = () => {
+        setLoginMode('customer')
+        setShowCheckoutEntryChoice(true)
+      }
+      const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim())
+      const isValidPhone = (phone) => /^09\d{8}$/.test(String(phone || '').replace(/\D/g, ''))
 
       const handleAuthSubmit = async () => {
         if (!auth) return alert("請先設定 Firebase 金鑰！");
         try {
           if (isRegistering) {
-            if (!customerInfo.name || !customerInfo.phone) return alert("請填寫姓名與電話！");
+            if (!customerInfo.name || !customerInfo.phone || !customerInfo.address || !emailInput || !passwordInput) {
+              return alert("請完整填寫姓名、性別、手機、地址、Email 與密碼（皆為必填）！")
+            }
+            if (!isValidPhone(customerInfo.phone)) return alert("手機格式不正確，請輸入 09 開頭共 10 碼")
+            if (!isValidEmail(emailInput)) return alert("Email 格式不正確，請重新輸入")
             const cred = await auth.createUserWithEmailAndPassword(emailInput, passwordInput);
             await db.collection('users').doc(cred.user.uid).set({ ...customerInfo, email: emailInput, role: 'customer' });
             alert("註冊成功！歡迎加入木子家MUZI MAISON！");
@@ -940,11 +961,38 @@ mainProductQty += item.qty;
             await auth.signInWithEmailAndPassword(emailInput, passwordInput);
             alert("登入成功！");
           }
-          setShowLoginModal(false); setEmailInput(''); setPasswordInput(''); setIsRegistering(false);
+          closeLoginModal();
         } catch (error) {
           alert(isRegistering ? "註冊失敗：" + error.message : "登入失敗，請檢查帳號密碼！");
         }
       };
+
+      const handleReorderOrder = (order) => {
+        if (!order) return
+        if (!window.confirm(`確定要重購這筆訂單嗎？\n單號：${order.id}\n（將覆蓋目前購物車）`)) return
+        const nextCart = {}
+        ;(order.items || []).forEach((item) => {
+          if (!item?.id) return
+          if (item.isGift) return
+          const qty = Number(item.qty) || 0
+          if (qty > 0) nextCart[item.id] = qty
+        })
+        setCart(nextCart)
+        setShowMemberProfile(false)
+        if (routeMode === 'cart') {
+          setIsCartOpen(true)
+        } else {
+          navigate('/cart')
+        }
+      }
+      const handleReorderLatest = () => {
+        const latestOrder = myOrders?.[0] || lastPlacedOrderForReorder
+        if (!latestOrder) {
+          alert('尚未取得最新訂單資料，請稍候 1-2 秒再試一次')
+          return
+        }
+        handleReorderOrder(latestOrder)
+      }
 
       const handleShareWebsite = async () => {
         const shareData = { title: '木子家MUZI MAISON｜職人手作，純粹養生', text: '推薦給您！嚴選優質堅果、牛軋糖、核桃糕...手作，提供最便利的線上訂購體驗。快來逛逛吧！', url:'https://muzi-maison.netlify.app/?=' };
@@ -1077,6 +1125,9 @@ mainProductQty += item.qty;
         let finalUserId = adminOrderingFor ? adminOrderingFor.id : (currentUser ? currentUser.uid : 'guest');
         const orderId = `MZ${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 900 + 100)}`;
         const initialStatus = (checkoutBankCode && checkoutBankCode.length === 5) ? 'confirming' : 'pending';
+        const orderDraftItems = cartData.items
+          .filter((item) => !item.isGift)
+          .map((item) => ({ ...item }))
 
         if (db) {
           const batch = db.batch();
@@ -1092,6 +1143,7 @@ mainProductQty += item.qty;
          
 
           await batch.commit();
+          setLastPlacedOrderForReorder({ id: orderId, items: orderDraftItems })
         }
 try {
           // 1. 將下面的網址替換成你剛剛拿到的 GAS 網頁應用程式網址
@@ -1712,6 +1764,81 @@ const ordersToMerge = currentOrders.filter(o => mergeSelection.includes(o.id));
                 pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
             }
           }
+
+          // === 新增：撿貨清單（品項總表） ===
+          const pickMap = new Map()
+          confirmedOrders.forEach((o) => {
+            ;(o.items || []).forEach((item) => {
+              const key = `${item.id || ''}__${item.name || ''}__${item.weight || ''}__${item.unit || ''}__${item.isGift ? 'gift' : ''}`
+              const prev = pickMap.get(key) || { ...item, qty: 0 }
+              prev.qty += Number(item.qty) || 0
+              pickMap.set(key, prev)
+            })
+          })
+          const pickItems = Array.from(pickMap.values()).sort((a, b) => (a.id || '').localeCompare(b.id || ''))
+          const pickRoot = document.createElement('div')
+          pickRoot.style.width = '794px'
+          pickRoot.style.height = '1123px'
+          pickRoot.style.padding = '40px'
+          pickRoot.style.boxSizing = 'border-box'
+          pickRoot.style.background = '#fff'
+          pickRoot.style.fontFamily = "'Microsoft JhengHei', sans-serif"
+          const title = document.createElement('h1')
+          title.textContent = '木子家MUZI MAISON - 撿貨清單（品項總表）'
+          title.style.textAlign = 'center'
+          title.style.borderBottom = '2px solid #000'
+          title.style.paddingBottom = '10px'
+          title.style.marginBottom = '16px'
+          pickRoot.appendChild(title)
+          const subtitle = document.createElement('div')
+          subtitle.textContent = `已確認訂單數：${confirmedOrders.length}（產生時間：${new Date().toLocaleString()}）`
+          subtitle.style.fontWeight = 'bold'
+          subtitle.style.marginBottom = '12px'
+          pickRoot.appendChild(subtitle)
+          const table = document.createElement('table')
+          table.style.width = '100%'
+          table.style.borderCollapse = 'collapse'
+          table.style.fontSize = '14px'
+          const thead = document.createElement('thead')
+          const headRow = document.createElement('tr')
+          ;['品號', '商品名稱', '重量', '單位', '數量'].forEach((h) => {
+            const th = document.createElement('th')
+            th.textContent = h
+            th.style.border = '1px solid #333'
+            th.style.padding = '8px'
+            th.style.background = '#f0f0f0'
+            headRow.appendChild(th)
+          })
+          thead.appendChild(headRow)
+          table.appendChild(thead)
+          const tbody = document.createElement('tbody')
+          pickItems.forEach((it) => {
+            const tr = document.createElement('tr')
+            const cells = [
+              it.id || '',
+              `${it.name || ''}${it.isGift ? '（贈品）' : ''}`,
+              it.weight || '',
+              it.unit || '',
+              String(it.qty || 0)
+            ]
+            cells.forEach((val) => {
+              const td = document.createElement('td')
+              td.textContent = val
+              td.style.border = '1px solid #333'
+              td.style.padding = '8px'
+              tr.appendChild(td)
+            })
+            tbody.appendChild(tr)
+          })
+          table.appendChild(tbody)
+          pickRoot.appendChild(table)
+          printContainer.innerHTML = ''
+          printContainer.appendChild(pickRoot)
+          await new Promise((resolve) => setTimeout(resolve, 50))
+          const pickCanvas = await html2canvas(pickRoot, { scale: 2, useCORS: true })
+          const pickImg = pickCanvas.toDataURL('image/jpeg', 0.9)
+          pdf.addPage()
+          pdf.addImage(pickImg, 'JPEG', 0, 0, 210, 297)
 
           document.body.removeChild(printContainer);
           pdf.save(`木子家出貨明細單_${new Date().toISOString().split('T')[0]}.pdf`);
@@ -2771,8 +2898,7 @@ const uploadTask = await storageRef.put(blob, metadata);
             setCheckoutBankCode={setCheckoutBankCode}
             onRequireLogin={() => {
               setIsCartOpen(false)
-              setLoginMode('customer')
-              setShowLoginModal(true)
+              openCheckoutEntryChoice()
             }}
             handleCheckout={handleCheckout}
           />
@@ -2919,6 +3045,17 @@ const uploadTask = await storageRef.put(blob, metadata);
               submitBankCode={submitBankCode}
               requestCancelOrder={requestCancelOrder}
               onQuickReorder={(productId) => navigate(`/product/${productId}`)}
+              onReorderLastOrder={handleReorderLatest}
+              cart={cart}
+              onAdjustQuickReorder={(productId, delta) => updateCart(productId, delta)}
+              onGoToCartFromQuickReorder={() => {
+                setShowMemberProfile(false)
+                if (routeMode === 'cart') {
+                  setIsCartOpen(true)
+                } else {
+                  navigate('/cart')
+                }
+              }}
             />
           )}
 
@@ -3619,13 +3756,57 @@ if (isThisMonth && ['confirmed', 'shipped', 'completed'].includes(order.status))
           )}
 
           {/* 登入註冊 */}
+          {showCheckoutEntryChoice && (
+            <div className="fixed inset-0 z-[55] flex justify-center items-center bg-black/50 backdrop-blur-sm px-4">
+              <div className="bg-white p-6 rounded-3xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 relative border border-stone-100">
+                <button
+                  onClick={() => {
+                    setShowCheckoutEntryChoice(false)
+                    if (routeMode === 'cart') setIsCartOpen(true)
+                  }}
+                  className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full"
+                >
+                  <X size={20} />
+                </button>
+                <h3 className="text-lg font-black text-stone-800 mb-2 text-center">結帳方式</h3>
+                <p className="text-sm text-stone-500 text-center mb-5">
+                  請選擇登入方式，我們會帶你進入下一步。
+                </p>
+                <div className="space-y-3">
+                  <button
+                    onClick={() => {
+                      setShowCheckoutEntryChoice(false)
+                      setLoginMode('customer')
+                      setIsRegistering(false)
+                      setShowLoginModal(true)
+                    }}
+                    className="w-full bg-stone-800 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform"
+                  >
+                    已是會員：登入結帳
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowCheckoutEntryChoice(false)
+                      setLoginMode('customer')
+                      setIsRegistering(true)
+                      setShowLoginModal(true)
+                    }}
+                    className="w-full bg-amber-500 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform"
+                  >
+                    非會員：快速結帳
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {showLoginModal && (
             <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4">
               <div className="bg-white p-6 md:p-8 rounded-3xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 relative">
-                <button onClick={() => setShowLoginModal(false)} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full"><X size={20} /></button>
+                <button onClick={closeLoginModal} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full"><X size={20} /></button>
                 <h3 className="text-xl font-bold text-stone-800 mb-6 flex items-center gap-2 justify-center">
                   {loginMode === 'admin' ? <Lock size={24} className="text-rose-600" /> : <UserIcon size={24} className="text-amber-600" />}
-                  {loginMode === 'admin' ? '管理員登入' : (isRegistering ? '註冊新會員' : '會員登入')}
+                  {loginMode === 'admin' ? '管理員登入' : (isRegistering ? '非會員快速結帳' : '會員登入')}
                 </h3>
                 
                 {isRegistering && loginMode === 'customer' && (
@@ -3636,24 +3817,30 @@ if (isThisMonth && ['confirmed', 'shipped', 'completed'].includes(order.status))
                        <label className="flex items-center gap-1 text-sm"><input type="radio" name="regGender" value="男" checked={customerInfo.gender==='男'} onChange={e=>setCustomerInfo({...customerInfo, gender:e.target.value})} className="accent-amber-500"/>男</label>
                        <label className="flex items-center gap-1 text-sm"><input type="radio" name="regGender" value="女" checked={customerInfo.gender==='女'} onChange={e=>setCustomerInfo({...customerInfo, gender:e.target.value})} className="accent-amber-500"/>女</label>
                     </div>
-                    <input type="tel" placeholder="手機號碼 (必填)" value={customerInfo.phone} onChange={e => setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 text-sm"/>
+                    <div className="col-span-1">
+                      <input type="tel" placeholder="手機號碼 (必填)" value={customerInfo.phone} onChange={e => setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 text-sm"/>
+                      {!!customerInfo.phone && !isValidPhone(customerInfo.phone) && <p className="text-[10px] text-rose-600 font-bold mt-1 px-1">手機格式：請輸入 09 開頭 10 碼</p>}
+                    </div>
                     <input type="text" placeholder="Line ID (選填)" value={customerInfo.lineId} onChange={e => setCustomerInfo({...customerInfo, lineId: e.target.value})} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 text-sm"/>
                     <input type="text" placeholder="聯絡地址 (必填)" value={customerInfo.address} onChange={e => setCustomerInfo({...customerInfo, address: e.target.value})} className="col-span-2 w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 text-sm"/>
                   </div>
                 )}
 
-                <input type="email" placeholder="Email 信箱" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 mb-3 outline-none focus:border-amber-500 text-sm"/>
-                <input type="password" placeholder="密碼" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAuthSubmit()} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 mb-5 outline-none focus:border-amber-500 text-sm"/>
+                <div className="mb-3">
+                  <input type="email" placeholder="Email 信箱 (必填)" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 text-sm"/>
+                  {isRegistering && !!emailInput && !isValidEmail(emailInput) && <p className="text-[10px] text-rose-600 font-bold mt-1 px-1">Email 格式不正確</p>}
+                </div>
+                <input type="password" placeholder="密碼 (必填)" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAuthSubmit()} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 mb-5 outline-none focus:border-amber-500 text-sm"/>
                 
                 <div className="flex flex-col gap-3">
-                  <button onClick={handleAuthSubmit} className="w-full bg-amber-500 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform">{isRegistering ? '立即註冊' : '登入'}</button>
-                  <button onClick={() => { setShowLoginModal(false); setEmailInput(''); setPasswordInput(''); setIsRegistering(false); }} className="w-full bg-stone-100 text-stone-600 font-bold py-3 rounded-xl active:scale-95 transition-transform">取消</button>
+                  <button onClick={handleAuthSubmit} className="w-full bg-amber-500 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform">{isRegistering ? '快速結帳' : '登入'}</button>
+                  <button onClick={closeLoginModal} className="w-full bg-stone-100 text-stone-600 font-bold py-3 rounded-xl active:scale-95 transition-transform">取消</button>
                 </div>
 
                 <div className="mt-6 pt-4 border-t border-stone-100 flex justify-between items-center text-xs text-stone-500">
                   {loginMode === 'customer' ? (
                     <>
-                      <button onClick={() => setIsRegistering(!isRegistering)} className="hover:text-amber-600 font-bold">{isRegistering ? '已有帳號？返回登入' : '還沒有帳號？立即註冊'}</button>
+                      <button onClick={() => setIsRegistering(!isRegistering)} className="hover:text-amber-600 font-bold">{isRegistering ? '已有帳號？返回登入' : '非會員快速結帳'}</button>
                       <button onClick={() => setLoginMode('admin')} className="hover:text-rose-600">管理員通道</button>
                     </>
                   ) : (

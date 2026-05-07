@@ -1,4 +1,4 @@
-﻿import LegacyApp from './components/LegacyApp'
+import LegacyApp from './components/LegacyApp'
 import { Navigate, Route, Routes, matchPath, useLocation } from 'react-router-dom'
 
 function RoutedLegacyApp() {
