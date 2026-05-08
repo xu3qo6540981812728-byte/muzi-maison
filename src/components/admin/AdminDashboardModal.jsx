@@ -7,6 +7,8 @@ export default function AdminDashboardModal({
   onStartImageMigration,
   imageMigrationRunning,
   imageMigrationStatus,
+  onRecalculateMonthlyStats,
+  isRecalculatingMonthlyStats,
   allOrders,
   allUsers,
   products,
@@ -28,6 +30,17 @@ export default function AdminDashboardModal({
           <TrendingUp size={24} className="text-indigo-600" /> 營運數據儀表板
         </h2>
         <div className="mb-4 flex justify-end gap-2">
+          <button
+            onClick={onRecalculateMonthlyStats}
+            disabled={isRecalculatingMonthlyStats}
+            className={`text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition-colors ${
+              isRecalculatingMonthlyStats
+                ? 'bg-stone-300 text-white cursor-not-allowed'
+                : 'bg-amber-600 text-white hover:bg-amber-700'
+            }`}
+          >
+            {isRecalculatingMonthlyStats ? '重算中...' : '重算本月營收'}
+          </button>
           <button
             onClick={onStartImageMigration}
             disabled={imageMigrationRunning}
