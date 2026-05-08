@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react'
 import { ArrowUp, ClipboardList, TrendingUp, X } from '../Icons'
 
 export default function AdminDashboardModal({
@@ -14,8 +15,27 @@ export default function AdminDashboardModal({
   products,
   monthlyStats,
   db,
-  statusMap
+  statusMap,
+  topSellers,
+  onPublishManualTopSellers
 }) {
+  const productOptions = useMemo(() => {
+    const list = (products || []).filter((p) => p?.id && p?.name)
+    return [...list].sort((a, b) => String(a.id).localeCompare(String(b.id)))
+  }, [products])
+
+  const initialManualIds = useMemo(() => {
+    const ids = (topSellers?.items || []).map((i) => i?.id).filter(Boolean)
+    if (ids.length === 5) return ids
+    return ['', '', '', '', '']
+  }, [topSellers])
+
+  const [manualTopIds, setManualTopIds] = useState(initialManualIds)
+
+  useEffect(() => {
+    setManualTopIds(initialManualIds)
+  }, [initialManualIds])
+
   return (
     <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4 md:px-10 py-6">
       <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-5xl h-full flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
@@ -64,7 +84,6 @@ export default function AdminDashboardModal({
             {imageMigrationStatus}
           </p>
         )}
-
         <div className="flex-1 overflow-y-auto space-y-6 pr-2">
           {(() => {
             // --- 數據核心計算邏輯開始 ---
@@ -128,11 +147,68 @@ export default function AdminDashboardModal({
 
             return (
               <>
+                <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm">
+                  <div className="flex items-center justify-between mb-3 border-b border-stone-100 pb-2">
+                    <h3 className="font-bold text-stone-800 flex items-center gap-2">
+                      ⭐ 初次上架：手動設定首頁熱銷 Top 5
+                    </h3>
+                    <span className="text-[10px] bg-stone-100 text-stone-500 px-2 py-1 rounded">
+                      之後可用真實數據覆蓋發布
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
+                    {manualTopIds.map((val, idx) => (
+                      <select
+                        key={idx}
+                        value={val}
+                        onChange={(e) => {
+                          const next = [...manualTopIds]
+                          next[idx] = e.target.value
+                          setManualTopIds(next)
+                        }}
+                        className="bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-xs font-bold text-stone-700 outline-none focus:border-amber-400"
+                      >
+                        <option value="">
+                          第 {idx + 1} 名
+                        </option>
+                        {productOptions.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.id}｜{p.name}
+                          </option>
+                        ))}
+                      </select>
+                    ))}
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    <button
+                      onClick={() => onPublishManualTopSellers?.(manualTopIds)}
+                      className="text-xs font-bold px-3 py-2 rounded-lg shadow-sm transition-colors bg-amber-600 text-white hover:bg-amber-700 active:scale-95"
+                    >
+                      發佈手動 Top 5 至首頁
+                    </button>
+                    <button
+                      onClick={() => setManualTopIds(['', '', '', '', ''])}
+                      className="text-xs font-bold px-3 py-2 rounded-lg shadow-sm transition-colors bg-stone-100 text-stone-700 hover:bg-stone-200 active:scale-95"
+                    >
+                      清空選擇
+                    </button>
+                    <div className="ml-auto text-[11px] text-stone-500 font-bold flex items-center">
+                      目前首頁顯示：{topSellers?.label || '未設定'}
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-stone-500 mt-2 leading-relaxed">
+                    提醒：本區是「初期手動榜單」。等累積銷售後，你可以在下方「🏆 本月熱銷排行榜」按「發佈至首頁」改為真實數據。
+                  </p>
+                </div>
+
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="bg-white p-4 rounded-2xl border border-indigo-100 shadow-sm flex flex-col justify-center">
                     <span className="text-xs font-bold text-indigo-500 mb-1">本月總營收</span>
                     <span className="text-2xl md:text-3xl font-black text-stone-800">
-                      ${(monthlyStats.monthlyRevenue || 0).toLocaleString()}
+                      ${(monthlyRevenue || 0).toLocaleString()}
                     </span>
                   </div>
 

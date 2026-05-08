@@ -36,7 +36,15 @@ export default function AdminOrdersModal({
   adminNoteInputs,
   setAdminNoteInputs,
   saveOrderNote,
-  loadMoreOldOrders
+  currentPage,
+  totalPages,
+  totalPagesKnown,
+  loadedPages,
+  onPrevPage,
+  onNextPage,
+  isPagingLoading,
+  canGoPrev,
+  canGoNext
 }) {
   return (
     <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4 md:px-10 py-6">
@@ -144,12 +152,28 @@ export default function AdminOrdersModal({
             />
           )}
 
-          <div className="col-span-full flex justify-center mt-6 mb-8">
+          <div className="col-span-full flex items-center justify-center gap-3 mt-6 mb-8">
             <button
-              onClick={loadMoreOldOrders}
-              className="bg-stone-200 text-stone-600 px-6 py-2 rounded-full font-bold text-sm hover:bg-stone-300 transition-colors shadow-sm active:scale-95"
+              onClick={onPrevPage}
+              disabled={!canGoPrev}
+              className="bg-stone-200 text-stone-700 px-5 py-2 rounded-full font-bold text-sm hover:bg-stone-300 transition-colors shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              載入更早的訂單...
+              上一頁
+            </button>
+            <span className="text-sm font-bold text-stone-600 min-w-[180px] text-center">
+              第 {currentPage} 頁 / {totalPagesKnown ? totalPages : '?'}
+              {!totalPagesKnown && (
+                <span className="text-[10px] text-stone-400 font-bold ml-2">
+                  （已載入 {loadedPages} 頁）
+                </span>
+              )}
+            </span>
+            <button
+              onClick={onNextPage}
+              disabled={!canGoNext || isPagingLoading}
+              className="bg-stone-800 text-white px-5 py-2 rounded-full font-bold text-sm hover:bg-stone-700 transition-colors shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isPagingLoading ? '載入中...' : '下一頁'}
             </button>
           </div>
         </div>
