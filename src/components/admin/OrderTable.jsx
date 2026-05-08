@@ -89,12 +89,12 @@ export default function OrderTable({
               </div>
             )}
 
-            {order.status === 'shipped' && (
+            {(order.status === 'shipping' || order.status === 'shipped') && (
               <div className="mb-3 flex gap-2">
                 <input
                   type="text"
-                  placeholder="輸入出貨單號"
-                  value={trackingInputs[order.id] || ''}
+                  placeholder={order.status === 'shipping' ? '輸入物流單號（儲存後為已出貨）' : '輸入物流單號'}
+                  value={trackingInputs[order.id] ?? order.trackingNumber ?? ''}
                   onChange={(e) =>
                     setTrackingInputs({
                       ...trackingInputs,

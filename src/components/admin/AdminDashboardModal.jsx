@@ -65,6 +65,7 @@ export default function AdminDashboardModal({
               pending: 0,
               confirming: 0,
               confirmed: 0,
+              shipping: 0,
               shipped: 0,
               completed: 0,
               cancelled: 0
@@ -82,7 +83,7 @@ export default function AdminDashboardModal({
               if (statusCounts[order.status] !== undefined) statusCounts[order.status]++
 
               // 僅限本月且計算已確認/已出貨/已完成
-              if (isThisMonth && ['confirmed', 'shipped', 'completed'].includes(order.status)) {
+              if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(order.status)) {
                 monthlyRevenue += order.totals.finalPrice || 0
                 monthlyCost += order.totals.totalCost || 0
               }
@@ -236,6 +237,7 @@ export default function AdminDashboardModal({
                           { key: 'pending', label: '未處理', color: 'bg-rose-500' },
                           { key: 'confirming', label: '確認中 (已傳後五碼)', color: 'bg-amber-500' },
                           { key: 'confirmed', label: '已確認 (待出貨)', color: 'bg-blue-500' },
+                          { key: 'shipping', label: '出貨中', color: 'bg-violet-500' },
                           { key: 'shipped', label: '已出貨', color: 'bg-purple-500' },
                           { key: 'completed', label: '已完成', color: 'bg-emerald-500' }
                         ].map((status) => {

@@ -263,7 +263,9 @@ export default function MemberProfileModal({
                         ? '下一步：等待對帳確認'
                         : order.status === 'confirmed'
                           ? '下一步：預計 5-7 天出貨'
-                          : ''
+                          : order.status === 'shipping'
+                            ? '下一步：店家備貨／出貨中，填寫物流後將顯示為已出貨'
+                            : ''
 
                   return (
                     <div

@@ -365,7 +365,7 @@ export default function CartDrawer({
                 <UserIcon size={48} className="text-stone-400 mb-4 opacity-60" />
                 <h3 className="text-lg font-bold text-stone-800 mb-2">請選擇結帳方式</h3>
                 <p className="text-sm text-stone-500 mb-6 leading-relaxed">
-                  已是會員可登入結帳；非會員也可快速結帳（下一步會請你填寫必要資料）。
+                  已是會員可登入結帳；非會員也可快速結帳。
                 </p>
                 <button
                   onClick={onRequireLogin}
@@ -460,14 +460,7 @@ export default function CartDrawer({
                 ※ 為保持良好賞味，商品皆為接單製作，接單後5~7天出貨，敬請見諒
               </p>
             </>
-          ) : (
-            <button
-              onClick={onRequireLogin}
-              className="w-full bg-stone-800 text-white font-bold rounded-2xl p-4 flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform"
-            >
-              <UserIcon size={20} /> 點此登入會員結帳
-            </button>
-          )}
+          ) : null}
         </div>
       </div>
     </div>
