@@ -2545,7 +2545,7 @@ const ordersToMerge = currentOrders.filter(o => mergeSelection.includes(o.id));
             }
           }
 
-          // === 新增：撿貨清單（品項總表） ===
+          // === 新增：撿貨清單（品項總表）— 分頁輸出，避免單頁過長被 html2canvas / 列印裁切 ===
           const pickMap = new Map()
           confirmedOrders.forEach((o) => {
             ;(o.items || []).forEach((item) => {
@@ -2556,69 +2556,104 @@ const ordersToMerge = currentOrders.filter(o => mergeSelection.includes(o.id));
             })
           })
           const pickItems = Array.from(pickMap.values()).sort((a, b) => (a.id || '').localeCompare(b.id || ''))
-          const pickRoot = document.createElement('div')
-          pickRoot.style.width = '794px'
-          pickRoot.style.height = '1123px'
-          pickRoot.style.padding = '40px'
-          pickRoot.style.boxSizing = 'border-box'
-          pickRoot.style.background = '#fff'
-          pickRoot.style.fontFamily = "'Microsoft JhengHei', sans-serif"
-          const title = document.createElement('h1')
-          title.textContent = '木子家MUZI MAISON - 撿貨清單（品項總表）'
-          title.style.textAlign = 'center'
-          title.style.borderBottom = '2px solid #000'
-          title.style.paddingBottom = '10px'
-          title.style.marginBottom = '16px'
-          pickRoot.appendChild(title)
-          const subtitle = document.createElement('div')
-          subtitle.textContent = `已確認訂單數：${confirmedOrders.length}（產生時間：${new Date().toLocaleString()}）`
-          subtitle.style.fontWeight = 'bold'
-          subtitle.style.marginBottom = '12px'
-          pickRoot.appendChild(subtitle)
-          const table = document.createElement('table')
-          table.style.width = '100%'
-          table.style.borderCollapse = 'collapse'
-          table.style.fontSize = '14px'
-          const thead = document.createElement('thead')
-          const headRow = document.createElement('tr')
-          ;['品號', '商品名稱', '重量', '單位', '數量'].forEach((h) => {
-            const th = document.createElement('th')
-            th.textContent = h
-            th.style.border = '1px solid #333'
-            th.style.padding = '8px'
-            th.style.background = '#f0f0f0'
-            headRow.appendChild(th)
-          })
-          thead.appendChild(headRow)
-          table.appendChild(thead)
-          const tbody = document.createElement('tbody')
-          pickItems.forEach((it) => {
-            const tr = document.createElement('tr')
-            const cells = [
-              it.id || '',
-              `${it.name || ''}${it.groupSplitLabel ? `（${it.groupSplitLabel}）` : ''}${it.isGift ? '（贈品）' : ''}`,
-              it.weight || '',
-              it.unit || '',
-              String(it.qty || 0)
-            ]
-            cells.forEach((val) => {
-              const td = document.createElement('td')
-              td.textContent = val
-              td.style.border = '1px solid #333'
-              td.style.padding = '8px'
-              tr.appendChild(td)
+          const PICK_ROWS_PER_PAGE = 22
+          const pickChunks = (() => {
+            if (pickItems.length === 0) return [[]]
+            if (pickItems.length <= PICK_ROWS_PER_PAGE) return [pickItems]
+            const out = [pickItems.slice(0, PICK_ROWS_PER_PAGE)]
+            let rest = pickItems.slice(PICK_ROWS_PER_PAGE)
+            while (rest.length > 0) {
+              out.push(rest.slice(0, PICK_ROWS_PER_PAGE))
+              rest = rest.slice(PICK_ROWS_PER_PAGE)
+            }
+            return out
+          })()
+          const pickTotalPages = pickChunks.length
+          const pickGenTime = new Date().toLocaleString()
+          for (let pi = 0; pi < pickChunks.length; pi++) {
+            const chunk = pickChunks[pi]
+            const pickRoot = document.createElement('div')
+            pickRoot.style.width = '794px'
+            pickRoot.style.minHeight = '1123px'
+            pickRoot.style.padding = '40px'
+            pickRoot.style.boxSizing = 'border-box'
+            pickRoot.style.background = '#fff'
+            pickRoot.style.fontFamily = "'Microsoft JhengHei', sans-serif"
+            pickRoot.style.position = 'relative'
+            const title = document.createElement('h1')
+            title.textContent =
+              pi === 0
+                ? '木子家MUZI MAISON - 撿貨清單（品項總表）'
+                : '木子家MUZI MAISON - 撿貨清單（品項總表）（續）'
+            title.style.textAlign = 'center'
+            title.style.borderBottom = '2px solid #000'
+            title.style.paddingBottom = '10px'
+            title.style.marginBottom = '16px'
+            title.style.fontSize = pi === 0 ? '' : '1.35rem'
+            pickRoot.appendChild(title)
+            const subtitle = document.createElement('div')
+            subtitle.textContent = `已確認訂單數：${confirmedOrders.length}（產生時間：${pickGenTime}）`
+            subtitle.style.fontWeight = 'bold'
+            subtitle.style.marginBottom = '12px'
+            pickRoot.appendChild(subtitle)
+            const table = document.createElement('table')
+            table.style.width = '100%'
+            table.style.borderCollapse = 'collapse'
+            table.style.fontSize = '14px'
+            const thead = document.createElement('thead')
+            const headRow = document.createElement('tr')
+            ;['品號', '商品名稱', '重量', '單位', '數量'].forEach((h) => {
+              const th = document.createElement('th')
+              th.textContent = h
+              th.style.border = '1px solid #333'
+              th.style.padding = '8px'
+              th.style.background = '#f0f0f0'
+              headRow.appendChild(th)
             })
-            tbody.appendChild(tr)
-          })
-          table.appendChild(tbody)
-          pickRoot.appendChild(table)
-          printContainer.innerHTML = ''
-          printContainer.appendChild(pickRoot)
-          await new Promise((resolve) => setTimeout(resolve, 50))
-          const pickCanvas = await html2canvas(pickRoot, { scale: 2, useCORS: true })
-          const pickImg = pickCanvas.toDataURL('image/jpeg', 0.9)
-          pdf.addPage()
-          pdf.addImage(pickImg, 'JPEG', 0, 0, 210, 297)
+            thead.appendChild(headRow)
+            table.appendChild(thead)
+            const tbody = document.createElement('tbody')
+            chunk.forEach((it) => {
+              const tr = document.createElement('tr')
+              const cells = [
+                it.id || '',
+                `${it.name || ''}${it.groupSplitLabel ? `（${it.groupSplitLabel}）` : ''}${it.isGift ? '（贈品）' : ''}`,
+                it.weight || '',
+                it.unit || '',
+                String(it.qty || 0)
+              ]
+              cells.forEach((val) => {
+                const td = document.createElement('td')
+                td.textContent = val
+                td.style.border = '1px solid #333'
+                td.style.padding = '8px'
+                tr.appendChild(td)
+              })
+              tbody.appendChild(tr)
+            })
+            table.appendChild(tbody)
+            pickRoot.appendChild(table)
+            const pickFoot = document.createElement('div')
+            pickFoot.textContent = `📋 撿貨清單 第 ${pi + 1} 頁 / 共 ${pickTotalPages} 頁`
+            pickFoot.style.position = 'absolute'
+            pickFoot.style.bottom = '40px'
+            pickFoot.style.right = '40px'
+            pickFoot.style.fontWeight = 'bold'
+            pickFoot.style.fontSize = '16px'
+            pickFoot.style.color = '#555'
+            pickFoot.style.borderTop = '2px solid #333'
+            pickFoot.style.paddingTop = '10px'
+            pickFoot.style.width = 'calc(100% - 80px)'
+            pickFoot.style.textAlign = 'right'
+            pickRoot.appendChild(pickFoot)
+            printContainer.innerHTML = ''
+            printContainer.appendChild(pickRoot)
+            await new Promise((resolve) => setTimeout(resolve, 50))
+            const pickCanvas = await html2canvas(pickRoot, { scale: 2, useCORS: true })
+            const pickImg = pickCanvas.toDataURL('image/jpeg', 0.9)
+            pdf.addPage()
+            pdf.addImage(pickImg, 'JPEG', 0, 0, 210, 297)
+          }
 
           document.body.removeChild(printContainer);
           pdf.save(`木子家出貨明細單_${new Date().toISOString().split('T')[0]}.pdf`);
