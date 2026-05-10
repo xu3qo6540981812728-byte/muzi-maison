@@ -2655,7 +2655,6 @@ const ordersToMerge = currentOrders.filter(o => mergeSelection.includes(o.id));
             pdf.addImage(pickImg, 'JPEG', 0, 0, 210, 297)
           }
 
-          document.body.removeChild(printContainer);
           pdf.save(`木子家出貨明細單_${new Date().toISOString().split('T')[0]}.pdf`);
 
           if (db && confirmedOrders.length > 0) {
@@ -2677,8 +2676,9 @@ const ordersToMerge = currentOrders.filter(o => mergeSelection.includes(o.id));
           alert(`PDF 已下載。\n已將本次 ${confirmedOrders.length} 筆訂單更新為「出貨中」（請於訂單管理填寫物流單號後即為「已出貨」）。下次列印不會再重複包含這些訂單。`)
           
         } catch (error) {
-          if(printContainer.parentNode) document.body.removeChild(printContainer);
           alert("PDF 產生失敗：" + error.message);
+        } finally {
+          if (printContainer.parentNode) document.body.removeChild(printContainer);
         }
       };
 
