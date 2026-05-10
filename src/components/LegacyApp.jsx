@@ -1606,9 +1606,15 @@ mainProductQty += item.qty;
       }
 
       const handleCheckout = async () => {
-        if (cartData.totalQty === 0) return;
         if (groupBuyFriendMode) {
           alert('揪團訂單須由主揪統一結帳，無法在此送出。')
+          return
+        }
+        const purchasedQty = cartData.items
+          .filter((item) => !item.isGift)
+          .reduce((sum, item) => sum + (Number(item.qty) || 0), 0)
+        if (purchasedQty === 0) {
+          alert('購物車內尚未選購商品（不含滿額贈品），請先加入至少一項商品後再送出訂單。')
           return
         }
         if (!currentUser && !adminOrderingFor) return alert("請先登入或註冊會員！");

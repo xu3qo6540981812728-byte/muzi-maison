@@ -41,6 +41,11 @@ export default function CartDrawer({
   getItemQty = null
 }) {
   if (!isOpen) return null
+  /** 至少一項「非贈品」商品才可結帳（避免只有贈品或空車仍可按送出） */
+  const purchasedQty = (cartData.items || [])
+    .filter((item) => !item.isGift)
+    .reduce((sum, item) => sum + (Number(item.qty) || 0), 0)
+  const canSubmitOrder = purchasedQty > 0
   const productList = products || []
   const qtyOf = (pid) =>
     typeof getItemQty === 'function' ? Number(getItemQty(pid)) || 0 : cart[pid] || 0
@@ -494,9 +499,20 @@ export default function CartDrawer({
             </p>
           ) : currentUser || adminOrderingFor ? (
             <>
+              {!canSubmitOrder && (
+                <p className="text-center text-sm text-rose-600 font-bold mb-3 px-2">
+                  請至少選購一項商品後，再送出訂單。
+                </p>
+              )}
               <button
+                type="button"
                 onClick={handleCheckout}
-                className="w-full bg-[#06C755] text-white font-bold rounded-2xl p-4 flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform"
+                disabled={!canSubmitOrder}
+                className={`w-full font-bold rounded-2xl p-4 flex items-center justify-center gap-2 shadow-lg transition-transform ${
+                  canSubmitOrder
+                    ? 'bg-[#06C755] text-white active:scale-95'
+                    : 'bg-stone-300 text-stone-500 cursor-not-allowed'
+                }`}
               >
                 <MessageCircle size={20} />
                 {adminOrderingFor ? '完成代建訂單' : '送出訂單並前往確認'}
