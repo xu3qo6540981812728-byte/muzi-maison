@@ -150,13 +150,6 @@ export default function GroupBuyHost({
         {!isActive && (
           <p className="text-center text-xs text-amber-900 font-bold mb-2 px-1 leading-relaxed">{endedMessage}</p>
         )}
-
-        <Link
-          to="/"
-          className="block text-center text-sm text-stone-500 font-bold hover:text-stone-800"
-        >
-          ← 回到商店首頁
-        </Link>
       </div>
     </div>
   )

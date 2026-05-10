@@ -2420,7 +2420,7 @@ const ordersToMerge = currentOrders.filter(o => mergeSelection.includes(o.id));
             let chunks = [];
             
             // 第一頁可以放的商品數量 (扣掉表頭與收件資訊)
-            const MAX_FIRST_PAGE = 8;
+            const MAX_FIRST_PAGE = 10;
             // 之後每一頁可以放的商品數量
             const MAX_OTHER_PAGE = 10;
 
@@ -2434,10 +2434,10 @@ const ordersToMerge = currentOrders.filter(o => mergeSelection.includes(o.id));
             }
 
             // 檢查最後一頁有沒有足夠的空間放「訂單備註與總計金額」
-            // 預估總計區塊大約需要 6 筆商品的高度
+            // 以「商品列」估算：預留約 2 列高度給總計區（見 maxForLastChunk - 2）
             const lastChunk = chunks[chunks.length - 1];
             const maxForLastChunk = chunks.length === 1 ? MAX_FIRST_PAGE : MAX_OTHER_PAGE;
-            if (lastChunk.length > (maxForLastChunk - 3)) {
+            if (lastChunk.length > (maxForLastChunk - 2)) {
                // 如果最後一頁太滿，就塞一頁空白的專門放總計，避免爆版
                chunks.push([]); 
             }
