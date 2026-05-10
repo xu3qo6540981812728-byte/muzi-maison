@@ -1,4 +1,5 @@
 import { Trash2 } from '../Icons'
+import { getDiscountDisplay } from '../../utils/discountDisplay'
 
 export default function OrderTable({
   orders,
@@ -139,6 +140,11 @@ export default function OrderTable({
                 <div key={i} className="flex justify-between items-center mb-1">
                   <span>
                     {item.name}{' '}
+                    {item.groupSplitLabel && (
+                      <span className="text-[10px] text-indigo-600 font-bold">
+                        （{item.groupSplitLabel}）
+                      </span>
+                    )}{' '}
                     {item.weight && (
                       <span className="text-[10px] text-stone-500 font-normal ml-1">
                         ({item.weight})
@@ -234,12 +240,22 @@ export default function OrderTable({
                   <span>商品小計</span>
                   <span>${order.totals.itemsBaseTotal}</span>
                 </div>
-                {order.totals.discountAmount > 0 && (
-                  <div className="flex justify-between text-rose-500">
-                    <span>活動折抵</span>
-                    <span>-${order.totals.discountAmount}</span>
-                  </div>
-                )}
+                {order.totals.discountAmount > 0 && (() => {
+                  const disc = getDiscountDisplay(order.totals)
+                  return (
+                    <div className="flex justify-between gap-2 text-rose-500 text-left">
+                      <span className="min-w-0 flex-1">
+                        <span className="block">{disc?.title || '活動折抵'}</span>
+                        {disc?.detail && (
+                          <span className="block text-[10px] font-normal text-rose-600 mt-0.5 leading-snug">
+                            {disc.detail}
+                          </span>
+                        )}
+                      </span>
+                      <span className="shrink-0">-${order.totals.discountAmount}</span>
+                    </div>
+                  )
+                })()}
                 <div className="flex justify-between">
                   <span>運費</span>
                   <span>${order.totals.shippingFee}</span>

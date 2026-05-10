@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { jsPDF } from 'jspdf'
 import html2canvas from 'html2canvas'
@@ -52,8 +52,19 @@ import AdminDashboardModal from './admin/AdminDashboardModal'
 import AdminOrdersModal from './admin/AdminOrdersModal'
 import AdminLogsModal from './admin/AdminLogsModal'
 import AdminCustomersModal from './admin/AdminCustomersModal'
+import GroupBuyHost from './group/GroupBuyHost'
 import { PAID_STATUSES, STATUS_MAP } from '../constants/orderStatus'
 import useMonthlyStats from '../hooks/useMonthlyStats'
+import { getDiscountDisplay, getDiscountPdfBlockHtml } from '../utils/discountDisplay'
+import {
+  aggregateGroupLines,
+  groupLineDocId,
+  participantLineLabel,
+  GROUP_STORAGE_HOST_SID,
+  GROUP_STORAGE_FRIEND_SID,
+  GROUP_STORAGE_FRIEND_NAME,
+  GROUP_STORAGE_FRIEND_PHONE
+} from '../utils/groupBuy'
 
 if (typeof window !== 'undefined') {
   window.jspdf = { jsPDF }
@@ -72,7 +83,7 @@ if (typeof window !== 'undefined') {
   giftProductId: '' // 預設送的商品品號（空字串代表不送或尚未設定）
 };
 
-    function App({ routeMode = 'home', routeProductId = '', standaloneAdminPage = false }) {
+    function App({ routeMode = 'home', routeProductId = '', routeGroupSessionId = '', bootstrapFriendSessionId = '', standaloneAdminPage = false }) {
       // 🌟 全局載入狀態，防止畫面閃現
       const [isAppLoading, setIsAppLoading] = useState(true);
       const [adminOrderingFor, setAdminOrderingFor] = useState(null);
@@ -170,6 +181,15 @@ const [adminLogs, setAdminLogs] = useState([]);
       const [adminOrdersPage, setAdminOrdersPage] = useState(1)
       const [isOrdersPagingLoading, setIsOrdersPagingLoading] = useState(false)
       const [hasMoreOldOrders, setHasMoreOldOrders] = useState(true)
+      const [groupSessionDoc, setGroupSessionDoc] = useState(null)
+      const [groupSessionLines, setGroupSessionLines] = useState([])
+      const [activeHostGroupSid, setActiveHostGroupSid] = useState(null)
+      const [activeFriendGroupSid, setActiveFriendGroupSid] = useState(null)
+      const [friendGroupParticipantName, setFriendGroupParticipantName] = useState('')
+      const [friendGroupParticipantPhone, setFriendGroupParticipantPhone] = useState('')
+      const [friendNicknameDraft, setFriendNicknameDraft] = useState('')
+      const [friendPhoneDraft, setFriendPhoneDraft] = useState('')
+      const groupFriendEndedRef = useRef(false)
 
       const [editingProduct, setEditingProduct] = useState(null); 
       const [mainDisplayImg, setMainDisplayImg] = useState(''); 
@@ -183,6 +203,52 @@ const [tableProducts, setTableProducts] = useState([]);
 const [publicTopSellers, setPublicTopSellers] = useState({ items: [], label: '本月' });
       const navigate = useNavigate()
       const isAdminRouteMode = routeMode.startsWith('admin-')
+
+      useEffect(() => {
+        if (typeof window === 'undefined') return
+        const h = sessionStorage.getItem(GROUP_STORAGE_HOST_SID)
+        const f = sessionStorage.getItem(GROUP_STORAGE_FRIEND_SID)
+        const n = sessionStorage.getItem(GROUP_STORAGE_FRIEND_NAME)
+        const p = sessionStorage.getItem(GROUP_STORAGE_FRIEND_PHONE)
+        if (h) setActiveHostGroupSid(h)
+        if (f) setActiveFriendGroupSid(f)
+        if (n) setFriendGroupParticipantName(n)
+        if (p) setFriendGroupParticipantPhone(p)
+      }, [])
+
+      useLayoutEffect(() => {
+        if (!bootstrapFriendSessionId || typeof window === 'undefined') return
+        sessionStorage.setItem(GROUP_STORAGE_FRIEND_SID, bootstrapFriendSessionId)
+        setActiveFriendGroupSid(bootstrapFriendSessionId)
+        navigate('/', { replace: true })
+      }, [bootstrapFriendSessionId, navigate])
+
+      /** 揪團朋友：僅在「完全未登入」時匿名（已有會員／匿名則沿用，避免與主揪 ownerUid 混淆） */
+      useEffect(() => {
+        if (!auth || !activeFriendGroupSid) return
+        let cancelled = false
+        ;(async () => {
+          if (auth.currentUser) return
+          try {
+            await auth.signInAnonymously()
+          } catch (e) {
+            if (!cancelled) {
+              console.error(e)
+              alert(`無法啟用揪團選購連線：${e.message || e}`)
+            }
+          }
+        })()
+        return () => {
+          cancelled = true
+        }
+      }, [activeFriendGroupSid])
+
+      /** 揪團管理頁須為「會員主揪」；若先前以匿名參與揪團，先登出匿名以免誤判為非主揪 */
+      useEffect(() => {
+        if (routeMode !== 'group-host' || !auth?.currentUser?.isAnonymous) return
+        auth.signOut().catch(() => {})
+        alert('管理揪團須登入主揪會員帳號。已結束匿名瀏覽，請於右上角登入會員後再進入揪團管理。')
+      }, [routeMode, auth])
       const rememberHomeScroll = () => {
         if (typeof window === 'undefined') return
         window.sessionStorage.setItem('muzi_home_scroll_y', String(window.scrollY || 0))
@@ -718,6 +784,70 @@ useEffect(() => {
         };
       }, [currentUser, isAdminMode, orderLimit, userLimit, isAdminRouteMode]);
 
+      const groupSubscribeSid =
+        routeMode === 'group-host' && routeGroupSessionId
+          ? routeGroupSessionId
+          : activeHostGroupSid || activeFriendGroupSid
+
+      useEffect(() => {
+        if (!db || !groupSubscribeSid) {
+          setGroupSessionDoc(null)
+          setGroupSessionLines([])
+          return undefined
+        }
+        const sessionRef = db.collection('groupSessions').doc(groupSubscribeSid)
+        const unsubDoc = sessionRef.onSnapshot((docSnap) => {
+          if (!docSnap.exists) {
+            setGroupSessionDoc({ id: groupSubscribeSid, missing: true })
+          } else {
+            setGroupSessionDoc({ id: docSnap.id, ...docSnap.data() })
+          }
+        })
+        const unsubLines = sessionRef.collection('lines').onSnapshot((snap) => {
+          setGroupSessionLines(snap.docs.map((d) => ({ ...d.data(), _docId: d.id })))
+        })
+        return () => {
+          unsubDoc()
+          unsubLines()
+        }
+      }, [db, groupSubscribeSid, routeMode, routeGroupSessionId])
+
+      useEffect(() => {
+        if (activeFriendGroupSid) {
+          groupFriendEndedRef.current = false
+        }
+      }, [activeFriendGroupSid])
+
+      useEffect(() => {
+        if (!activeFriendGroupSid || !groupSessionDoc || groupSessionDoc.missing) return
+        if (groupSessionDoc.status === 'active') return
+        if (groupFriendEndedRef.current) return
+        groupFriendEndedRef.current = true
+        sessionStorage.removeItem(GROUP_STORAGE_FRIEND_SID)
+        sessionStorage.removeItem(GROUP_STORAGE_FRIEND_NAME)
+        sessionStorage.removeItem(GROUP_STORAGE_FRIEND_PHONE)
+        setActiveFriendGroupSid(null)
+        setFriendGroupParticipantName('')
+        setFriendGroupParticipantPhone('')
+        const st = groupSessionDoc.status
+        if (st === 'cancelled') {
+          alert('此團購已由主揪取消，連結已失效')
+        } else {
+          alert('此團購已結束（主揪已結帳），連結已失效')
+        }
+      }, [groupSessionDoc, activeFriendGroupSid])
+
+      useEffect(() => {
+        if (!activeFriendGroupSid || !groupSessionDoc?.missing) return
+        sessionStorage.removeItem(GROUP_STORAGE_FRIEND_SID)
+        sessionStorage.removeItem(GROUP_STORAGE_FRIEND_NAME)
+        sessionStorage.removeItem(GROUP_STORAGE_FRIEND_PHONE)
+        setActiveFriendGroupSid(null)
+        setFriendGroupParticipantName('')
+        setFriendGroupParticipantPhone('')
+        alert('找不到此揪團連結')
+      }, [groupSessionDoc, activeFriendGroupSid])
+
       useEffect(() => {
         if (!isAdminRouteMode || isAppLoading) return
         if (!currentUser || !isAdminMode) {
@@ -763,7 +893,217 @@ useEffect(() => {
       const candyProducts = products.filter(p => p.category.includes('糖果') || p.category.includes('軟糕'));
       const addonProducts = displayedProducts.filter(p => p.isAddon);
 
+      const normalizeFriendPhoneDigits = (raw) =>
+        String(raw || '')
+          .replace(/\D/g, '')
+          .slice(0, 10)
+
+      /** 揪團朋友：依 Firestore lines 模擬下一個數量，檢查加購總數不大於該朋友自己的主商品總數 */
+      const validateFriendGroupLineQuantities = (
+        myName,
+        myPhone,
+        productId,
+        nextQty,
+        linesSnapshot,
+        productMeta
+      ) => {
+        const myLabel = participantLineLabel(myName, myPhone)
+        const map = {}
+        ;(linesSnapshot || []).forEach((l) => {
+          const lb =
+            participantLineLabel(l.participantName, l.participantPhone) ||
+            String(l.participantName || '').trim()
+          if (lb !== myLabel) return
+          if (l.productId === productId) return
+          map[l.productId] = (map[l.productId] || 0) + (Number(l.qty) || 0)
+        })
+        if (nextQty > 0) map[productId] = nextQty
+        let mainSum = 0
+        let addonSum = 0
+        Object.entries(map).forEach(([id, q]) => {
+          if (q <= 0) return
+          const p = productMeta.find((x) => x.id === id)
+          if (!p) return
+          if (p.isAddon) addonSum += q
+          else mainSum += q
+        })
+        if (addonSum > mainSum) {
+          alert('加購品的總數不能大於你的主商品總數喔！')
+          return false
+        }
+        return true
+      }
+
+      /** 開團時將主揪本機購物車一次寫入 Firestore lines（與 handleGroupLineDelta 欄位一致） */
+      const flushHostCartToGroupLines = async (
+        sessionId,
+        cartSnapshot,
+        participantName,
+        participantPhoneDigits,
+        participantFirebaseUid
+      ) => {
+        if (!db || !sessionId || !participantFirebaseUid) return
+        const pname = String(participantName || '').trim()
+        const pphone = normalizeFriendPhoneDigits(participantPhoneDigits)
+        if (!pname || !/^09\d{8}$/.test(pphone)) {
+          throw new Error('主揪姓名或手機格式不完整')
+        }
+        const entries = Object.entries(cartSnapshot || {}).filter(
+          ([, q]) => (Number(q) || 0) > 0
+        )
+        if (entries.length === 0) return
+        const sessionRef = db.collection('groupSessions').doc(sessionId)
+        const lineKeyLabel = participantLineLabel(pname, pphone)
+        const batch = db.batch()
+        for (const [productId, qtyRaw] of entries) {
+          const q = Number(qtyRaw) || 0
+          if (q <= 0) continue
+          const product = products.find((p) => p.id === productId)
+          if (!product) continue
+          const docId = groupLineDocId(productId, lineKeyLabel)
+          const ref = sessionRef.collection('lines').doc(docId)
+          batch.set(
+            ref,
+            {
+              participantName: pname,
+              participantPhone: pphone,
+              productId,
+              qty: q,
+              participantUid: participantFirebaseUid,
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            },
+            { merge: true }
+          )
+        }
+        await batch.commit()
+      }
+
+      const handleGroupLineDelta = async (
+        sessionId,
+        participantName,
+        participantPhoneDigits,
+        productId,
+        delta
+      ) => {
+        if (!db || !sessionId) return
+        const pname = String(participantName || '').trim()
+        const pphone = normalizeFriendPhoneDigits(participantPhoneDigits)
+        if (!pname) return alert('請先填寫姓名')
+        if (!/^09\d{8}$/.test(pphone)) return alert('請填寫有效的台灣手機號碼（09 開頭共 10 碼）')
+        const product = products.find((p) => p.id === productId)
+        if (!product) return
+        try {
+          if (auth && !auth.currentUser) {
+            await auth.signInAnonymously()
+          }
+          const uid = auth?.currentUser?.uid
+          if (!uid) {
+            alert('無法取得使用者身分，請重新整理頁面後再試')
+            return
+          }
+          const sessionSnap = await db.collection('groupSessions').doc(sessionId).get()
+          if (!sessionSnap.exists || sessionSnap.data().status !== 'active') {
+            alert('此團購已失效或已結束')
+            return
+          }
+          const lineKeyLabel = participantLineLabel(pname, pphone)
+          const docId = groupLineDocId(productId, lineKeyLabel)
+          const ref = db.collection('groupSessions').doc(sessionId).collection('lines').doc(docId)
+          const lineSnap = await ref.get()
+          const prev = lineSnap.exists ? Number(lineSnap.data().qty) || 0 : 0
+          const next = prev + delta
+          if (next > 0) {
+            if (
+              !validateFriendGroupLineQuantities(
+                pname,
+                pphone,
+                productId,
+                next,
+                groupSessionLines,
+                products
+              )
+            ) {
+              return
+            }
+          }
+          if (next <= 0) {
+            if (lineSnap.exists) {
+              if (
+                !validateFriendGroupLineQuantities(
+                  pname,
+                  pphone,
+                  productId,
+                  0,
+                  groupSessionLines,
+                  products
+                )
+              ) {
+                return
+              }
+              await ref.delete()
+            }
+          } else {
+            await ref.set(
+              {
+                participantName: pname,
+                participantPhone: pphone,
+                productId,
+                qty: next,
+                participantUid: uid,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+              },
+              { merge: true }
+            )
+          }
+        } catch (e) {
+          alert(`更新失敗：${e.message}`)
+        }
+      }
+
       const updateCart = (id, delta) => {
+        const hostSid =
+          routeMode === 'group-host' && routeGroupSessionId
+            ? routeGroupSessionId
+            : activeHostGroupSid
+        const isHostGroupLineShopping =
+          !!hostSid &&
+          groupSessionDoc &&
+          !groupSessionDoc.missing &&
+          groupSessionDoc.status === 'active' &&
+          currentUser &&
+          !currentUser.isAnonymous &&
+          groupSessionDoc.ownerUid === currentUser.uid &&
+          !adminOrderingFor
+
+        if (isHostGroupLineShopping) {
+          const hostName = (userProfile?.name || customerInfo?.name || '').trim()
+          const hostPhone = normalizeFriendPhoneDigits(
+            userProfile?.phone || customerInfo?.phone
+          )
+          if (!hostName || !/^09\d{8}$/.test(hostPhone)) {
+            alert(
+              '揪團加購需先在「會員／我的帳號」填寫姓名與台灣手機（09 開頭共 10 碼）。'
+            )
+            return
+          }
+          void handleGroupLineDelta(hostSid, hostName, hostPhone, id, delta)
+          return
+        }
+
+        if (
+          activeFriendGroupSid &&
+          friendGroupParticipantName &&
+          friendGroupParticipantPhone
+        ) {
+          void handleGroupLineDelta(
+            activeFriendGroupSid,
+            friendGroupParticipantName,
+            friendGroupParticipantPhone,
+            id,
+            delta
+          )
+          return
+        }
         setCart(prev => {
           const product = products.find(p => p.id === id);
           const currentQty = prev[id] || 0;
@@ -876,33 +1216,197 @@ mainProductQty += item.qty;
         if (deliveryWay === 'delivery' && currentTotal < storeConfig.freeShippingThreshold) shippingFee = storeConfig.shippingFee;
         const finalPrice = currentTotal + shippingFee;
 
-        return { totalQty, freeShippingQty, currentTotal, finalPrice, shippingFee, discountAmount, itemsBaseTotal, totalCost, giftCount, appliedGiftId };
+        return {
+          totalQty,
+          freeShippingQty,
+          currentTotal,
+          finalPrice,
+          shippingFee,
+          discountAmount,
+          itemsBaseTotal,
+          totalCost,
+          giftCount,
+          appliedGiftId,
+          promoBundleQty: storeConfig.promoQty,
+          promoBundlePrice: storeConfig.promoPrice,
+          promoBundleSets: promoSets
+        }
       };
 
       const cartData = useMemo(() => {
-  let items = Object.entries(cart).map(([id, qty]) => {
-    const product = products.find(p => p.id === id);
-    return product ? { ...product, qty } : null;
-  }).filter(Boolean);
+        const sid =
+          routeMode === 'group-host' && routeGroupSessionId ? routeGroupSessionId : activeHostGroupSid
+        const isHostGroupMerge =
+          !!sid &&
+          groupSessionDoc &&
+          !groupSessionDoc.missing &&
+          groupSessionDoc.status === 'active' &&
+          currentUser &&
+          !currentUser.isAnonymous &&
+          groupSessionDoc.ownerUid === currentUser.uid &&
+          !adminOrderingFor
 
-  const totals = calculateTotals(items, deliveryMethod);
+        if (isHostGroupMerge) {
+          const { cart: fc, labels: hostAllLabels, labelsDisplay: hostLabelsDisplay } =
+            aggregateGroupLines(groupSessionLines)
+          let items = Object.entries(fc)
+            .map(([id, qty]) => {
+              const product = products.find((p) => p.id === id)
+              if (!product) return null
+              const split =
+                (hostLabelsDisplay && hostLabelsDisplay[id]) || hostAllLabels[id] || ''
+              return {
+                ...product,
+                qty,
+                ...(split ? { groupSplitLabel: split } : {})
+              }
+            })
+            .filter(Boolean)
+          const totals = calculateTotals(items, deliveryMethod)
+          if (totals.giftCount > 0 && totals.appliedGiftId) {
+            const giftProduct = products.find((p) => p.id === totals.appliedGiftId)
+            if (giftProduct) {
+              items.push({
+                ...giftProduct,
+                isGift: true,
+                qty: totals.giftCount,
+                subtotal: 0,
+                price: 0
+              })
+            }
+          }
+          return { items, ...totals }
+        }
 
-  // === 處理贈品：將贈品加到 items 陣列最後面 ===
-  if (totals.giftCount > 0 && totals.appliedGiftId) {
-    const giftProduct = products.find(p => p.id === totals.appliedGiftId);
-    if (giftProduct) {
-      // 複製一份商品資料，標記為贈品，金額設為 0
-      items.push({
-        ...giftProduct,
-        isGift: true, // 標記這是系統送的贈品
-        qty: totals.giftCount,
-        subtotal: 0,
-        price: 0 // 顯示單價為 0
-      });
-    }
-  }
-        return { items, ...totals };
-}, [cart, products, storeConfig, deliveryMethod]);
+        if (
+          activeFriendGroupSid &&
+          friendGroupParticipantName &&
+          friendGroupParticipantPhone &&
+          groupSessionDoc &&
+          !groupSessionDoc.missing &&
+          groupSessionDoc.status === 'active'
+        ) {
+          const { cart: fc, labels: friendAllLabels, labelsDisplay: friendLabelsDisplay } =
+            aggregateGroupLines(groupSessionLines)
+          let items = Object.entries(fc)
+            .map(([id, qty]) => {
+              const product = products.find((p) => p.id === id)
+              if (!product) return null
+              const split =
+                (friendLabelsDisplay && friendLabelsDisplay[id]) || friendAllLabels[id] || ''
+              return {
+                ...product,
+                qty,
+                ...(split ? { groupSplitLabel: split } : {})
+              }
+            })
+            .filter(Boolean)
+          const totals = calculateTotals(items, deliveryMethod)
+          if (totals.giftCount > 0 && totals.appliedGiftId) {
+            const giftProduct = products.find((p) => p.id === totals.appliedGiftId)
+            if (giftProduct) {
+              items.push({
+                ...giftProduct,
+                isGift: true,
+                qty: totals.giftCount,
+                subtotal: 0,
+                price: 0
+              })
+            }
+          }
+          return { items, ...totals }
+        }
+
+        let items = Object.entries(cart)
+          .map(([id, qty]) => {
+            const product = products.find((p) => p.id === id)
+            if (!product) return null
+            return { ...product, qty }
+          })
+          .filter(Boolean)
+
+        const totals = calculateTotals(items, deliveryMethod)
+
+        if (totals.giftCount > 0 && totals.appliedGiftId) {
+          const giftProduct = products.find((p) => p.id === totals.appliedGiftId)
+          if (giftProduct) {
+            items.push({
+              ...giftProduct,
+              isGift: true,
+              qty: totals.giftCount,
+              subtotal: 0,
+              price: 0
+            })
+          }
+        }
+        return { items, ...totals }
+      }, [
+        cart,
+        products,
+        storeConfig,
+        deliveryMethod,
+        activeHostGroupSid,
+        activeFriendGroupSid,
+        friendGroupParticipantName,
+        friendGroupParticipantPhone,
+        groupSessionLines,
+        groupSessionDoc,
+        currentUser,
+        userProfile,
+        customerInfo,
+        adminOrderingFor,
+        routeMode,
+        routeGroupSessionId
+      ])
+
+      const getDisplayQtyForProduct = (productId) => {
+        const sidMerge =
+          routeMode === 'group-host' && routeGroupSessionId ? routeGroupSessionId : activeHostGroupSid
+        const isHostGroupQty =
+          !!sidMerge &&
+          groupSessionDoc &&
+          !groupSessionDoc.missing &&
+          groupSessionDoc.status === 'active' &&
+          currentUser &&
+          !currentUser.isAnonymous &&
+          groupSessionDoc.ownerUid === currentUser.uid &&
+          !adminOrderingFor
+        if (isHostGroupQty) {
+          const hostName = (userProfile?.name || customerInfo?.name || '').trim()
+          const hostPhone = normalizeFriendPhoneDigits(
+            userProfile?.phone || customerInfo?.phone
+          )
+          const myLabel = participantLineLabel(hostName, hostPhone)
+          if (!hostName || !/^09\d{8}$/.test(hostPhone)) return 0
+          return groupSessionLines
+            .filter((l) => {
+              const lb =
+                participantLineLabel(l.participantName, l.participantPhone) ||
+                String(l.participantName || '').trim()
+              return lb === myLabel && l.productId === productId
+            })
+            .reduce((s, l) => s + (Number(l.qty) || 0), 0)
+        }
+        if (activeFriendGroupSid && friendGroupParticipantName && friendGroupParticipantPhone) {
+          const myLabel = participantLineLabel(
+            friendGroupParticipantName,
+            friendGroupParticipantPhone
+          )
+          return groupSessionLines
+            .filter((l) => {
+              const lb =
+                participantLineLabel(l.participantName, l.participantPhone) ||
+                String(l.participantName || '').trim()
+              return lb === myLabel && l.productId === productId
+            })
+            .reduce((s, l) => s + (Number(l.qty) || 0), 0)
+        }
+        return cart[productId] || 0
+      }
+
+      const groupBuyFriendMode = Boolean(
+        activeFriendGroupSid && friendGroupParticipantName && friendGroupParticipantPhone
+      )
 
 
       
@@ -1103,6 +1607,10 @@ mainProductQty += item.qty;
 
       const handleCheckout = async () => {
         if (cartData.totalQty === 0) return;
+        if (groupBuyFriendMode) {
+          alert('揪團訂單須由主揪統一結帳，無法在此送出。')
+          return
+        }
         if (!currentUser && !adminOrderingFor) return alert("請先登入或註冊會員！");
         if (!customerInfo.name || !customerInfo.phone) return alert("請填寫訂購人姓名與電話！");
         if (!customerInfo.address) return alert("請務必填寫聯絡/收件地址！");
@@ -1115,21 +1623,60 @@ mainProductQty += item.qty;
         const orderDraftItems = cartData.items
           .filter((item) => !item.isGift)
           .map((item) => ({ ...item }))
+        const checkoutHostSid =
+          routeMode === 'group-host' && routeGroupSessionId ? routeGroupSessionId : activeHostGroupSid
+        const attachGroupBuy =
+          !!checkoutHostSid &&
+          groupSessionDoc &&
+          !groupSessionDoc.missing &&
+          groupSessionDoc.status === 'active' &&
+          currentUser &&
+          !currentUser.isAnonymous &&
+          groupSessionDoc.ownerUid === currentUser.uid &&
+          !adminOrderingFor
+        const gbSessionId = attachGroupBuy ? checkoutHostSid : null
 
         if (db) {
           const batch = db.batch();
           const orderRef = db.collection('orders').doc(orderId);
-          batch.set(orderRef, {
+          const orderPayload = {
             orderId, userId: finalUserId, customerInfo, items: cartData.items,
-            totals: { itemsBaseTotal: cartData.itemsBaseTotal, discountAmount: cartData.discountAmount, shippingFee: cartData.shippingFee, finalPrice: cartData.finalPrice, totalCost: cartData.totalCost },
+            totals: {
+              itemsBaseTotal: cartData.itemsBaseTotal,
+              discountAmount: cartData.discountAmount,
+              shippingFee: cartData.shippingFee,
+              finalPrice: cartData.finalPrice,
+              totalCost: cartData.totalCost,
+              ...(cartData.discountAmount > 0
+                ? {
+                    promoBundleQty: cartData.promoBundleQty,
+                    promoBundlePrice: cartData.promoBundlePrice,
+                    promoBundleSets: cartData.promoBundleSets
+                  }
+                : {})
+            },
             deliveryMethod, status: initialStatus, bankAccountLast5: checkoutBankCode || '', trackingNumber: '', orderNote, adminDiscount: 0,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             createdByAdmin: !!adminOrderingFor 
-          });
+          }
+          if (gbSessionId) {
+            orderPayload.groupBuySessionId = gbSessionId
+            batch.update(db.collection('groupSessions').doc(gbSessionId), {
+              status: 'checked_out',
+              closedAt: firebase.firestore.FieldValue.serverTimestamp()
+            })
+          }
+          batch.set(orderRef, orderPayload);
 
          
 
           await batch.commit();
+          if (gbSessionId) {
+            if (typeof window !== 'undefined') {
+              sessionStorage.removeItem(GROUP_STORAGE_HOST_SID)
+            }
+            setActiveHostGroupSid(null)
+          }
           setLastPlacedOrderForReorder({ id: orderId, items: orderDraftItems })
         }
 try {
@@ -1220,7 +1767,10 @@ try {
         const currentBankCode = bankCodeInputs[order.id] || order.bankAccountLast5;
         if (!currentBankCode || currentBankCode.length < 5) { alert("⚠️ 請先在下方填寫完整的「匯款後五碼」才可複製明細喔！"); return; }
         let text = `*【木子家 MUZI MAISON 新訂單】*\n\n訂單編號：${order.id}\n訂購人：${order.customerInfo.name}\n聯絡電話：${order.customerInfo.phone}\n取貨方式：${order.deliveryMethod === 'delivery' ? '宅配' : '自取'}\n地址：${order.customerInfo.address}\n----------------------\n`;
-        order.items.forEach(item => text += `▪️ ${item.name} ${item.weight ? `(${item.weight})` : ''} x ${item.qty} ${item.unit || ''}\n`);
+        order.items.forEach(item => {
+          const splitTag = item.groupSplitLabel ? `（${item.groupSplitLabel}）` : ''
+          text += `▪️ ${item.name} ${item.weight ? `(${item.weight})` : ''}${splitTag} x ${item.qty} ${item.unit || ''}\n`
+        });
         text += `----------------------\n`;
         if (order.adminDiscount > 0) text += `*手動折扣*：-$${order.adminDiscount}\n`;
         
@@ -1510,6 +2060,132 @@ try {
           alert(`發佈失敗：${e.message}`)
         }
       }
+
+      const createGroupBuySession = async () => {
+        if (!currentUser) {
+          alert('請先登入會員')
+          return
+        }
+        if (auth?.currentUser?.isAnonymous) {
+          alert('請先登入會員帳號再開團（匿名瀏覽無法擔任主揪）。')
+          return
+        }
+        if (!db) return alert('資料庫尚未連線')
+        const hostName = (userProfile?.name || customerInfo?.name || '').trim()
+        const hostPhone = normalizeFriendPhoneDigits(userProfile?.phone || customerInfo?.phone)
+        if (!hostName || !/^09\d{8}$/.test(hostPhone)) {
+          alert(
+            '開團前請先在「會員／我的帳號」填寫「姓名」與「台灣手機（09 開頭共 10 碼）」，才能把購物車併入揪團。'
+          )
+          return
+        }
+        const fromStorage =
+          typeof window !== 'undefined' ? sessionStorage.getItem(GROUP_STORAGE_HOST_SID) : null
+        const candidates = [...new Set([fromStorage, activeHostGroupSid].filter(Boolean))]
+        for (const sid of candidates) {
+          try {
+            const snap = await db.collection('groupSessions').doc(sid).get()
+            if (
+              snap.exists &&
+              snap.data().status === 'active' &&
+              snap.data().ownerUid === currentUser.uid
+            ) {
+              if (typeof window !== 'undefined') {
+                sessionStorage.setItem(GROUP_STORAGE_HOST_SID, sid)
+              }
+              setActiveHostGroupSid(sid)
+              alert('目前已有進行中的揪團，請使用「揪團管理」複製連結，或結帳／取消後再開新團。')
+              navigate(`/group/host/${sid}`)
+              return
+            }
+          } catch {
+            /* 略過單筆讀取錯誤 */
+          }
+        }
+        const sessionId = `GP${Date.now().toString(36)}${Math.floor(Math.random() * 900 + 100)}`
+        const cartSnapshot = { ...cart }
+        try {
+          await db.collection('groupSessions').doc(sessionId).set({
+            ownerUid: currentUser.uid,
+            status: 'active',
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          })
+          await flushHostCartToGroupLines(
+            sessionId,
+            cartSnapshot,
+            hostName,
+            hostPhone,
+            currentUser.uid
+          )
+          setCart({})
+          await writeAdminLog('group_buy_session_created', { sessionId })
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem(GROUP_STORAGE_HOST_SID, sessionId)
+            sessionStorage.removeItem(GROUP_STORAGE_FRIEND_SID)
+            sessionStorage.removeItem(GROUP_STORAGE_FRIEND_NAME)
+            sessionStorage.removeItem(GROUP_STORAGE_FRIEND_PHONE)
+          }
+          setActiveHostGroupSid(sessionId)
+          setActiveFriendGroupSid(null)
+          setFriendGroupParticipantName('')
+          navigate('/')
+          alert('已開團！購物車已併入本場揪團；揪團連結請點畫面下方「揪團管理」複製給朋友。')
+        } catch (e) {
+          alert(`開團失敗：${e.message}`)
+        }
+      }
+
+      const cancelGroupBuySession = async (sessionId) => {
+        if (!currentUser || !db || !sessionId) return
+        try {
+          const sessionRef = db.collection('groupSessions').doc(sessionId)
+          const snap = await sessionRef.get()
+          if (!snap.exists) return alert('揪團不存在')
+          const d = snap.data()
+          if (d.ownerUid !== currentUser.uid) return alert('僅主揪可操作')
+          if (d.status !== 'active') return alert('此揪團已結束')
+          if (
+            !window.confirm(
+              '確定取消揪團？朋友的連結將失效，其他人無法再加單；若要重新揪團須再開新場。'
+            )
+          ) {
+            return
+          }
+          await sessionRef.update({
+            status: 'cancelled',
+            cancelledAt: firebase.firestore.FieldValue.serverTimestamp()
+          })
+          if (typeof window !== 'undefined') {
+            sessionStorage.removeItem(GROUP_STORAGE_HOST_SID)
+          }
+          setActiveHostGroupSid(null)
+          navigate('/')
+          alert('已取消揪團')
+        } catch (e) {
+          alert(`取消失敗：${e.message}`)
+        }
+      }
+
+      const copyGroupJoinLink = async (url) => {
+        try {
+          if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(url)
+          } else {
+            const ta = document.createElement('textarea')
+            ta.value = url
+            ta.style.position = 'fixed'
+            ta.style.left = '-9999px'
+            document.body.appendChild(ta)
+            ta.select()
+            document.execCommand('copy')
+            ta.remove()
+          }
+          alert('已複製揪團連結')
+        } catch {
+          alert('複製失敗，請手動複製網址')
+        }
+      }
+
 // 🌟 新增：雲端精準搜尋單號 (單次讀取，最省效能)
       const handleCloudSearch = () => {
         setActiveSearchId(orderSearchId.trim().toUpperCase());
@@ -1570,7 +2246,20 @@ const ordersToMerge = currentOrders.filter(o => mergeSelection.includes(o.id));
           const newOrderRef = db.collection('orders').doc(newOrderId);
           batch.set(newOrderRef, {
             orderId: newOrderId, userId: selectedCustomer.id, customerInfo: selectedCustomer, items: newItems,
-            totals: { itemsBaseTotal: newTotals.itemsBaseTotal, discountAmount: newTotals.discountAmount, shippingFee: newTotals.shippingFee, finalPrice: newTotals.finalPrice, totalCost: newTotals.totalCost },
+            totals: {
+              itemsBaseTotal: newTotals.itemsBaseTotal,
+              discountAmount: newTotals.discountAmount,
+              shippingFee: newTotals.shippingFee,
+              finalPrice: newTotals.finalPrice,
+              totalCost: newTotals.totalCost,
+              ...(newTotals.discountAmount > 0
+                ? {
+                    promoBundleQty: newTotals.promoBundleQty,
+                    promoBundlePrice: newTotals.promoBundlePrice,
+                    promoBundleSets: newTotals.promoBundleSets
+                  }
+                : {})
+            },
             deliveryMethod: baseOrder.deliveryMethod, status: 'pending', bankAccountLast5: '', trackingNumber: '', orderNote: combinedNotes, adminDiscount: totalAdminDiscount,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(), isMerged: true, mergeNote: `系統備註：由舊單號 ${mergeSelection.join(', ')} 合併產生。`
           });
@@ -1671,7 +2360,11 @@ const ordersToMerge = currentOrders.filter(o => mergeSelection.includes(o.id));
             const o = { id: doc.id, ...doc.data() };
             const date = o.createdAt ? o.createdAt.toDate().toLocaleString() : '';
             const status = STATUS_MAP[o.status]?.label || o.status;
-            const itemsStr = o.items.map(i => `${i.name} ${i.weight ? `(${i.weight})` : ''} ($${i.price}) x ${i.qty} ${i.unit || ''}`).join(' ; ');
+            const itemsStr = o.items.map(i => {
+              let s = `${i.name} ${i.weight ? `(${i.weight})` : ''} ($${i.price}) x ${i.qty} ${i.unit || ''}`
+              if (i.groupSplitLabel) s += ` [分裝:${i.groupSplitLabel}]`
+              return s
+            }).join(' ; ');
             
             const row = [
               o.id, date, status, o.customerInfo.name, o.customerInfo.gender || '', o.customerInfo.phone, o.customerInfo.lineId || '',
@@ -1802,7 +2495,7 @@ const ordersToMerge = currentOrders.filter(o => mergeSelection.includes(o.id));
                             <tr>
                               <td style="border: 1px solid #333; padding: 10px;">${item.id || ''}</td>
                               <td style="border: 1px solid #333; padding: 10px;">${item.category || ''}</td>
-                              <td style="border: 1px solid #333; padding: 10px;">${item.name} ${item.weight ? `(${item.weight})` : ''}</td>
+                              <td style="border: 1px solid #333; padding: 10px;">${item.name} ${item.weight ? `(${item.weight})` : ''}${item.groupSplitLabel ? `（${item.groupSplitLabel}）` : ''}</td>
                               <td style="border: 1px solid #333; padding: 10px;">$${item.isAddon && item.freeQty > 0 && item.paidQty > 0 ? `${item.freeQty}件$0, ${item.paidQty}件$${item.price}` : (item.subtotal === 0 ? '0' : item.price)}</td>
                               <td style="border: 1px solid #333; padding: 10px;">${item.qty} ${item.unit || ''}</td>
                               <td style="border: 1px solid #333; padding: 10px;">$${item.subtotal !== undefined ? item.subtotal : (item.price * item.qty)}</td>
@@ -1819,7 +2512,7 @@ const ordersToMerge = currentOrders.filter(o => mergeSelection.includes(o.id));
                       ${o.mergeNote ? `<div style="margin-top: 15px; padding: 10px; border: 1px solid #333; background: #fafafa;"><strong>系統備註：</strong><br/>${o.mergeNote}</div>` : ''}
                       <div style="margin-top: 20px; padding-top: 15px; border-top: 2px solid #333; text-align: right; font-size: 1.2em;">
                         <div style="display: flex; justify-content: flex-end; gap: 20px; margin-bottom: 5px;"><span>商品小計：</span><span>$${o.totals.itemsBaseTotal}</span></div>
-                        ${o.totals.discountAmount > 0 ? `<div style="display: flex; justify-content: flex-end; gap: 20px; margin-bottom: 5px; color: #e11d48;"><span>活動折抵：</span><span>-$${o.totals.discountAmount}</span></div>` : ''}
+                        ${getDiscountPdfBlockHtml(o.totals)}
                         ${o.adminDiscount > 0 ? `<div style="display: flex; justify-content: flex-end; gap: 20px; margin-bottom: 5px; color: #e11d48;"><span>手動折扣：</span><span>-$${o.adminDiscount}</span></div>` : ''}
                         <div style="display: flex; justify-content: flex-end; gap: 20px; margin-bottom: 5px;"><span>運費：</span><span style="${o.totals.shippingFee === 0 ? 'color: #10b981; font-weight: bold;' : ''}">${o.totals.shippingFee === 0 ? '免運費 ($0)' : `$${o.totals.shippingFee}`}</span></div>
                         <div style="font-weight: bold; font-size: 1.4em; margin-top: 10px;"><span>總計金額：</span><span>$${o.totals.finalPrice}</span></div>
@@ -1903,7 +2596,7 @@ const ordersToMerge = currentOrders.filter(o => mergeSelection.includes(o.id));
             const tr = document.createElement('tr')
             const cells = [
               it.id || '',
-              `${it.name || ''}${it.isGift ? '（贈品）' : ''}`,
+              `${it.name || ''}${it.groupSplitLabel ? `（${it.groupSplitLabel}）` : ''}${it.isGift ? '（贈品）' : ''}`,
               it.weight || '',
               it.unit || '',
               String(it.qty || 0)
@@ -2805,14 +3498,28 @@ const uploadTask = await storageRef.put(blob, metadata);
                 <div className="flex gap-4">
                   <div className="flex items-center gap-4 bg-stone-50 rounded-xl px-4 py-3 border border-stone-200 flex-1 justify-center">
                     <button onClick={() => updateCart(routeProduct.id, -1)} className="p-1 text-stone-500"><Minus size={18} /></button>
-                    <span className="w-6 text-center text-lg font-bold">{cart[routeProduct.id] || 0}</span>
+                    <span className="w-6 text-center text-lg font-bold">{getDisplayQtyForProduct(routeProduct.id)}</span>
                     <button onClick={() => updateCart(routeProduct.id, 1)} className="p-1 text-amber-600"><Plus size={18} /></button>
                   </div>
-                  <Link to="/cart" className="flex-[1.5] bg-amber-500 text-white font-bold py-3.5 rounded-xl shadow-lg text-center active:scale-95 transition-transform">前往購物車</Link>
+                  <Link to="/cart" className="flex-[1.5] bg-amber-500 text-white font-bold py-3.5 rounded-xl shadow-lg text-center active:scale-95 transition-transform">{groupBuyFriendMode ? '查看揪團選購' : '前往購物車'}</Link>
                 </div>
               </div>
             </div>
           </div>
+        )
+      }
+
+      if (routeMode === 'group-host') {
+        return (
+          <GroupBuyHost
+            sessionId={routeGroupSessionId}
+            sessionDoc={groupSessionDoc}
+            lines={groupSessionLines}
+            products={products}
+            currentUser={currentUser}
+            onCopyJoinLink={copyGroupJoinLink}
+            onCancelGroupBuy={() => cancelGroupBuySession(routeGroupSessionId)}
+          />
         )
       }
 
@@ -2821,6 +3528,61 @@ const uploadTask = await storageRef.put(blob, metadata);
           
           {!standaloneAdminPage && (
           <>
+          {activeFriendGroupSid &&
+            groupSessionDoc &&
+            !groupSessionDoc.missing &&
+            groupSessionDoc.status === 'active' &&
+            !(
+              friendGroupParticipantName.trim() &&
+              /^09\d{8}$/.test(String(friendGroupParticipantPhone || ''))
+            ) && (
+            <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+              <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-stone-200">
+                <h3 className="text-lg font-black text-stone-800 mb-2">揪團選購</h3>
+                <p className="text-sm text-stone-600 mb-4">
+                  請填寫真實姓名與手機（與主揪對帳聯絡用）。同一揪團連結內所有人可看到完整選購明細；再次從連結進入時請重新填寫。
+                </p>
+                <label className="block text-xs font-bold text-stone-600 mb-1">姓名</label>
+                <input
+                  type="text"
+                  value={friendNicknameDraft}
+                  onChange={(e) => setFriendNicknameDraft(e.target.value)}
+                  placeholder="姓名"
+                  className="w-full border border-stone-200 rounded-xl px-3 py-2.5 mb-3 outline-none focus:border-amber-500"
+                  maxLength={40}
+                  autoFocus
+                />
+                <label className="block text-xs font-bold text-stone-600 mb-1">手機（09 開頭共 10 碼）</label>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  value={friendPhoneDraft}
+                  onChange={(e) => setFriendPhoneDraft(e.target.value)}
+                  placeholder="0912345678"
+                  className="w-full border border-stone-200 rounded-xl px-3 py-2.5 mb-4 outline-none focus:border-amber-500"
+                  maxLength={12}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const n = friendNicknameDraft.trim()
+                    const digits = normalizeFriendPhoneDigits(friendPhoneDraft)
+                    if (!n) return alert('請輸入姓名')
+                    if (!/^09\d{8}$/.test(digits)) return alert('請輸入有效的台灣手機號碼（09 開頭共 10 碼）')
+                    if (typeof window !== 'undefined') {
+                      sessionStorage.setItem(GROUP_STORAGE_FRIEND_NAME, n)
+                      sessionStorage.setItem(GROUP_STORAGE_FRIEND_PHONE, digits)
+                    }
+                    setFriendGroupParticipantName(n)
+                    setFriendGroupParticipantPhone(digits)
+                  }}
+                  className="w-full bg-amber-600 text-white font-black py-3 rounded-xl shadow-md hover:bg-amber-700 transition-colors"
+                >
+                  開始選購
+                </button>
+              </div>
+            </div>
+          )}
           {/* Sidebar */}
           <div className={`fixed inset-0 bg-black/50 z-[60] transition-opacity duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setSidebarOpen(false)}>
             <div className={`absolute left-0 top-0 bottom-0 w-64 bg-[#Fdfbf7] shadow-xl transform transition-transform duration-300 flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`} onClick={e => e.stopPropagation()}>
@@ -2838,7 +3600,48 @@ const uploadTask = await storageRef.put(blob, metadata);
                      <li className="my-2 border-t border-stone-200"></li>
                      
                      {currentUser && !isAdminMode && (
+                        <>
                         <li><Link to="/member" onClick={() => setSidebarOpen(false)} className="w-full text-left px-6 py-3 hover:bg-stone-100 font-bold text-stone-800 flex items-center gap-3"><UserIcon size={18}/>會員中心</Link></li>
+                        {activeFriendGroupSid ? (
+                          <li>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSidebarOpen(false)
+                                copyGroupJoinLink(
+                                  `${typeof window !== 'undefined' ? window.location.origin : ''}/group/join/${activeFriendGroupSid}`
+                                )
+                              }}
+                              className="w-full text-left px-6 py-3 hover:bg-indigo-50 font-bold text-indigo-900 flex items-center gap-3"
+                            >
+                              <Copy size={18} /> 複製本場揪團連結
+                            </button>
+                          </li>
+                        ) : activeHostGroupSid ? (
+                          <li>
+                            <Link
+                              to={`/group/host/${activeHostGroupSid}`}
+                              onClick={() => setSidebarOpen(false)}
+                              className="w-full text-left px-6 py-3 hover:bg-amber-50 font-bold text-amber-900 flex items-center gap-3"
+                            >
+                              <UsersIcon size={18} /> 揪團管理
+                            </Link>
+                          </li>
+                        ) : (
+                          <li>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSidebarOpen(false)
+                                createGroupBuySession()
+                              }}
+                              className="w-full text-left px-6 py-3 hover:bg-amber-50 font-bold text-amber-900 flex items-center gap-3"
+                            >
+                              <UsersIcon size={18} /> 揪團購物（開團）
+                            </button>
+                          </li>
+                        )}
+                        </>
                      )}
                      
                      {isAdminMode && (
@@ -2912,6 +3715,59 @@ const uploadTask = await storageRef.put(blob, metadata);
                   <Megaphone size={18} className="shrink-0"/> <span className="truncate">{ann.title}</span>
                </div>
             ))}
+
+            {activeFriendGroupSid && (
+              <div className="mx-4 mt-2 rounded-2xl border border-indigo-200 bg-gradient-to-r from-indigo-50 to-violet-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-sm">
+                <div className="flex items-start gap-2 text-sm font-bold text-indigo-950 leading-snug">
+                  <UsersIcon size={20} className="text-indigo-600 shrink-0 mt-0.5" />
+                  <span>
+                    揪團選購中：這是「加入連結」，可轉貼給其他人一起加單（不會開新團）。
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      copyGroupJoinLink(
+                        `${typeof window !== 'undefined' ? window.location.origin : ''}/group/join/${activeFriendGroupSid}`
+                      )
+                    }
+                    className="px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-black shadow hover:bg-indigo-700 transition-colors"
+                  >
+                    複製本場連結
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {currentUser && !isAdminMode && !adminOrderingFor && !activeFriendGroupSid && (
+              <div className="mx-4 mt-2 rounded-2xl border border-amber-300/80 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-sm">
+                <div className="flex items-start gap-2 text-sm font-bold text-amber-950 leading-snug">
+                  <UsersIcon size={20} className="text-amber-600 shrink-0 mt-0.5" />
+                  <span>
+                    揪團購物：一場揪團對應一個連結；開團後分享連結給朋友，由主揪統一結帳。進行中時無法再開新團。
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2 shrink-0">
+                  {!activeHostGroupSid ? (
+                    <button
+                      type="button"
+                      onClick={() => createGroupBuySession()}
+                      className="px-4 py-2 rounded-xl bg-amber-600 text-white text-xs font-black shadow hover:bg-amber-700 transition-colors"
+                    >
+                      立即開團
+                    </button>
+                  ) : (
+                    <Link
+                      to={`/group/host/${activeHostGroupSid}`}
+                      className="px-4 py-2 rounded-xl bg-white border border-amber-400 text-amber-900 text-xs font-black shadow-sm hover:bg-amber-50 transition-colors text-center"
+                    >
+                      揪團管理（本場連結）
+                    </Link>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div className="px-4 py-3 flex gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {displayedTabs.map(category => {
@@ -3022,7 +3878,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                       product={product}
                       isAdminMode={isAdminMode}
                       adminOrderingFor={adminOrderingFor}
-                      cartQty={cart[product.id] || 0}
+                      cartQty={getDisplayQtyForProduct(product.id)}
                       onOpenDetail={() => openProductDetail(product)}
                       onUpdateCart={(delta) => updateCart(product.id, delta)}
                     />
@@ -3137,7 +3993,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                     </div>
                   ) : (
                     <div className="flex gap-4">
-                      <div className="flex items-center gap-4 bg-stone-50 rounded-xl px-4 py-3 border border-stone-200 flex-1 justify-center"><button onClick={() => updateCart(editingProduct.id, -1)} className="p-1 text-stone-500"><Minus size={18} /></button><span className="w-6 text-center text-lg font-bold">{cart[editingProduct.id] || 0}</span><button onClick={() => updateCart(editingProduct.id, 1)} className="p-1 text-amber-600"><Plus size={18} /></button></div>
+                      <div className="flex items-center gap-4 bg-stone-50 rounded-xl px-4 py-3 border border-stone-200 flex-1 justify-center"><button onClick={() => updateCart(editingProduct.id, -1)} className="p-1 text-stone-500"><Minus size={18} /></button><span className="w-6 text-center text-lg font-bold">{getDisplayQtyForProduct(editingProduct.id)}</span><button onClick={() => updateCart(editingProduct.id, 1)} className="p-1 text-amber-600"><Plus size={18} /></button></div>
                       <button onClick={() => setEditingProduct(null)} className="flex-[1.5] bg-amber-500 text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform">確認返回</button>
                     </div>
                   )}
@@ -3146,11 +4002,29 @@ const uploadTask = await storageRef.put(blob, metadata);
             </div>
           )}
 
+          {activeHostGroupSid &&
+            currentUser &&
+            !currentUser.isAnonymous &&
+            groupSessionDoc &&
+            groupSessionDoc.ownerUid === currentUser.uid &&
+            !isAdminMode &&
+            !adminOrderingFor &&
+            groupSessionDoc.status === 'active' && (
+            <div className="fixed bottom-[5.5rem] left-0 right-0 max-w-md md:max-w-4xl lg:max-w-6xl mx-auto px-4 z-[12] pointer-events-none flex justify-start">
+              <Link
+                to={`/group/host/${activeHostGroupSid}`}
+                className="pointer-events-auto inline-flex items-center gap-2 bg-amber-700 text-white text-xs font-black px-4 py-2.5 rounded-full shadow-lg border border-amber-800 hover:bg-amber-800 transition-colors"
+              >
+                <LinkIcon size={14} /> 揪團管理・複製連結
+              </Link>
+            </div>
+          )}
+
           {/* 購物車懸浮按鈕 */}
           {cartData.totalQty > 0 && (!isAdminMode || adminOrderingFor) && !editingProduct && (
             <div className="fixed bottom-0 left-0 right-0 max-w-md md:max-w-4xl lg:max-w-6xl mx-auto p-4 bg-gradient-to-t from-white via-white to-transparent pointer-events-none z-10">
               <Link to="/cart" className="w-full bg-stone-800 text-white rounded-2xl p-4 flex items-center justify-between shadow-xl pointer-events-auto active:scale-95 transition-transform">
-                <div className="flex items-center gap-3"><div className="relative"><ShoppingCart size={24} /><span className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">{cartData.totalQty}</span></div><span className="font-medium">查看購物車</span></div>
+                <div className="flex items-center gap-3"><div className="relative"><ShoppingCart size={24} /><span className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">{cartData.totalQty}</span></div><span className="font-medium">{groupBuyFriendMode ? '查看揪團選購' : '查看購物車'}</span></div>
                 <div className="text-lg font-bold">${cartData.currentTotal}</div>
               </Link>
             </div>
@@ -3188,6 +4062,8 @@ const uploadTask = await storageRef.put(blob, metadata);
               openCheckoutEntryChoice()
             }}
             handleCheckout={handleCheckout}
+            groupBuyFriendMode={groupBuyFriendMode}
+            getItemQty={getDisplayQtyForProduct}
           />
 
           {/* 會員專區 */}
@@ -3291,7 +4167,21 @@ const uploadTask = await storageRef.put(blob, metadata);
                                 {isCancellable ? <button onClick={() => requestCancelOrder(order)} className="text-xs text-stone-400 hover:text-rose-500 font-bold transition-colors underline mb-1">申請取消訂單</button> : <div></div>}
                                 <div className="text-right text-xs text-stone-500 space-y-1">
                                   <div>商品小計：${order.totals.itemsBaseTotal}</div>
-                                  {order.totals.discountAmount > 0 && <div className="text-rose-500">活動折抵：-${order.totals.discountAmount}</div>}
+                                  {order.totals.discountAmount > 0 && (() => {
+                                    const disc = getDiscountDisplay(order.totals)
+                                    return (
+                                      <div className="text-rose-500">
+                                        <div>
+                                          {disc?.title || '活動折抵'}：-${order.totals.discountAmount}
+                                        </div>
+                                        {disc?.detail && (
+                                          <div className="text-[10px] text-rose-600 mt-0.5 leading-snug">
+                                            {disc.detail}
+                                          </div>
+                                        )}
+                                      </div>
+                                    )
+                                  })()}
                                   {order.adminDiscount > 0 && <div className="text-amber-500">特別折扣：-${order.adminDiscount}</div>}
                                   <div>運費：${order.totals.shippingFee}</div>
                                   <div className="font-black text-stone-800 text-xl pt-1">總計：${order.totals.finalPrice}</div>
@@ -3765,7 +4655,22 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
                             <div className="mt-auto border-t border-stone-100 pt-3">
                               <div className="bg-stone-50 p-2 rounded-lg text-right text-xs text-stone-500 mb-2 space-y-1">
                                  <div className="flex justify-between"><span>商品小計</span><span>${order.totals.itemsBaseTotal}</span></div>
-                                 {order.totals.discountAmount > 0 && <div className="flex justify-between text-rose-500"><span>活動折抵</span><span>-${order.totals.discountAmount}</span></div>}
+                                 {order.totals.discountAmount > 0 && (() => {
+                                   const disc = getDiscountDisplay(order.totals)
+                                   return (
+                                     <div className="flex justify-between gap-2 text-rose-500 text-left">
+                                       <span className="min-w-0 flex-1">
+                                         <span className="block">{disc?.title || '活動折抵'}</span>
+                                         {disc?.detail && (
+                                           <span className="block text-[10px] font-normal text-rose-600 mt-0.5 leading-snug">
+                                             {disc.detail}
+                                           </span>
+                                         )}
+                                       </span>
+                                       <span className="shrink-0">-${order.totals.discountAmount}</span>
+                                     </div>
+                                   )
+                                 })()}
                                  <div className="flex justify-between"><span>運費</span><span>${order.totals.shippingFee}</span></div>
                               </div>
                               <div className="flex justify-between items-center">

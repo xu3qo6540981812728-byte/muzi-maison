@@ -12,6 +12,7 @@ import {
   X
 } from '../Icons'
 import { Link } from 'react-router-dom'
+import { getDiscountDisplay } from '../../utils/discountDisplay'
 
 export default function CartDrawer({
   isOpen,
@@ -35,10 +36,14 @@ export default function CartDrawer({
   onRequireLogin,
   handleCheckout,
   products,
-  topSellers
+  topSellers,
+  groupBuyFriendMode = false,
+  getItemQty = null
 }) {
   if (!isOpen) return null
   const productList = products || []
+  const qtyOf = (pid) =>
+    typeof getItemQty === 'function' ? Number(getItemQty(pid)) || 0 : cart[pid] || 0
   const remainingToFreeShipping = Math.max(0, storeConfig.freeShippingThreshold - cartData.currentTotal)
   const recommendedForFreeShipping = (() => {
     if (remainingToFreeShipping <= 0) return []
@@ -81,7 +86,7 @@ export default function CartDrawer({
       <div className="w-full max-w-md md:max-w-4xl bg-[#Fdfbf7] rounded-t-3xl sm:rounded-3xl h-[85vh] sm:h-auto sm:max-h-[85vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-full duration-300">
         <div className="flex items-center justify-between p-5 border-b border-stone-200">
           <h2 className="text-xl font-bold text-stone-800 flex items-center gap-2">
-            <ShoppingCart size={20} /> 訂單結帳
+            <ShoppingCart size={20} /> {groupBuyFriendMode ? '揪團選購明細' : '訂單結帳'}
           </h2>
           <button
             onClick={onClose}
@@ -124,8 +129,13 @@ export default function CartDrawer({
                 className="flex items-center justify-between py-3 border-b border-stone-100 last:border-0"
               >
                 <div className="flex-1">
-                  <h4 className="font-bold text-stone-800 flex items-center gap-1">
+                  <h4 className="font-bold text-stone-800 flex items-center gap-1 flex-wrap">
                     {item.name}
+                    {item.groupSplitLabel && (
+                      <span className="text-[10px] font-bold text-indigo-600">
+                        （{item.groupSplitLabel}）
+                      </span>
+                    )}
                     {item.isPromo && !item.isGift && (
                       <span className="text-[9px] bg-rose-100 text-rose-600 px-1 py-0.5 rounded">
                         指定商品活動
@@ -207,7 +217,7 @@ export default function CartDrawer({
                               <span className="text-[10px] text-stone-400">/{addon.unit}</span>
                             )}
                           </span>
-                          {cart[addon.id] ? (
+                          {qtyOf(addon.id) ? (
                             <div className="flex items-center gap-2 bg-stone-50 rounded-full px-1.5 py-0.5 border border-stone-200">
                               <button
                                 onClick={() => updateCart(addon.id, -1)}
@@ -215,7 +225,7 @@ export default function CartDrawer({
                               >
                                 <Minus size={10} />
                               </button>
-                              <span className="text-xs font-bold w-3 text-center">{cart[addon.id]}</span>
+                              <span className="text-xs font-bold w-3 text-center">{qtyOf(addon.id)}</span>
                               <button
                                 onClick={() => updateCart(addon.id, 1)}
                                 className="text-amber-600 p-0.5"
@@ -239,6 +249,7 @@ export default function CartDrawer({
               </div>
             )}
 
+            {!groupBuyFriendMode && (
             <div className="mt-6 pt-4 border-t border-stone-100">
               <h3 className="font-bold text-stone-800 mb-3">取貨方式</h3>
               <div className="flex gap-4 mb-4">
@@ -286,7 +297,9 @@ export default function CartDrawer({
                 </label>
               </div>
             </div>
+            )}
 
+            {!groupBuyFriendMode && (
             <div className="mt-4 bg-white border border-stone-200 p-4 rounded-2xl space-y-2 text-sm">
               <h4 className="font-bold text-stone-800">結帳資訊</h4>
               <p className="text-stone-600">
@@ -330,18 +343,34 @@ export default function CartDrawer({
                 匯款說明：下單後可輸入後五碼，並將訂單編號回報 LINE 以加速對帳。
               </p>
             </div>
+            )}
 
             <div className="mt-4 bg-stone-50 p-4 rounded-2xl space-y-2">
+              {groupBuyFriendMode && (
+                <p className="text-xs font-bold text-amber-800 mb-2">
+                  以下金額為參考（含試算運費），實際結帳由主揪統一處理。
+                </p>
+              )}
               <div className="flex justify-between text-sm text-stone-600">
                 <span>商品小計</span>
                 <span>${cartData.itemsBaseTotal}</span>
               </div>
-              {cartData.discountAmount > 0 && (
-                <div className="flex justify-between text-sm text-rose-500 font-bold">
-                  <span>活動折抵</span>
-                  <span>-${cartData.discountAmount}</span>
-                </div>
-              )}
+              {cartData.discountAmount > 0 && (() => {
+                const disc = getDiscountDisplay(cartData)
+                return (
+                  <div className="flex justify-between gap-3 text-sm text-rose-500 font-bold">
+                    <span className="min-w-0 flex-1">
+                      <span className="block">{disc?.title || '活動折抵'}</span>
+                      {disc?.detail && (
+                        <span className="block text-[10px] font-normal text-rose-600 leading-snug mt-0.5">
+                          {disc.detail}
+                        </span>
+                      )}
+                    </span>
+                    <span className="shrink-0">-${cartData.discountAmount}</span>
+                  </div>
+                )
+              })()}
               <div className="flex justify-between text-sm text-stone-600">
                 <span>運費</span>
                 <span className={cartData.shippingFee === 0 && deliveryMethod === 'delivery' ? 'text-emerald-500 font-bold' : ''}>
@@ -360,7 +389,19 @@ export default function CartDrawer({
           </div>
 
           <div className="md:w-1/2 md:border-l border-stone-200 md:pl-8 flex flex-col mt-6 md:mt-0">
-            {!currentUser && !adminOrderingFor ? (
+            {groupBuyFriendMode ? (
+              <div className="flex-1 flex flex-col justify-center bg-amber-50 border border-amber-200 p-6 rounded-2xl">
+                <div className="flex items-start gap-3">
+                  <Info size={22} className="text-amber-700 shrink-0 mt-0.5" />
+                  <div>
+                    <h3 className="text-base font-black text-amber-950 mb-2">無法在此結帳</h3>
+                    <p className="text-sm text-amber-900 leading-relaxed">
+                      揪團訂單須由主揪從購物車統一送出。你可在此確認自己的選購數量，或關閉視窗繼續逛商店。
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : !currentUser && !adminOrderingFor ? (
               <div className="flex-1 flex flex-col items-center justify-center bg-white border border-stone-200 p-6 rounded-2xl text-center h-full">
                 <UserIcon size={48} className="text-stone-400 mb-4 opacity-60" />
                 <h3 className="text-lg font-bold text-stone-800 mb-2">請選擇結帳方式</h3>
@@ -447,7 +488,11 @@ export default function CartDrawer({
         </div>
 
         <div className="p-5 border-t border-stone-200 bg-white">
-          {currentUser || adminOrderingFor ? (
+          {groupBuyFriendMode ? (
+            <p className="text-center text-sm text-stone-700 font-bold leading-relaxed px-2">
+              選購完成後請通知主揪；由主揪開啟購物車並送出訂單後，此揪團即結束。
+            </p>
+          ) : currentUser || adminOrderingFor ? (
             <>
               <button
                 onClick={handleCheckout}

@@ -9,6 +9,7 @@ import {
   UserIcon,
   X
 } from '../Icons'
+import { getDiscountDisplay } from '../../utils/discountDisplay'
 
 export default function MemberProfileModal({
   onClose,
@@ -319,6 +320,11 @@ export default function MemberProfileModal({
                           <div key={i} className="flex justify-between items-center">
                             <span>
                               {item.name}{' '}
+                              {item.groupSplitLabel && (
+                                <span className="text-[10px] text-indigo-600 font-bold">
+                                  （{item.groupSplitLabel}）
+                                </span>
+                              )}{' '}
                               {item.weight && (
                                 <span className="text-[10px] text-stone-500 font-normal ml-1">
                                   ({item.weight})
@@ -467,9 +473,21 @@ export default function MemberProfileModal({
                         )}
                         <div className="text-right text-xs text-stone-500 space-y-1">
                           <div>商品小計：${order.totals.itemsBaseTotal}</div>
-                          {order.totals.discountAmount > 0 && (
-                            <div className="text-rose-500">活動折抵：-${order.totals.discountAmount}</div>
-                          )}
+                          {order.totals.discountAmount > 0 && (() => {
+                            const disc = getDiscountDisplay(order.totals)
+                            return (
+                              <div className="text-rose-500">
+                                <div>
+                                  {disc?.title || '活動折抵'}：-${order.totals.discountAmount}
+                                </div>
+                                {disc?.detail && (
+                                  <div className="text-[10px] text-rose-600 mt-0.5 leading-snug">
+                                    {disc.detail}
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })()}
                           {order.adminDiscount > 0 && (
                             <div className="text-amber-500">特別折扣：-${order.adminDiscount}</div>
                           )}
