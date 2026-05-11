@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { Helmet } from 'react-helmet-async'
 import { jsPDF } from 'jspdf'
 import html2canvas from 'html2canvas'
 import firebase, { auth, db, storage } from '../config/firebase'
@@ -71,6 +72,33 @@ if (typeof window !== 'undefined') {
   window.html2canvas = html2canvas
 }
 
+/** 全站浮動 LINE（網址與側邊欄「聯絡我們」相同） */
+function LineFloatButton({ lineLink }) {
+  if (!lineLink) return null
+  return (
+    <a
+      href={lineLink}
+      target="_blank"
+      rel="noreferrer"
+      className="fixed bottom-20 right-4 z-[45] flex h-14 w-14 items-center justify-center rounded-full bg-[#06C755] text-white shadow-lg ring-2 ring-white/90 hover:bg-[#05b34c] transition-colors active:scale-95"
+      aria-label="開啟 LINE 官方帳號"
+    >
+      <MessageCircle size={26} strokeWidth={2} />
+    </a>
+  )
+}
+
+/** 連結預覽 og:image 須為絕對網址 */
+function toAbsoluteOgUrl(origin, url) {
+  if (!url || typeof url !== 'string') return ''
+  const u = url.trim()
+  if (/^https?:\/\//i.test(u)) return u
+  if (u.startsWith('//')) return `https:${u}`
+  const base = (origin || '').replace(/\/$/, '')
+  const path = u.startsWith('/') ? u : `/${u.replace(/^\.\//, '')}`
+  return `${base}${path}`
+}
+
     const defaultProducts = [];
     const defaultStoreConfig = { 
   shippingFee: 100, 
@@ -80,7 +108,10 @@ if (typeof window !== 'undefined') {
   wholesaleThreshold: 12, 
   freeAddonReminderMsg: '恭喜！您選購的主商品享有「0元加購」優惠！\n別忘了至下方加購專區挑選喔！',
   giftThreshold: 30, // 預設滿 30 件送
-  giftProductId: '' // 預設送的商品品號（空字串代表不送或尚未設定）
+  giftProductId: '', // 預設送的商品品號（空字串代表不送或尚未設定）
+  /** 揪團複製連結時一併複製；使用 {link} 代入揪團網址 */
+  groupBuyShareTemplate:
+    '我開了一場木子家的揪團，點下面連結一起選購：\n{link}'
 };
 
     function App({ routeMode = 'home', routeProductId = '', routeGroupSessionId = '', bootstrapFriendSessionId = '', standaloneAdminPage = false }) {
@@ -1494,6 +1525,82 @@ mainProductQty += item.qty;
         }
       };
 
+      /** 商品頁分享：固定句式 + 商品「簡介」欄位（desc）約 50 字 + … + 結尾 + 連結（不用 intro 產品介紹） */
+      const handleShareProduct = async (product) => {
+        if (!product?.id) return
+        const origin = typeof window !== 'undefined' ? window.location.origin : ''
+        const url = `${origin}/product/${product.id}`
+        const raw = String(product.desc || '').trim().replace(/\s+/g, ' ')
+        const maxLen = 50
+        let excerpt = ''
+        let truncated = false
+        if (raw) {
+          if (raw.length <= maxLen) {
+            excerpt = raw
+          } else {
+            truncated = true
+            let cut = raw.slice(0, maxLen)
+            const punct = Math.max(
+              cut.lastIndexOf('。'),
+              cut.lastIndexOf('！'),
+              cut.lastIndexOf('？'),
+              cut.lastIndexOf('，'),
+              cut.lastIndexOf('、'),
+              cut.lastIndexOf(' ')
+            )
+            if (punct >= 12) cut = cut.slice(0, punct + 1)
+            excerpt = cut.replace(/[，、]$/, '')
+          }
+        }
+        const mid = excerpt
+          ? truncated
+            ? `${excerpt}…`
+            : excerpt
+          : ''
+        const bodyCore = mid
+          ? `跟您分享木子家Muzi Maison的${product.name}產品簡介，${mid}有空點連結進去看看詳情唷！`
+          : `跟您分享木子家Muzi Maison的${product.name}產品簡介，有空點連結進去看看詳情唷！`
+        const textBody = `${bodyCore}\n\n👉 ${url}`
+        const title = `木子家｜${product.name}`
+        const sharePayload = { title, text: bodyCore, url }
+
+        if (typeof navigator !== 'undefined' && navigator.share) {
+          try {
+            await navigator.share(sharePayload)
+            return
+          } catch (err) {
+            if (err && err.name === 'AbortError') return
+          }
+        }
+
+        const fallbackCopy = () => {
+          const ta = document.createElement('textarea')
+          ta.value = textBody
+          ta.style.position = 'fixed'
+          ta.style.left = '-999999px'
+          document.body.appendChild(ta)
+          ta.select()
+          try {
+            document.execCommand('copy')
+            alert('已複製分享文字與連結，可貼到 LINE 或訊息給朋友')
+          } catch {
+            alert(`請手動複製以下連結：\n${url}`)
+          }
+          ta.remove()
+        }
+
+        try {
+          if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(textBody)
+            alert('已複製分享文字與連結，可貼到 LINE 或訊息給朋友')
+          } else {
+            fallbackCopy()
+          }
+        } catch {
+          fallbackCopy()
+        }
+      };
+
       const handleUpdateMyProfile = async () => {
         if (!customerInfo.name || !customerInfo.phone) return alert("姓名與電話不能為空！");
         if (db && currentUser) {
@@ -2173,12 +2280,18 @@ try {
       }
 
       const copyGroupJoinLink = async (url) => {
+        const tpl =
+          (storeConfig.groupBuyShareTemplate || '').trim() ||
+          defaultStoreConfig.groupBuyShareTemplate
+        const fullText = tpl.includes('{link}')
+          ? tpl.replace(/\{link\}/g, url)
+          : `${tpl}\n\n${url}`
         try {
           if (navigator.clipboard && window.isSecureContext) {
-            await navigator.clipboard.writeText(url)
+            await navigator.clipboard.writeText(fullText)
           } else {
             const ta = document.createElement('textarea')
-            ta.value = url
+            ta.value = fullText
             ta.style.position = 'fixed'
             ta.style.left = '-9999px'
             document.body.appendChild(ta)
@@ -2186,7 +2299,7 @@ try {
             document.execCommand('copy')
             ta.remove()
           }
-          alert('已複製揪團連結')
+          alert('已複製揪團邀請文字與連結')
         } catch {
           alert('複製失敗，請手動複製網址')
         }
@@ -3332,7 +3445,8 @@ const uploadTask = await storageRef.put(blob, metadata);
     wholesaleThreshold: Number(tempConfig.wholesaleThreshold)||0, 
     freeAddonReminderMsg: tempConfig.freeAddonReminderMsg || '',
     giftThreshold: Number(tempConfig.giftThreshold)||0, // 加入滿幾件送
-    giftProductId: tempConfig.giftProductId || '' // 加入贈品品號
+    giftProductId: tempConfig.giftProductId || '', // 加入贈品品號
+    groupBuyShareTemplate: tempConfig.groupBuyShareTemplate ?? ''
   };
   const configLabels = {
     shippingFee: '運費',
@@ -3342,7 +3456,8 @@ const uploadTask = await storageRef.put(blob, metadata);
     wholesaleThreshold: '批發門檻',
     freeAddonReminderMsg: '加購提醒文字',
     giftThreshold: '滿額贈門檻',
-    giftProductId: '贈品品號'
+    giftProductId: '贈品品號',
+    groupBuyShareTemplate: '揪團分享文案'
   }
   const configChanges = Object.keys(configToSave)
     .filter((key) => storeConfig?.[key] !== configToSave[key])
@@ -3458,14 +3573,60 @@ const uploadTask = await storageRef.put(blob, metadata);
           : productFromRoute
         const galleryImages = [routeProduct.image, ...(routeProduct.extraImages || [])].filter(Boolean)
         const currentImage = mainDisplayImg || routeProduct.image
+        const pageOrigin = typeof window !== 'undefined' ? window.location.origin : ''
+        const ogImageRaw =
+          routeProduct.image || routeProduct.thumbUrl || galleryImages[0] || ''
+        const ogImage = toAbsoluteOgUrl(pageOrigin, ogImageRaw)
+        const canonical = `${pageOrigin}/product/${routeProduct.id}`
+        const ogDesc = String(routeProduct.desc || '').trim().slice(0, 200)
 
         return (
-          <div className="min-h-screen bg-[#Fdfbf7] p-2 md:p-6">
+          <>
+            <Helmet prioritizeSeoTags>
+              <title>{`${routeProduct.name}｜木子家 MUZI MAISON`}</title>
+              <meta
+                name="description"
+                content={ogDesc || `${routeProduct.name}｜木子家手作烘焙`}
+              />
+              <link rel="canonical" href={canonical} />
+              <meta property="og:title" content={`${routeProduct.name}｜木子家 MUZI MAISON`} />
+              <meta
+                property="og:description"
+                content={ogDesc || `${routeProduct.name}`}
+              />
+              <meta property="og:url" content={canonical} />
+              <meta property="og:type" content="website" />
+              <meta property="og:site_name" content="木子家 MUZI MAISON" />
+              <meta property="og:locale" content="zh_TW" />
+              {ogImage ? <meta property="og:image" content={ogImage} /> : null}
+              {ogImage ? (
+                <meta property="og:image:alt" content={routeProduct.name} />
+              ) : null}
+              <meta name="twitter:card" content="summary_large_image" />
+              {ogImage ? <meta name="twitter:image" content={ogImage} /> : null}
+            </Helmet>
+            <div className="min-h-screen bg-[#Fdfbf7] p-2 md:p-6">
             <div className="max-w-5xl mx-auto bg-[#Fdfbf7] w-full rounded-3xl h-[92vh] flex flex-col overflow-hidden shadow-2xl border border-stone-100">
-              <div className="flex items-center justify-between p-4 bg-white/80 backdrop-blur-md border-b border-stone-100 shadow-sm">
-                <Link to="/" className="text-sm font-bold text-stone-600 hover:text-stone-900">← 返回首頁</Link>
-                <h2 className="font-bold text-stone-800 flex-1 text-center truncate px-3">{routeProduct.name}</h2>
-                <span className="text-xs bg-stone-100 text-stone-500 px-2 py-1 rounded">品號：{routeProduct.id}</span>
+              <div className="flex items-center justify-between gap-2 p-4 bg-white/80 backdrop-blur-md border-b border-stone-100 shadow-sm">
+                <Link to="/" className="text-sm font-bold text-stone-600 hover:text-stone-900 shrink-0">← 返回首頁</Link>
+                <h2 className="font-bold text-stone-800 flex-1 text-center truncate px-1 min-w-0">{routeProduct.name}</h2>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => handleShareProduct(routeProduct)}
+                    className="flex items-center gap-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 px-2 py-1.5 text-xs font-bold hover:bg-emerald-100 transition-colors active:scale-95"
+                    aria-label="分享此商品"
+                  >
+                    <Share2 size={14} />
+                    <span className="hidden sm:inline">分享</span>
+                  </button>
+                  <span
+                    title={`品號：${routeProduct.id}`}
+                    className="text-[10px] sm:text-xs bg-stone-100 text-stone-500 px-2 py-1 rounded whitespace-nowrap"
+                  >
+                    {routeProduct.id}
+                  </span>
+                </div>
               </div>
 
               <div className="flex-1 overflow-y-auto md:flex md:flex-row">
@@ -3546,27 +3707,68 @@ const uploadTask = await storageRef.put(blob, metadata);
                 </div>
               </div>
             </div>
+            <LineFloatButton lineLink={contactData.lineLink} />
           </div>
+          </>
         )
       }
 
       if (routeMode === 'group-host') {
         return (
-          <GroupBuyHost
-            sessionId={routeGroupSessionId}
-            sessionDoc={groupSessionDoc}
-            lines={groupSessionLines}
-            products={products}
-            currentUser={currentUser}
-            onCopyJoinLink={copyGroupJoinLink}
-            onCancelGroupBuy={() => cancelGroupBuySession(routeGroupSessionId)}
-          />
+          <>
+            <GroupBuyHost
+              sessionId={routeGroupSessionId}
+              sessionDoc={groupSessionDoc}
+              lines={groupSessionLines}
+              products={products}
+              currentUser={currentUser}
+              onCopyJoinLink={copyGroupJoinLink}
+              onCancelGroupBuy={() => cancelGroupBuySession(routeGroupSessionId)}
+            />
+            <LineFloatButton lineLink={contactData.lineLink} />
+          </>
         )
       }
 
       return (
         <div className="max-w-md md:max-w-4xl lg:max-w-6xl mx-auto bg-[#Fdfbf7] min-h-screen relative font-sans text-stone-800 shadow-xl overflow-hidden flex flex-col">
-          
+          {routeMode === 'home' && (
+            <Helmet prioritizeSeoTags>
+              <title>木子家 MUZI MAISON｜線上訂購</title>
+              <meta
+                name="description"
+                content={
+                  storeSlogan ||
+                  '堅果、牛軋糖、核桃糕嚴選烘焙，線上訂購最便利。'
+                }
+              />
+              <meta property="og:title" content="木子家 MUZI MAISON｜線上訂購" />
+              <meta
+                property="og:description"
+                content={storeSlogan || '線上訂購最便利'}
+              />
+              <meta
+                property="og:url"
+                content={
+                  typeof window !== 'undefined'
+                    ? `${window.location.origin}/`
+                    : ''
+                }
+              />
+              <meta property="og:type" content="website" />
+              <meta property="og:site_name" content="木子家 MUZI MAISON" />
+              <meta property="og:locale" content="zh_TW" />
+              {logo ? (
+                <meta
+                  property="og:image"
+                  content={toAbsoluteOgUrl(
+                    typeof window !== 'undefined' ? window.location.origin : '',
+                    logo
+                  )}
+                />
+              ) : null}
+            </Helmet>
+          )}
           {!standaloneAdminPage && (
           <>
           {activeFriendGroupSid &&
@@ -3927,6 +4129,49 @@ const uploadTask = await storageRef.put(blob, metadata);
                 </div>
               </div>
             ))}
+            {routeMode === 'home' && (
+              <footer className="mt-10 mb-2 pt-8 border-t border-stone-200">
+                <nav className="flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-stone-600">
+                  <button
+                    type="button"
+                    onClick={() => setShowAboutModal(true)}
+                    className="hover:text-amber-800 underline-offset-2 hover:underline"
+                  >
+                    關於我們
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowCatalogModal(true)}
+                    className="hover:text-amber-800 underline-offset-2 hover:underline"
+                  >
+                    產品型錄
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowContactModal(true)}
+                    className="hover:text-amber-800 underline-offset-2 hover:underline"
+                  >
+                    聯絡我們
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleShareWebsite()}
+                    className="hover:text-amber-800 underline-offset-2 hover:underline"
+                  >
+                    分享商店
+                  </button>
+                  <Link
+                    to="/member"
+                    className="hover:text-amber-800 underline-offset-2 hover:underline"
+                  >
+                    會員中心
+                  </Link>
+                </nav>
+                <p className="text-center text-[11px] text-stone-400 mt-5 px-2">
+                  © {new Date().getFullYear()} 木子家 MUZI MAISON. All rights reserved.
+                </p>
+              </footer>
+            )}
           </main>
 
           {/* 商品編輯/詳情 */}
@@ -5016,6 +5261,19 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
                   <p className="text-sm font-bold text-blue-700 mb-2 flex items-center gap-1"><Info size={16}/> 0元加購提醒窗框文字</p>
                   <textarea value={tempConfig.freeAddonReminderMsg || ''} onChange={e => setTempConfig({...tempConfig, freeAddonReminderMsg: e.target.value})} className="w-full bg-white border border-blue-200 rounded p-2 text-sm outline-none focus:border-blue-500" rows="3" placeholder="請輸入提醒顧客挑選0元加購品的文字..."></textarea>
                 </div>
+                <div className="bg-violet-50 p-3 rounded-xl border border-violet-100">
+                  <p className="text-sm font-bold text-violet-900 mb-2 flex items-center gap-1"><Share2 size={16}/> 揪團分享文案</p>
+                  <p className="text-[10px] text-violet-800 mb-2 leading-relaxed">
+                    顧客複製揪團連結時，會一併複製此段文字。請在適當位置輸入「<span className="font-mono font-bold">{'{link}'}</span>」代表揪團網址；若未填則使用預設文案。
+                  </p>
+                  <textarea
+                    value={tempConfig.groupBuyShareTemplate ?? ''}
+                    onChange={(e) => setTempConfig({ ...tempConfig, groupBuyShareTemplate: e.target.value })}
+                    className="w-full bg-white border border-violet-200 rounded p-2 text-sm outline-none focus:border-violet-500"
+                    rows={4}
+                    placeholder={'例：我開了一場木子家揪團，點連結一起選購：\n{link}'}
+                  />
+                </div>
                 {/* 👆👆 =================================== 👆👆 */}
 
               </div>
@@ -5302,6 +5560,7 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
               </div>
             </div>
           )}
+          <LineFloatButton lineLink={contactData.lineLink} />
         </div>
       );
     }
