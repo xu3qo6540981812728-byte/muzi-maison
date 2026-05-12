@@ -1572,7 +1572,7 @@ mainProductQty += item.qty;
           const code = error?.code
           if (code === 'auth/user-not-found') {
             alert(
-              '查無此 Email 的註冊紀錄，請確認是否輸入正確；若尚未註冊可選「非會員快速結帳」建立帳號。'
+              '查無此 Email 的註冊紀錄。\n\n請確認是否與註冊時「完全一致」（含大小寫、多餘空格）；若可能打錯請修正後再試。\n若完全不記得註冊信箱，請點下方「開啟官方 LINE」向客服協助查詢。\n若尚未註冊會員，可先選「非會員快速結帳」建立帳號。'
             )
           } else if (code === 'auth/invalid-email') {
             alert('Email 格式不正確')
@@ -5898,6 +5898,9 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
                       className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 text-sm"
                       autoComplete="email"
                     />
+                    <p className="text-[11px] text-stone-500 leading-relaxed">
+                      請與註冊時完全相同；若打錯或尚無此帳號，將無法寄信，並會提示您確認。
+                    </p>
                     <button
                       type="button"
                       onClick={handleSendPasswordReset}
