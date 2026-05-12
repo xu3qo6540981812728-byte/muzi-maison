@@ -255,7 +255,7 @@ export default function OrderTable({
   return (
     <>
       <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white shadow-inner -mx-1">
-        <table className="w-full text-left border-collapse min-w-[1580px]">
+        <table className="w-full text-left border-collapse min-w-[1180px]">
           <thead className="bg-stone-100 sticky top-0 z-10 shadow-sm">
             <tr className="text-[11px] md:text-xs text-stone-600 font-black uppercase tracking-wide">
               <th className="px-2 py-3 border-b border-stone-200 whitespace-nowrap">訂單編號</th>
@@ -265,11 +265,7 @@ export default function OrderTable({
               <th className="px-2 py-3 border-b border-stone-200 whitespace-nowrap">電話</th>
               <th className="px-2 py-3 border-b border-stone-200 whitespace-nowrap min-w-[128px]">物流單號</th>
               <th className="px-2 py-3 border-b border-stone-200 whitespace-nowrap">購買明細</th>
-              <th className="px-2 py-3 border-b border-stone-200 whitespace-nowrap">手動折抵</th>
               <th className="px-2 py-3 border-b border-stone-200 whitespace-nowrap min-w-[140px]">訂單備註</th>
-              <th className="px-2 py-3 border-b border-stone-200 whitespace-nowrap min-w-[160px]">
-                商品小計
-              </th>
               <th className="px-2 py-3 border-b border-stone-200 whitespace-nowrap text-right">總金額</th>
               <th className="px-2 py-3 border-b border-stone-200 whitespace-nowrap text-center w-14">刪除</th>
             </tr>
@@ -280,7 +276,6 @@ export default function OrderTable({
               const itemCount = order.items?.length || 0
               const noteVal =
                 adminNoteInputs[order.id] !== undefined ? adminNoteInputs[order.id] : order.orderNote || ''
-              const disc = order.totals?.discountAmount > 0 ? getDiscountDisplay(order.totals) : null
 
               return (
                 <Fragment key={order.id}>
@@ -369,9 +364,7 @@ export default function OrderTable({
                       )}
                     </td>
                     <td className="px-2 py-2 align-top">
-                      <div className="text-[11px] text-stone-600 mb-1">
-                        {itemCount} 項 · 小計 ${order.totals?.itemsBaseTotal ?? '—'}
-                      </div>
+                      <div className="text-[11px] text-stone-600 mb-1">{itemCount} 項</div>
                       <button
                         type="button"
                         onClick={() => setDetailOrder(order)}
@@ -379,32 +372,6 @@ export default function OrderTable({
                       >
                         <Eye size={14} /> 查看更多
                       </button>
-                    </td>
-                    <td className="px-2 py-2 align-top">
-                      <div className="flex flex-col gap-1 max-w-[120px]">
-                        <input
-                          type="number"
-                          value={
-                            adminDiscountInputs[order.id] !== undefined
-                              ? adminDiscountInputs[order.id]
-                              : order.adminDiscount || 0
-                          }
-                          onChange={(e) =>
-                            setAdminDiscountInputs({
-                              ...adminDiscountInputs,
-                              [order.id]: e.target.value
-                            })
-                          }
-                          className="w-full bg-white border border-stone-200 rounded px-1 py-1 text-[11px] outline-none focus:border-amber-400 font-bold text-red-600"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => saveAdminDiscount(order)}
-                          className="bg-stone-200 text-stone-600 text-[10px] font-bold px-2 py-0.5 rounded hover:bg-stone-300"
-                        >
-                          儲存
-                        </button>
-                      </div>
                     </td>
                     <td className="px-2 py-2 align-top">
                       <textarea
@@ -427,26 +394,6 @@ export default function OrderTable({
                         儲存備註
                       </button>
                     </td>
-                    <td className="px-2 py-2 align-top text-[11px] text-stone-700">
-                      <div className="space-y-0.5">
-                        <div className="flex justify-between gap-2">
-                          <span className="text-stone-500 shrink-0">小計</span>
-                          <span className="font-bold">${order.totals?.itemsBaseTotal ?? '—'}</span>
-                        </div>
-                        {Number(order.totals?.discountAmount) > 0 && (
-                          <div className="flex justify-between gap-1 text-rose-600">
-                            <span className="truncate max-w-[100px]" title={disc?.detail}>
-                              {disc?.title || '活動折抵'}
-                            </span>
-                            <span className="shrink-0">-${order.totals.discountAmount}</span>
-                          </div>
-                        )}
-                        <div className="flex justify-between gap-2">
-                          <span className="text-stone-500 shrink-0">運費</span>
-                          <span>${order.totals?.shippingFee ?? '—'}</span>
-                        </div>
-                      </div>
-                    </td>
                     <td className="px-2 py-2 align-top text-right font-black text-amber-700 text-sm whitespace-nowrap">
                       ${order.totals?.finalPrice ?? '—'}
                     </td>
@@ -463,7 +410,7 @@ export default function OrderTable({
                   </tr>
                   {(order.status === 'confirming' || isCancelReq) && (
                     <tr className="bg-amber-50/80">
-                      <td colSpan={12} className="px-3 py-2 text-[11px] font-bold border-b border-stone-100">
+                      <td colSpan={10} className="px-3 py-2 text-[11px] font-bold border-b border-stone-100">
                         {order.status === 'confirming' && (
                           <span className="text-amber-800">
                             後五碼：{' '}
