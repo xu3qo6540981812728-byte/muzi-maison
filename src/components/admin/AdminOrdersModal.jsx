@@ -36,6 +36,7 @@ export default function AdminOrdersModal({
   adminNoteInputs,
   setAdminNoteInputs,
   saveOrderNote,
+  openAdminCustomerFromOrder,
   currentPage,
   totalPages,
   totalPagesKnown,
@@ -149,6 +150,7 @@ export default function AdminOrdersModal({
               adminNoteInputs={adminNoteInputs}
               setAdminNoteInputs={setAdminNoteInputs}
               saveOrderNote={saveOrderNote}
+              openAdminCustomerFromOrder={openAdminCustomerFromOrder}
             />
           )}
 
