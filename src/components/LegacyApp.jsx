@@ -146,6 +146,7 @@ function toAbsoluteOgUrl(origin, url) {
 
       const [emailInput, setEmailInput] = useState('');
       const [passwordInput, setPasswordInput] = useState('');
+      const [passwordResetSending, setPasswordResetSending] = useState(false);
       const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '', address: '', email: '', lineId: '', gender: '女' });
       
       const [orderNote, setOrderNote] = useState('');
@@ -1515,6 +1516,7 @@ mainProductQty += item.qty;
         setEmailInput('')
         setPasswordInput('')
         setIsRegistering(false)
+        setPasswordResetSending(false)
         if (routeMode === 'cart') {
           setIsCartOpen(true)
         }
@@ -1547,6 +1549,36 @@ mainProductQty += item.qty;
           alert(isRegistering ? "註冊失敗：" + error.message : "登入失敗，請檢查帳號密碼！");
         }
       };
+
+      const handleSendPasswordReset = async () => {
+        if (!auth) return alert('請先設定 Firebase 金鑰！')
+        const email = String(emailInput || '').trim()
+        if (!email) return alert('請先輸入您註冊時使用的 Email')
+        if (!isValidEmail(email)) return alert('Email 格式不正確，請重新輸入')
+        if (passwordResetSending) return
+        setPasswordResetSending(true)
+        try {
+          await auth.sendPasswordResetEmail(email)
+          alert(
+            '已寄出密碼重設信，請至信箱開啟信件（含垃圾信匣），點選連結後即可設定新密碼。若未收到請數分鐘後再試。'
+          )
+        } catch (error) {
+          const code = error?.code
+          if (code === 'auth/user-not-found') {
+            alert(
+              '查無此 Email 的註冊紀錄，請確認是否輸入正確；若尚未註冊可選「非會員快速結帳」建立帳號。'
+            )
+          } else if (code === 'auth/invalid-email') {
+            alert('Email 格式不正確')
+          } else if (code === 'auth/too-many-requests') {
+            alert('寄送次數過於頻繁，請稍後再試')
+          } else {
+            alert(`無法寄送重設信：${error.message || '請稍後再試'}`)
+          }
+        } finally {
+          setPasswordResetSending(false)
+        }
+      }
 
       const handleReorderOrder = (order) => {
         if (!order) return
@@ -5848,7 +5880,21 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
                   <input type="email" placeholder="Email 信箱 (必填)" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 text-sm"/>
                   {isRegistering && !!emailInput && !isValidEmail(emailInput) && <p className="text-[10px] text-rose-600 font-bold mt-1 px-1">Email 格式不正確</p>}
                 </div>
-                <input type="password" placeholder="密碼 (必填)" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAuthSubmit()} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 mb-5 outline-none focus:border-amber-500 text-sm"/>
+                <div className="mb-5">
+                  <input type="password" placeholder="密碼 (必填)" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAuthSubmit()} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 text-sm"/>
+                  {!isRegistering && (
+                    <div className="flex justify-end mt-2">
+                      <button
+                        type="button"
+                        onClick={handleSendPasswordReset}
+                        disabled={passwordResetSending}
+                        className="text-xs font-bold text-amber-700 hover:text-amber-900 underline decoration-amber-700/50 disabled:opacity-50 disabled:pointer-events-none"
+                      >
+                        {passwordResetSending ? '寄送中…' : '忘記密碼？'}
+                      </button>
+                    </div>
+                  )}
+                </div>
                 
                 <div className="flex flex-col gap-3">
                   <button onClick={handleAuthSubmit} className="w-full bg-amber-500 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform">{isRegistering ? '快速結帳' : '登入'}</button>
