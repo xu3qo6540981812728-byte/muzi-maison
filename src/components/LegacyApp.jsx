@@ -584,6 +584,7 @@ useEffect(() => {
     showMemberProfile || 
     showLoginModal || 
     sidebarOpen ||
+    showAdminDashboard ||
     showAdminOrders ||
     showAdminCustomers ||
     showAdminLogs ||
@@ -618,6 +619,12 @@ useEffect(() => {
       if (showAnnouncementModal) setShowAnnouncementModal(false);
       if (showAnnounceConfig) setShowAnnounceConfig(false);
       if (showAdminDashboard) setShowAdminDashboard(false);
+
+      // 與網址綁定的全屏頁：僅關閉 state 時 URL 仍為 /member、/cart、/admin/*，瀏覽器上一頁後無法再次進入
+      const path = typeof window !== 'undefined' ? window.location.pathname : '';
+      if (path === '/member' || path === '/cart' || path.startsWith('/admin/')) {
+        navigate('/', { replace: true });
+      }
     }
   };
 
