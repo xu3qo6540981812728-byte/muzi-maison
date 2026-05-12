@@ -4589,7 +4589,7 @@ const uploadTask = await storageRef.put(blob, metadata);
             )}
 
             {currentUser && !isAdminMode && !adminOrderingFor && !activeFriendGroupSid && (
-              <div className="mx-4 mt-2 rounded-2xl border border-amber-300/80 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-sm">
+              <div className="relative z-30 mx-4 mt-2 rounded-2xl border border-amber-300/80 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-sm">
                 <div className="flex items-start gap-2 text-sm font-bold text-amber-950 leading-snug">
                   <UsersIcon size={20} className="text-amber-600 shrink-0 mt-0.5" />
                   <span>
@@ -4617,7 +4617,7 @@ const uploadTask = await storageRef.put(blob, metadata);
               </div>
             )}
 
-            <div className="px-4 py-3 flex gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <div className="relative z-10 px-4 py-3 flex gap-2 overflow-x-auto bg-white [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {displayedTabs.map(category => {
                 const catObj = mergedCategories.find(c => c.name === category);
                 const isHidden = catObj?.isHidden;
@@ -4901,7 +4901,7 @@ const uploadTask = await storageRef.put(blob, metadata);
             !isAdminMode &&
             !adminOrderingFor &&
             groupSessionDoc.status === 'active' && (
-            <div className="fixed bottom-[5.5rem] left-0 right-0 max-w-md md:max-w-4xl lg:max-w-6xl mx-auto px-4 z-[12] pointer-events-none flex justify-start">
+            <div className="fixed bottom-[5.5rem] left-0 right-0 max-w-md md:max-w-4xl lg:max-w-6xl mx-auto px-4 z-[35] pointer-events-none flex justify-start">
               <Link
                 to={`/group/host/${activeHostGroupSid}`}
                 className="pointer-events-auto inline-flex items-center gap-2 bg-amber-700 text-white text-xs font-black px-4 py-2.5 rounded-full shadow-lg border border-amber-800 hover:bg-amber-800 transition-colors"
@@ -4913,7 +4913,7 @@ const uploadTask = await storageRef.put(blob, metadata);
 
           {/* 購物車懸浮按鈕 */}
           {cartData.totalQty > 0 && (!isAdminMode || adminOrderingFor) && !editingProduct && (
-            <div className="fixed bottom-0 left-0 right-0 max-w-md md:max-w-4xl lg:max-w-6xl mx-auto p-4 bg-gradient-to-t from-white via-white to-transparent pointer-events-none z-10">
+            <div className="fixed bottom-0 left-0 right-0 max-w-md md:max-w-4xl lg:max-w-6xl mx-auto p-4 bg-gradient-to-t from-white via-white to-transparent pointer-events-none z-[34]">
               <Link to="/cart" className="w-full bg-stone-800 text-white rounded-2xl p-4 flex items-center justify-between shadow-xl pointer-events-auto active:scale-95 transition-transform">
                 <div className="flex items-center gap-3"><div className="relative"><ShoppingCart size={24} /><span className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">{cartData.totalQty}</span></div><span className="font-medium">{groupBuyFriendMode ? '查看揪團選購' : '查看購物車'}</span></div>
                 <div className="text-lg font-bold">${cartData.currentTotal}</div>
