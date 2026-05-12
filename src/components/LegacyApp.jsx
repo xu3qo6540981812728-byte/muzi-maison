@@ -1556,12 +1556,36 @@ mainProductQty += item.qty;
 
       const handleSendPasswordReset = async () => {
         if (!auth) return alert('請先設定 Firebase 金鑰！')
-        const email = String(passwordResetEmailInput || '').trim()
-        if (!email) return alert('請輸入您註冊時使用的 Email 帳號')
-        if (!isValidEmail(email)) return alert('Email 格式不正確，請重新輸入')
+        const emailRaw = String(passwordResetEmailInput || '').trim()
+        if (!emailRaw) return alert('請輸入您註冊時使用的 Email 帳號')
+        if (!isValidEmail(emailRaw)) return alert('Email 格式不正確，請重新輸入')
+        const email = emailRaw.toLowerCase()
         if (passwordResetSending) return
         setPasswordResetSending(true)
         try {
+          /** Firebase 若開啟「防止信箱列舉」，sendPasswordResetEmail 對不存在帳號仍會 resolve，故先查登入方式 */
+          let methods = []
+          try {
+            methods = await auth.fetchSignInMethodsForEmail(email)
+          } catch (fetchErr) {
+            console.error(fetchErr)
+            alert('無法驗證此信箱，請檢查網路後再試。')
+            return
+          }
+          if (!methods || methods.length === 0) {
+            alert(
+              '查無此 Email 的註冊紀錄。\n\n請確認拼字是否與註冊時完全一致；若仍不正確，可透過下方「開啟官方 LINE」請客服協助確認註冊信箱。'
+            )
+            return
+          }
+          const passwordProviderId = firebase.auth.EmailAuthProvider.EMAIL_PASSWORD_SIGN_IN_METHOD
+          if (!methods.includes(passwordProviderId)) {
+            alert(
+              '此信箱的註冊方式不是「Email + 密碼」，無法由此寄送重設密碼信。\n請透過官方 LINE 或客服協助。'
+            )
+            return
+          }
+
           await auth.sendPasswordResetEmail(email)
           setForgotPasswordPanelOpen(false)
           setPasswordResetEmailInput('')
