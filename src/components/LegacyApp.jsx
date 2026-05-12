@@ -3645,6 +3645,13 @@ const uploadTask = await storageRef.put(blob, metadata);
           setAnnounceCarouselIndex((i) => (i + 1) % n);
           return;
         }
+        /** 手機版僅顯示 md:hidden 單張輪播；桌機三格為 hidden，量測無效——改為直接換索引 */
+        const isMobileViewport =
+          typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches;
+        if (isMobileViewport) {
+          setAnnounceCarouselIndex((i) => (i + 1) % n);
+          return;
+        }
         const stage = announceDeskStageRef.current;
         const lc = announceDeskLeftCardRef.current;
         const cc = announceDeskCenterCardRef.current;
@@ -3697,6 +3704,12 @@ const uploadTask = await storageRef.put(blob, metadata);
         const reduceMotion =
           typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
         if (reduceMotion) {
+          setAnnounceCarouselIndex((i) => (i - 1 + n) % n);
+          return;
+        }
+        const isMobileViewport =
+          typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches;
+        if (isMobileViewport) {
           setAnnounceCarouselIndex((i) => (i - 1 + n) % n);
           return;
         }
