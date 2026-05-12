@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { jsPDF } from 'jspdf'
@@ -247,6 +247,16 @@ const [tableProducts, setTableProducts] = useState([]);
 const [publicTopSellers, setPublicTopSellers] = useState({ items: [], label: '本月' });
       const navigate = useNavigate()
       const isAdminRouteMode = routeMode.startsWith('admin-')
+
+      /** 揪團連結失效／已結帳時：匿名朋友恢復訪客（登出匿名並清空購物車快取） */
+      const releaseAnonymousFriendSession = useCallback(() => {
+        if (!auth?.currentUser?.isAnonymous) return
+        setCart({})
+        try {
+          localStorage.removeItem('muzi_cart_v1')
+        } catch (_) {}
+        auth.signOut().catch(() => {})
+      }, [])
 
       useEffect(() => {
         if (typeof window === 'undefined') return
@@ -885,13 +895,14 @@ useEffect(() => {
         setActiveFriendGroupSid(null)
         setFriendGroupParticipantName('')
         setFriendGroupParticipantPhone('')
+        releaseAnonymousFriendSession()
         const st = groupSessionDoc.status
         if (st === 'cancelled') {
           alert('此團購已由主揪取消，連結已失效')
         } else {
           alert('此團購已結束（主揪已結帳），連結已失效')
         }
-      }, [groupSessionDoc, activeFriendGroupSid])
+      }, [groupSessionDoc, activeFriendGroupSid, releaseAnonymousFriendSession])
 
       useEffect(() => {
         if (!activeFriendGroupSid || !groupSessionDoc?.missing) return
@@ -901,8 +912,9 @@ useEffect(() => {
         setActiveFriendGroupSid(null)
         setFriendGroupParticipantName('')
         setFriendGroupParticipantPhone('')
+        releaseAnonymousFriendSession()
         alert('找不到此揪團連結')
-      }, [groupSessionDoc, activeFriendGroupSid])
+      }, [groupSessionDoc, activeFriendGroupSid, releaseAnonymousFriendSession])
 
       useEffect(() => {
         if (!isAdminRouteMode || isAppLoading) return
