@@ -61,7 +61,7 @@ export default function AdminCustomersModal({
                 <SearchIcon size={16} className="text-stone-400" />
                 <input
                   type="text"
-                  placeholder="搜尋客戶姓名或電話..."
+                  placeholder="搜尋姓名、電話或 Email…"
                   value={customerSearchName}
                   onChange={(e) => setCustomerSearchName(e.target.value)}
                   className="w-full text-sm outline-none font-bold"
@@ -111,6 +111,12 @@ export default function AdminCustomersModal({
                     </h3>
                     {user.role === 'deleted' && <div className="bg-rose-100 text-rose-600 text-[10px] font-bold px-2 py-0.5 rounded-md mt-1">已停用</div>}
                     <p className="text-sm text-stone-500 font-bold mt-1">{user.phone}</p>
+                    <p
+                      className="text-[11px] text-stone-400 font-mono mt-1 w-full px-1 truncate"
+                      title={user.email || ''}
+                    >
+                      {user.email ? `註冊 ${user.email}` : '（無 Email 紀錄）'}
+                    </p>
                     <span className="mt-3 text-[10px] bg-stone-100 text-stone-500 px-3 py-1 rounded-full font-bold">點擊查看詳細資料與訂單</span>
                   </div>
                 ))}
@@ -156,6 +162,10 @@ export default function AdminCustomersModal({
 
                   {isEditingAdminCustomer ? (
                     <div className="space-y-3 text-sm bg-stone-50 p-4 rounded-xl border border-stone-200 mt-4">
+                      <div className="rounded-md px-2 py-2 bg-white border border-stone-200 border-dashed">
+                        <span className="text-[10px] font-bold text-stone-400 block mb-0.5">註冊 Email（登入帳號，僅供檢視）</span>
+                        <span className="font-mono text-xs text-stone-700 break-all">{selectedCustomer.email || '（無紀錄，可能為舊資料）'}</span>
+                      </div>
                       <input type="text" placeholder="姓名" value={selectedCustomer.name} onChange={(e) => setSelectedCustomer({ ...selectedCustomer, name: e.target.value })} className="w-full bg-white border border-stone-200 rounded-md px-2 py-1.5 outline-none focus:border-blue-400" />
                       <div className="flex gap-4">
                         <label className="flex items-center gap-1"><input type="radio" name="adminGender" value="男" checked={selectedCustomer.gender === '男'} onChange={(e) => setSelectedCustomer({ ...selectedCustomer, gender: e.target.value })} />男</label>
@@ -172,6 +182,10 @@ export default function AdminCustomersModal({
                     </div>
                   ) : (
                     <div className="space-y-4 text-sm text-stone-600 bg-stone-50 p-4 rounded-xl mt-4">
+                      <div>
+                        <span className="text-xs font-bold text-stone-400 block mb-1">註冊 Email</span>
+                        <span className="font-mono text-xs font-bold text-stone-800 break-all">{selectedCustomer.email || '未提供'}</span>
+                      </div>
                       <div><span className="text-xs font-bold text-stone-400 block mb-1">性別</span><span className="font-bold">{selectedCustomer.gender || '-'}</span></div>
                       <div><span className="text-xs font-bold text-stone-400 block mb-1">聯絡電話</span><span className="font-bold">{selectedCustomer.phone}</span></div>
                       <div><span className="text-xs font-bold text-stone-400 block mb-1">Line ID</span><span className="font-bold text-[#06C755]">{selectedCustomer.lineId || '未提供'}</span></div>

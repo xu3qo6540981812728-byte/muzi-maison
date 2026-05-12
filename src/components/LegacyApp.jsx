@@ -147,6 +147,8 @@ function toAbsoluteOgUrl(origin, url) {
       const [emailInput, setEmailInput] = useState('');
       const [passwordInput, setPasswordInput] = useState('');
       const [passwordResetSending, setPasswordResetSending] = useState(false);
+      const [forgotPasswordPanelOpen, setForgotPasswordPanelOpen] = useState(false);
+      const [passwordResetEmailInput, setPasswordResetEmailInput] = useState('');
       const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '', address: '', email: '', lineId: '', gender: '女' });
       
       const [orderNote, setOrderNote] = useState('');
@@ -1517,6 +1519,8 @@ mainProductQty += item.qty;
         setPasswordInput('')
         setIsRegistering(false)
         setPasswordResetSending(false)
+        setForgotPasswordPanelOpen(false)
+        setPasswordResetEmailInput('')
         if (routeMode === 'cart') {
           setIsCartOpen(true)
         }
@@ -1552,13 +1556,15 @@ mainProductQty += item.qty;
 
       const handleSendPasswordReset = async () => {
         if (!auth) return alert('請先設定 Firebase 金鑰！')
-        const email = String(emailInput || '').trim()
-        if (!email) return alert('請先輸入您註冊時使用的 Email')
+        const email = String(passwordResetEmailInput || '').trim()
+        if (!email) return alert('請輸入您註冊時使用的 Email 帳號')
         if (!isValidEmail(email)) return alert('Email 格式不正確，請重新輸入')
         if (passwordResetSending) return
         setPasswordResetSending(true)
         try {
           await auth.sendPasswordResetEmail(email)
+          setForgotPasswordPanelOpen(false)
+          setPasswordResetEmailInput('')
           alert(
             '已寄出密碼重設信，請至信箱開啟信件（含垃圾信匣），點選連結後即可設定新密碼。若未收到請數分鐘後再試。'
           )
@@ -2901,7 +2907,9 @@ const ordersToMerge = currentOrders.filter(o => mergeSelection.includes(o.id));
            if (!showDeletedCustomers && user.role === 'deleted') return false;
            const matchName = customerSearchName ? user.name?.toLowerCase().includes(customerSearchName.toLowerCase()) : true;
            const matchPhone = customerSearchName ? user.phone?.includes(customerSearchName) : true;
-           return customerSearchName ? (matchName || matchPhone) : true;
+           const q = customerSearchName ? customerSearchName.toLowerCase().trim() : '';
+           const matchEmail = q ? String(user.email || '').toLowerCase().includes(q) : true;
+           return customerSearchName ? (matchName || matchPhone || matchEmail) : true;
         });
       }, [allUsers, customerSearchName, showDeletedCustomers]);
 
@@ -5855,10 +5863,82 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
               <div className="bg-white p-6 md:p-8 rounded-3xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 relative">
                 <button onClick={closeLoginModal} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full"><X size={20} /></button>
                 <h3 className="text-xl font-bold text-stone-800 mb-6 flex items-center gap-2 justify-center">
-                  {loginMode === 'admin' ? <Lock size={24} className="text-rose-600" /> : <UserIcon size={24} className="text-amber-600" />}
-                  {loginMode === 'admin' ? '管理員登入' : (isRegistering ? '非會員快速結帳' : '會員登入')}
+                  {forgotPasswordPanelOpen && !isRegistering ? (
+                    loginMode === 'admin' ? (
+                      <Lock size={24} className="text-rose-600" />
+                    ) : (
+                      <UserIcon size={24} className="text-amber-600" />
+                    )
+                  ) : loginMode === 'admin' ? (
+                    <Lock size={24} className="text-rose-600" />
+                  ) : (
+                    <UserIcon size={24} className="text-amber-600" />
+                  )}
+                  {forgotPasswordPanelOpen && !isRegistering
+                    ? '重設密碼'
+                    : loginMode === 'admin'
+                      ? '管理員登入'
+                      : isRegistering
+                        ? '非會員快速結帳'
+                        : '會員登入'}
                 </h3>
-                
+
+                {forgotPasswordPanelOpen && !isRegistering ? (
+                  <div className="space-y-4">
+                    <p className="text-sm text-stone-600 leading-relaxed text-center">
+                      請輸入您<span className="font-bold text-stone-800">註冊時使用的 Email</span>
+                      ，我們將寄送密碼重設連結至該信箱。
+                    </p>
+                    <input
+                      type="email"
+                      placeholder="註冊 Email 帳號"
+                      value={passwordResetEmailInput}
+                      onChange={(e) => setPasswordResetEmailInput(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSendPasswordReset()}
+                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 text-sm"
+                      autoComplete="email"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSendPasswordReset}
+                      disabled={passwordResetSending}
+                      className="w-full bg-amber-500 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform disabled:opacity-50 disabled:pointer-events-none"
+                    >
+                      {passwordResetSending ? '寄送中…' : '寄送重設信'}
+                    </button>
+
+                    <div className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-4 text-center space-y-3">
+                      <p className="text-xs font-bold text-stone-700">忘記註冊時使用的 Email？</p>
+                      <p className="text-[11px] text-stone-500 leading-relaxed">
+                        請透過下方官方 LINE 與我們聯繫，並提供姓名、電話等資料，客服將協助確認您的註冊信箱。
+                      </p>
+                      {contactData.lineLink ? (
+                        <a
+                          href={contactData.lineLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center justify-center gap-2 w-full bg-[#06C755] hover:bg-[#05b34c] text-white text-sm font-bold py-3 rounded-xl shadow-sm transition-colors active:scale-[0.98]"
+                        >
+                          <MessageCircle size={18} strokeWidth={2} /> 開啟官方 LINE
+                        </a>
+                      ) : (
+                        <p className="text-[11px] text-stone-400">店家尚未設定 LINE，請改由電話或「聯絡我們」洽客服。</p>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setForgotPasswordPanelOpen(false)
+                        setPasswordResetEmailInput('')
+                      }}
+                      className="w-full bg-stone-100 text-stone-700 font-bold py-3 rounded-xl active:scale-95 transition-transform"
+                    >
+                      返回登入
+                    </button>
+                  </div>
+                ) : (
+                  <>
                 {isRegistering && loginMode === 'customer' && (
                   <div className="grid grid-cols-2 gap-3 mb-3">
                     <input type="text" placeholder="真實姓名 (必填)" value={customerInfo.name} onChange={e => setCustomerInfo({...customerInfo, name: e.target.value})} className="col-span-2 w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 text-sm"/>
@@ -5886,11 +5966,13 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
                     <div className="flex justify-end mt-2">
                       <button
                         type="button"
-                        onClick={handleSendPasswordReset}
-                        disabled={passwordResetSending}
-                        className="text-xs font-bold text-amber-700 hover:text-amber-900 underline decoration-amber-700/50 disabled:opacity-50 disabled:pointer-events-none"
+                        onClick={() => {
+                          setForgotPasswordPanelOpen(true)
+                          setPasswordResetEmailInput(String(emailInput || '').trim())
+                        }}
+                        className="text-xs font-bold text-amber-700 hover:text-amber-900 underline decoration-amber-700/50"
                       >
-                        {passwordResetSending ? '寄送中…' : '忘記密碼？'}
+                        忘記密碼？
                       </button>
                     </div>
                   )}
@@ -5904,13 +5986,42 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
                 <div className="mt-6 pt-4 border-t border-stone-100 flex justify-between items-center text-xs text-stone-500">
                   {loginMode === 'customer' ? (
                     <>
-                      <button onClick={() => setIsRegistering(!isRegistering)} className="hover:text-amber-600 font-bold">{isRegistering ? '已有帳號？返回登入' : '非會員快速結帳'}</button>
-                      <button onClick={() => setLoginMode('admin')} className="hover:text-rose-600">管理員通道</button>
+                      <button
+                        onClick={() => {
+                          setForgotPasswordPanelOpen(false)
+                          setPasswordResetEmailInput('')
+                          setIsRegistering(!isRegistering)
+                        }}
+                        className="hover:text-amber-600 font-bold"
+                      >
+                        {isRegistering ? '已有帳號？返回登入' : '非會員快速結帳'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setForgotPasswordPanelOpen(false)
+                          setPasswordResetEmailInput('')
+                          setLoginMode('admin')
+                        }}
+                        className="hover:text-rose-600"
+                      >
+                        管理員通道
+                      </button>
                     </>
                   ) : (
-                    <button onClick={() => setLoginMode('customer')} className="hover:text-amber-600 w-full text-center">返回會員登入</button>
+                    <button
+                      onClick={() => {
+                        setForgotPasswordPanelOpen(false)
+                        setPasswordResetEmailInput('')
+                        setLoginMode('customer')
+                      }}
+                      className="hover:text-amber-600 w-full text-center"
+                    >
+                      返回會員登入
+                    </button>
                   )}
                 </div>
+                  </>
+                )}
               </div>
             </div>
           )}
