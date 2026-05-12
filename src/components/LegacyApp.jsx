@@ -4001,9 +4001,9 @@ const uploadTask = await storageRef.put(blob, metadata);
               </div>
             </header>
 
-            {/* 公告圖輪播（16:9 外框；圖片完整置入 object-contain，不足處白底；點擊開大視窗） */}
+            {/* 公告圖輪播（16:9 外框；桌機限制最大寬度置中；圖片 object-contain、不足處白底；點擊開大視窗） */}
             {announceCarouselItems.length > 0 && (
-              <div className="mx-4 mt-2 mb-1 relative rounded-xl overflow-hidden border border-stone-200 shadow-md bg-white aspect-video group">
+              <div className="mx-auto mt-2 mb-1 w-full max-w-4xl px-4 sm:px-6 relative rounded-xl overflow-hidden border border-stone-200 shadow-md bg-white aspect-video group">
                 {announceCarouselItems.map((ann, idx) => (
                   <div
                     key={ann.id}
