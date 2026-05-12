@@ -1534,18 +1534,21 @@ mainProductQty += item.qty;
 
       const handleAuthSubmit = async () => {
         if (!auth) return alert("請先設定 Firebase 金鑰！");
+        const authEmail = String(emailInput || '').trim().toLowerCase()
         try {
           if (isRegistering) {
             if (!customerInfo.name || !customerInfo.phone || !customerInfo.address || !emailInput || !passwordInput) {
               return alert("請完整填寫姓名、性別、手機、地址、Email 與密碼（皆為必填）！")
             }
             if (!isValidPhone(customerInfo.phone)) return alert("手機格式不正確，請輸入 09 開頭共 10 碼")
-            if (!isValidEmail(emailInput)) return alert("Email 格式不正確，請重新輸入")
-            const cred = await auth.createUserWithEmailAndPassword(emailInput, passwordInput);
-            await db.collection('users').doc(cred.user.uid).set({ ...customerInfo, email: emailInput, role: 'customer' });
+            if (!isValidEmail(authEmail)) return alert("Email 格式不正確，請重新輸入")
+            const cred = await auth.createUserWithEmailAndPassword(authEmail, passwordInput);
+            await db.collection('users').doc(cred.user.uid).set({ ...customerInfo, email: authEmail, role: 'customer' });
             alert("註冊成功！歡迎加入木子家MUZI MAISON！");
           } else {
-            await auth.signInWithEmailAndPassword(emailInput, passwordInput);
+            if (!authEmail || !passwordInput) return alert('請輸入 Email 與密碼')
+            if (!isValidEmail(authEmail)) return alert('Email 格式不正確，請重新輸入')
+            await auth.signInWithEmailAndPassword(authEmail, passwordInput);
             alert("登入成功！");
           }
           closeLoginModal();
@@ -1556,41 +1559,17 @@ mainProductQty += item.qty;
 
       const handleSendPasswordReset = async () => {
         if (!auth) return alert('請先設定 Firebase 金鑰！')
-        const emailRaw = String(passwordResetEmailInput || '').trim()
-        if (!emailRaw) return alert('請輸入您註冊時使用的 Email 帳號')
-        if (!isValidEmail(emailRaw)) return alert('Email 格式不正確，請重新輸入')
-        const email = emailRaw.toLowerCase()
+        const email = String(passwordResetEmailInput || '').trim().toLowerCase()
+        if (!email) return alert('請輸入您註冊時使用的 Email 帳號')
+        if (!isValidEmail(email)) return alert('Email 格式不正確，請重新輸入')
         if (passwordResetSending) return
         setPasswordResetSending(true)
         try {
-          /** Firebase 若開啟「防止信箱列舉」，sendPasswordResetEmail 對不存在帳號仍會 resolve，故先查登入方式 */
-          let methods = []
-          try {
-            methods = await auth.fetchSignInMethodsForEmail(email)
-          } catch (fetchErr) {
-            console.error(fetchErr)
-            alert('無法驗證此信箱，請檢查網路後再試。')
-            return
-          }
-          if (!methods || methods.length === 0) {
-            alert(
-              '查無此 Email 的註冊紀錄。\n\n請確認拼字是否與註冊時完全一致；若仍不正確，可透過下方「開啟官方 LINE」請客服協助確認註冊信箱。'
-            )
-            return
-          }
-          const passwordProviderId = firebase.auth.EmailAuthProvider.EMAIL_PASSWORD_SIGN_IN_METHOD
-          if (!methods.includes(passwordProviderId)) {
-            alert(
-              '此信箱的註冊方式不是「Email + 密碼」，無法由此寄送重設密碼信。\n請透過官方 LINE 或客服協助。'
-            )
-            return
-          }
-
           await auth.sendPasswordResetEmail(email)
           setForgotPasswordPanelOpen(false)
           setPasswordResetEmailInput('')
           alert(
-            '已寄出密碼重設信，請至信箱開啟信件（含垃圾信匣），點選連結後即可設定新密碼。若未收到請數分鐘後再試。'
+            '若此 Email 已在本站註冊，您將收到密碼重設信，請至信箱查看（含垃圾信匣）並點連結設定新密碼。\n\n若數分鐘後仍完全沒收到，可能是信箱拼錯、尚未註冊，或可到下方「開啟官方 LINE」請客服協助。\n\n（為保護帳號安全，系統無法在此告知該信箱是否有註冊紀錄。）'
           )
         } catch (error) {
           const code = error?.code
@@ -5923,7 +5902,7 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
                       autoComplete="email"
                     />
                     <p className="text-[11px] text-stone-500 leading-relaxed">
-                      請與註冊時完全相同；若打錯或尚無此帳號，將無法寄信，並會提示您確認。
+                      請輸入與註冊時相同的 Email（不需輸入密碼）。送出後若信箱正確且已註冊，將會收到重設信；為保護隱私，此處無法顯示該信箱是否有註冊紀錄。
                     </p>
                     <button
                       type="button"
