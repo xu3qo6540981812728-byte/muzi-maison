@@ -192,8 +192,16 @@ function toAbsoluteOgUrl(origin, url) {
       const [announcements, setAnnouncements] = useState([]);
       /** 首頁公告輪播間隔（秒），存於 settings/announcements.carouselIntervalSec */
       const [announceCarouselIntervalSec, setAnnounceCarouselIntervalSec] = useState(3);
-      /** 首頁公告圖輪播目前索引（僅含「有圖」且啟用中之公告） */
+      /** 首頁公告輪播目前索引（0..n-1） */
       const [announceCarouselIndex, setAnnounceCarouselIndex] = useState(0);
+      /** 桌機：下一則／上一則時「中→左、右→中」個別位移动畫；非 null 時禁止重複觸發 */
+      const [announceDeskFly, setAnnounceDeskFly] = useState(null);
+      const announceDeskStageRef = useRef(null);
+      const announceDeskLeftCardRef = useRef(null);
+      const announceDeskCenterCardRef = useRef(null);
+      const announceDeskRightCardRef = useRef(null);
+      const announceCarouselIndexRef = useRef(0);
+      const announceDeskFlyRef = useRef(null);
       const [viewingAnnounce, setViewingAnnounce] = useState(null);
       const [isEditingAnnounce, setIsEditingAnnounce] = useState(false);
       const [tempAnnounce, setTempAnnounce] = useState({});
@@ -3579,20 +3587,175 @@ const uploadTask = await storageRef.put(blob, metadata);
         () => announcements.filter((a) => a.isActive && !isAnnounceExpired(a) && a.image),
         [announcements]
       );
+      const announceCarouselItemsRef = useRef(announceCarouselItems);
+      useEffect(() => {
+        announceCarouselItemsRef.current = announceCarouselItems;
+      }, [announceCarouselItems]);
+
+      useEffect(() => {
+        announceCarouselIndexRef.current = announceCarouselIndex;
+      }, [announceCarouselIndex]);
+
+      useEffect(() => {
+        announceDeskFlyRef.current = announceDeskFly;
+      }, [announceDeskFly]);
 
       useEffect(() => {
         if (announceCarouselItems.length === 0) {
           setAnnounceCarouselIndex(0);
           return;
         }
-        setAnnounceCarouselIndex((i) => Math.min(i, announceCarouselItems.length - 1));
+        setAnnounceCarouselIndex((idx) => Math.min(idx, announceCarouselItems.length - 1));
       }, [announceCarouselItems]);
+
+      const announceCarouselLen = announceCarouselItems.length;
+
+      const relRectToStage = (stageRect, r) => ({
+        left: r.left - stageRect.left,
+        top: r.top - stageRect.top,
+        width: r.width,
+        height: r.height,
+      });
+
+      const announceDeskFlyFinishOnceRef = useRef(false);
+
+      const finishAnnounceDeskFly = (kind) => {
+        if (announceDeskFlyFinishOnceRef.current) return;
+        announceDeskFlyFinishOnceRef.current = true;
+        const items = announceCarouselItemsRef.current;
+        const n = items.length;
+        if (n <= 1) {
+          setAnnounceDeskFly(null);
+          announceDeskFlyFinishOnceRef.current = false;
+          return;
+        }
+        if (kind === 'next') setAnnounceCarouselIndex((i) => (i + 1) % n);
+        else setAnnounceCarouselIndex((i) => (i - 1 + n) % n);
+        setAnnounceDeskFly(null);
+        announceDeskFlyFinishOnceRef.current = false;
+      };
+
+      const startAnnounceDeskNextFly = () => {
+        const items = announceCarouselItemsRef.current;
+        const n = items.length;
+        if (n <= 1 || announceDeskFlyRef.current) return;
+        const reduceMotion =
+          typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+        if (reduceMotion) {
+          setAnnounceCarouselIndex((i) => (i + 1) % n);
+          return;
+        }
+        const stage = announceDeskStageRef.current;
+        const lc = announceDeskLeftCardRef.current;
+        const cc = announceDeskCenterCardRef.current;
+        const rc = announceDeskRightCardRef.current;
+        if (!stage || !lc || !cc || !rc) {
+          setAnnounceCarouselIndex((i) => (i + 1) % n);
+          return;
+        }
+        const sr = stage.getBoundingClientRect();
+        const centerStart = relRectToStage(sr, cc.getBoundingClientRect());
+        const rightStart = relRectToStage(sr, rc.getBoundingClientRect());
+        const leftEnd = relRectToStage(sr, lc.getBoundingClientRect());
+        const centerEnd = relRectToStage(sr, cc.getBoundingClientRect());
+        const rightEnd = relRectToStage(sr, rc.getBoundingClientRect());
+        const i = announceCarouselIndexRef.current;
+        const ni = (i + 2) % n;
+        const newRightSrc = items[ni].image;
+        const enterOffset = Math.min(120, Math.max(48, rightEnd.width * 0.35));
+        const newRightStart = {
+          left: rightEnd.left + enterOffset,
+          top: rightEnd.top,
+          width: rightEnd.width,
+          height: rightEnd.height,
+        };
+        announceDeskFlyFinishOnceRef.current = false;
+        setAnnounceDeskFly({
+          kind: 'next',
+          active: false,
+          centerSrc: items[i].image,
+          rightSrc: items[(i + 1) % n].image,
+          newRightSrc,
+          centerStart,
+          rightStart,
+          leftEnd,
+          centerEnd,
+          rightEnd,
+          newRightStart,
+        });
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            setAnnounceDeskFly((f) => (f && f.kind === 'next' ? { ...f, active: true } : f));
+          });
+        });
+      };
+
+      const startAnnounceDeskPrevFly = () => {
+        const items = announceCarouselItemsRef.current;
+        const n = items.length;
+        if (n <= 1 || announceDeskFlyRef.current) return;
+        const reduceMotion =
+          typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+        if (reduceMotion) {
+          setAnnounceCarouselIndex((i) => (i - 1 + n) % n);
+          return;
+        }
+        const stage = announceDeskStageRef.current;
+        const lc = announceDeskLeftCardRef.current;
+        const cc = announceDeskCenterCardRef.current;
+        const rc = announceDeskRightCardRef.current;
+        if (!stage || !lc || !cc || !rc) {
+          setAnnounceCarouselIndex((i) => (i - 1 + n) % n);
+          return;
+        }
+        const sr = stage.getBoundingClientRect();
+        const leftStart = relRectToStage(sr, lc.getBoundingClientRect());
+        const centerStart = relRectToStage(sr, cc.getBoundingClientRect());
+        const rightStart = relRectToStage(sr, rc.getBoundingClientRect());
+        const leftEnd = relRectToStage(sr, lc.getBoundingClientRect());
+        const centerEnd = relRectToStage(sr, cc.getBoundingClientRect());
+        const rightEnd = relRectToStage(sr, rc.getBoundingClientRect());
+        const i = announceCarouselIndexRef.current;
+        const pi = (i - 2 + n) % n;
+        const newLeftSrc = items[pi].image;
+        const enterOffset = Math.min(120, Math.max(48, leftEnd.width * 0.35));
+        const newLeftStart = {
+          left: leftEnd.left - enterOffset,
+          top: leftEnd.top,
+          width: leftEnd.width,
+          height: leftEnd.height,
+        };
+        announceDeskFlyFinishOnceRef.current = false;
+        setAnnounceDeskFly({
+          kind: 'prev',
+          active: false,
+          leftSrc: items[(i - 1 + n) % n].image,
+          centerSrc: items[i].image,
+          newLeftSrc,
+          leftStart,
+          centerStart,
+          rightStart,
+          leftEnd,
+          centerEnd,
+          rightEnd,
+          newLeftStart,
+        });
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            setAnnounceDeskFly((f) => (f && f.kind === 'prev' ? { ...f, active: true } : f));
+          });
+        });
+      };
+
+      const goAnnounceCarouselNext = () => startAnnounceDeskNextFly();
+      const goAnnounceCarouselPrev = () => startAnnounceDeskPrevFly();
 
       useEffect(() => {
         if (announceCarouselItems.length <= 1) return undefined;
         const ms = Math.max(2000, Math.min(120000, announceCarouselIntervalSec * 1000));
         const id = window.setInterval(() => {
-          setAnnounceCarouselIndex((i) => (i + 1) % announceCarouselItems.length);
+          if (announceDeskFlyRef.current) return;
+          startAnnounceDeskNextFly();
         }, ms);
         return () => clearInterval(id);
       }, [announceCarouselItems.length, announceCarouselIntervalSec]);
@@ -4001,76 +4164,383 @@ const uploadTask = await storageRef.put(blob, metadata);
               </div>
             </header>
 
-            {/* 公告圖輪播（16:9 外框；桌機 max-w-md≈前次 4xl 的一半寬度置中；圖片 object-contain、不足處白底；點擊開大視窗） */}
+            {/* 公告圖輪播：手機單張淡入淡出；桌機雙頁軌道（三卡一齊左移一格換頁） */}
             {announceCarouselItems.length > 0 && (
-              <div className="mx-auto mt-2 mb-1 w-full max-w-md px-4 sm:px-6 relative rounded-xl overflow-hidden border border-stone-200 shadow-md bg-white aspect-video group">
-                {announceCarouselItems.map((ann, idx) => (
-                  <div
-                    key={ann.id}
-                    className={`absolute inset-0 bg-white transition-opacity duration-500 ease-out ${
-                      idx === announceCarouselIndex ? 'opacity-100 z-[1]' : 'opacity-0 z-0 pointer-events-none'
-                    }`}
-                  >
-                    <img
-                      src={ann.image}
-                      alt={ann.title || '公告圖'}
-                      className="h-full w-full object-contain object-center"
-                      loading="eager"
-                      decoding="async"
-                      fetchPriority="high"
-                    />
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  className="absolute inset-0 z-[2] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-inset"
-                  aria-label="查看公告詳情"
-                  onClick={() => {
-                    const ann = announceCarouselItems[announceCarouselIndex];
-                    if (ann) {
-                      setViewingAnnounce(ann);
-                      setShowAnnouncementModal(true);
-                    }
-                  }}
-                />
-                {announceCarouselItems.length > 1 && (
-                  <>
-                    <button
-                      type="button"
-                      className="absolute left-2 top-1/2 z-[3] -translate-y-1/2 rounded-full bg-black/45 p-2 text-white shadow-md hover:bg-black/60 active:scale-95 transition-colors"
-                      aria-label="上一則公告"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setAnnounceCarouselIndex(
-                          (i) => (i - 1 + announceCarouselItems.length) % announceCarouselItems.length
-                        );
-                      }}
+              <div className="mx-auto mt-2 mb-1 w-full max-w-md md:max-w-5xl px-4 sm:px-6">
+                {/* 手機：維持單張輪播 */}
+                <div className="md:hidden relative rounded-xl overflow-hidden border border-stone-200 shadow-md bg-white aspect-video group">
+                  {announceCarouselItems.map((ann, idx) => (
+                    <div
+                      key={ann.id}
+                      className={`absolute inset-0 bg-white transition-opacity duration-500 ease-out ${
+                        idx === announceCarouselIndex ? 'opacity-100 z-[1]' : 'opacity-0 z-0 pointer-events-none'
+                      }`}
                     >
-                      <ChevronLeft size={22} />
-                    </button>
-                    <button
-                      type="button"
-                      className="absolute right-2 top-1/2 z-[3] -translate-y-1/2 rounded-full bg-black/45 p-2 text-white shadow-md hover:bg-black/60 active:scale-95 transition-colors"
-                      aria-label="下一則公告"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setAnnounceCarouselIndex((i) => (i + 1) % announceCarouselItems.length);
-                      }}
-                    >
-                      <ChevronRight size={22} />
-                    </button>
-                    <div className="absolute bottom-2 left-0 right-0 z-[3] flex justify-center gap-1.5 pointer-events-none">
-                      {announceCarouselItems.map((_, i) => (
-                        <span
-                          key={i}
-                          className={`rounded-full bg-white shadow-sm transition-all ${
-                            i === announceCarouselIndex ? 'h-1.5 w-5 opacity-100' : 'h-1.5 w-1.5 opacity-60'
-                          }`}
-                        />
-                      ))}
+                      <img
+                        src={ann.image}
+                        alt={ann.title || '公告圖'}
+                        className="h-full w-full object-contain object-center"
+                        loading="eager"
+                        decoding="async"
+                        fetchPriority="high"
+                      />
                     </div>
-                  </>
-                )}
+                  ))}
+                  <button
+                    type="button"
+                    className="absolute inset-0 z-[2] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-inset"
+                    aria-label="查看公告詳情"
+                    onClick={() => {
+                      const ann = announceCarouselItems[announceCarouselIndex];
+                      if (ann) {
+                        setViewingAnnounce(ann);
+                        setShowAnnouncementModal(true);
+                      }
+                    }}
+                  />
+                  {announceCarouselLen > 1 && (
+                    <>
+                      <button
+                        type="button"
+                        className="absolute left-2 top-1/2 z-[3] -translate-y-1/2 rounded-full bg-black/45 p-2 text-white shadow-md hover:bg-black/60 active:scale-95 transition-colors"
+                        aria-label="上一則公告"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setAnnounceCarouselIndex(
+                            (j) => (j - 1 + announceCarouselLen) % announceCarouselLen
+                          );
+                        }}
+                      >
+                        <ChevronLeft size={22} />
+                      </button>
+                      <button
+                        type="button"
+                        className="absolute right-2 top-1/2 z-[3] -translate-y-1/2 rounded-full bg-black/45 p-2 text-white shadow-md hover:bg-black/60 active:scale-95 transition-colors"
+                        aria-label="下一則公告"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setAnnounceCarouselIndex((j) => (j + 1) % announceCarouselLen);
+                        }}
+                      >
+                        <ChevronRight size={22} />
+                      </button>
+                      <div className="absolute bottom-2 left-0 right-0 z-[3] flex justify-center gap-1.5 pointer-events-none">
+                        {announceCarouselItems.map((_, i) => (
+                          <span
+                            key={i}
+                            className={`rounded-full bg-white shadow-sm transition-all ${
+                              i === announceCarouselIndex ? 'h-1.5 w-5 opacity-100' : 'h-1.5 w-1.5 opacity-60'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* 桌機：固定三格；換頁時「中→左、右→中」個別位移縮放，右側新圖滑入（非整排軌道平移） */}
+                <div className="hidden md:block relative group">
+                  <div className="rounded-2xl border border-stone-200 bg-stone-50/40 shadow-md p-3 lg:p-5 relative">
+                    {announceCarouselLen === 1 ? (
+                      <div className="relative w-full max-w-2xl mx-auto aspect-video rounded-xl overflow-hidden border border-stone-200 bg-white shadow-md">
+                        <img
+                          src={announceCarouselItems[0].image}
+                          alt={announceCarouselItems[0].title || '公告圖'}
+                          className="h-full w-full object-contain object-center bg-white"
+                          loading="eager"
+                          decoding="async"
+                          fetchPriority="high"
+                        />
+                        <button
+                          type="button"
+                          className="absolute inset-0 z-[2] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-inset rounded-xl"
+                          aria-label="查看公告詳情"
+                          onClick={() => {
+                            setViewingAnnounce(announceCarouselItems[0]);
+                            setShowAnnouncementModal(true);
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <div
+                        ref={announceDeskStageRef}
+                        className="relative min-h-[140px] sm:min-h-[160px]"
+                      >
+                        {announceDeskFly?.kind === 'next' && (
+                          <>
+                            <div
+                              className="pointer-events-none absolute overflow-hidden rounded-xl border-2 border-amber-300/90 bg-white shadow-lg ring-1 ring-amber-200/50 z-[25]"
+                              style={{
+                                left: announceDeskFly.centerStart.left,
+                                top: announceDeskFly.centerStart.top,
+                                width: announceDeskFly.centerStart.width,
+                                height: announceDeskFly.centerStart.height,
+                                transformOrigin: 'top left',
+                                transition: announceDeskFly.active
+                                  ? 'transform 520ms cubic-bezier(0.22, 1, 0.36, 1)'
+                                  : 'none',
+                                transform: announceDeskFly.active
+                                  ? `translate(${announceDeskFly.leftEnd.left - announceDeskFly.centerStart.left}px, ${announceDeskFly.leftEnd.top - announceDeskFly.centerStart.top}px) scale(${announceDeskFly.leftEnd.width / announceDeskFly.centerStart.width}, ${announceDeskFly.leftEnd.height / announceDeskFly.centerStart.height})`
+                                  : 'none',
+                              }}
+                              onTransitionEnd={(e) => {
+                                if (e.propertyName !== 'transform') return;
+                                finishAnnounceDeskFly('next');
+                              }}
+                            >
+                              <img
+                                src={announceDeskFly.centerSrc}
+                                alt=""
+                                className="h-full w-full object-contain bg-white"
+                                loading="eager"
+                                decoding="async"
+                              />
+                            </div>
+                            <div
+                              className="pointer-events-none absolute overflow-hidden rounded-lg border border-stone-200 bg-white shadow-sm z-[24]"
+                              style={{
+                                left: announceDeskFly.rightStart.left,
+                                top: announceDeskFly.rightStart.top,
+                                width: announceDeskFly.rightStart.width,
+                                height: announceDeskFly.rightStart.height,
+                                transformOrigin: 'top left',
+                                transition: announceDeskFly.active
+                                  ? 'transform 520ms cubic-bezier(0.22, 1, 0.36, 1)'
+                                  : 'none',
+                                transform: announceDeskFly.active
+                                  ? `translate(${announceDeskFly.centerEnd.left - announceDeskFly.rightStart.left}px, ${announceDeskFly.centerEnd.top - announceDeskFly.rightStart.top}px) scale(${announceDeskFly.centerEnd.width / announceDeskFly.rightStart.width}, ${announceDeskFly.centerEnd.height / announceDeskFly.rightStart.height})`
+                                  : 'none',
+                              }}
+                            >
+                              <img
+                                src={announceDeskFly.rightSrc}
+                                alt=""
+                                className="h-full w-full object-contain bg-white"
+                                loading="eager"
+                                decoding="async"
+                              />
+                            </div>
+                            <div
+                              className="pointer-events-none absolute overflow-hidden rounded-lg border border-stone-200 bg-white shadow-sm z-[23]"
+                              style={{
+                                left: announceDeskFly.newRightStart.left,
+                                top: announceDeskFly.newRightStart.top,
+                                width: announceDeskFly.newRightStart.width,
+                                height: announceDeskFly.newRightStart.height,
+                                transformOrigin: 'top left',
+                                transition: announceDeskFly.active
+                                  ? 'transform 520ms cubic-bezier(0.22, 1, 0.36, 1)'
+                                  : 'none',
+                                transform: announceDeskFly.active
+                                  ? `translate(${announceDeskFly.rightEnd.left - announceDeskFly.newRightStart.left}px, ${announceDeskFly.rightEnd.top - announceDeskFly.newRightStart.top}px) scale(${announceDeskFly.rightEnd.width / announceDeskFly.newRightStart.width}, ${announceDeskFly.rightEnd.height / announceDeskFly.newRightStart.height})`
+                                  : 'none',
+                              }}
+                            >
+                              <img
+                                src={announceDeskFly.newRightSrc}
+                                alt=""
+                                className="h-full w-full object-contain bg-white"
+                                loading="eager"
+                                decoding="async"
+                              />
+                            </div>
+                          </>
+                        )}
+                        {announceDeskFly?.kind === 'prev' && (
+                          <>
+                            <div
+                              className="pointer-events-none absolute overflow-hidden rounded-lg border border-stone-200 bg-white shadow-sm z-[25]"
+                              style={{
+                                left: announceDeskFly.newLeftStart.left,
+                                top: announceDeskFly.newLeftStart.top,
+                                width: announceDeskFly.newLeftStart.width,
+                                height: announceDeskFly.newLeftStart.height,
+                                transformOrigin: 'top left',
+                                transition: announceDeskFly.active
+                                  ? 'transform 520ms cubic-bezier(0.22, 1, 0.36, 1)'
+                                  : 'none',
+                                transform: announceDeskFly.active
+                                  ? `translate(${announceDeskFly.leftEnd.left - announceDeskFly.newLeftStart.left}px, ${announceDeskFly.leftEnd.top - announceDeskFly.newLeftStart.top}px) scale(${announceDeskFly.leftEnd.width / announceDeskFly.newLeftStart.width}, ${announceDeskFly.leftEnd.height / announceDeskFly.newLeftStart.height})`
+                                  : 'none',
+                              }}
+                            >
+                              <img
+                                src={announceDeskFly.newLeftSrc}
+                                alt=""
+                                className="h-full w-full object-contain bg-white"
+                                loading="eager"
+                                decoding="async"
+                              />
+                            </div>
+                            <div
+                              className="pointer-events-none absolute overflow-hidden rounded-lg border border-stone-200 bg-white shadow-sm z-[24]"
+                              style={{
+                                left: announceDeskFly.leftStart.left,
+                                top: announceDeskFly.leftStart.top,
+                                width: announceDeskFly.leftStart.width,
+                                height: announceDeskFly.leftStart.height,
+                                transformOrigin: 'top left',
+                                transition: announceDeskFly.active
+                                  ? 'transform 520ms cubic-bezier(0.22, 1, 0.36, 1)'
+                                  : 'none',
+                                transform: announceDeskFly.active
+                                  ? `translate(${announceDeskFly.centerEnd.left - announceDeskFly.leftStart.left}px, ${announceDeskFly.centerEnd.top - announceDeskFly.leftStart.top}px) scale(${announceDeskFly.centerEnd.width / announceDeskFly.leftStart.width}, ${announceDeskFly.centerEnd.height / announceDeskFly.leftStart.height})`
+                                  : 'none',
+                              }}
+                            >
+                              <img
+                                src={announceDeskFly.leftSrc}
+                                alt=""
+                                className="h-full w-full object-contain bg-white"
+                                loading="eager"
+                                decoding="async"
+                              />
+                            </div>
+                            <div
+                              className="pointer-events-none absolute overflow-hidden rounded-xl border-2 border-amber-300/90 bg-white shadow-lg ring-1 ring-amber-200/50 z-[23]"
+                              style={{
+                                left: announceDeskFly.centerStart.left,
+                                top: announceDeskFly.centerStart.top,
+                                width: announceDeskFly.centerStart.width,
+                                height: announceDeskFly.centerStart.height,
+                                transformOrigin: 'top left',
+                                transition: announceDeskFly.active
+                                  ? 'transform 520ms cubic-bezier(0.22, 1, 0.36, 1)'
+                                  : 'none',
+                                transform: announceDeskFly.active
+                                  ? `translate(${announceDeskFly.rightEnd.left - announceDeskFly.centerStart.left}px, ${announceDeskFly.rightEnd.top - announceDeskFly.centerStart.top}px) scale(${announceDeskFly.rightEnd.width / announceDeskFly.centerStart.width}, ${announceDeskFly.rightEnd.height / announceDeskFly.centerStart.height})`
+                                  : 'none',
+                              }}
+                              onTransitionEnd={(e) => {
+                                if (e.propertyName !== 'transform') return;
+                                finishAnnounceDeskFly('prev');
+                              }}
+                            >
+                              <img
+                                src={announceDeskFly.centerSrc}
+                                alt=""
+                                className="h-full w-full object-contain bg-white"
+                                loading="eager"
+                                decoding="async"
+                              />
+                            </div>
+                          </>
+                        )}
+                        <div
+                          className={`relative z-[10] flex items-center justify-center gap-2 lg:gap-5 px-1 min-w-0 ${
+                            announceDeskFly ? 'opacity-0 pointer-events-none select-none' : ''
+                          }`}
+                          aria-hidden={announceDeskFly ? true : undefined}
+                        >
+                          <button
+                            ref={announceDeskLeftCardRef}
+                            type="button"
+                            className="relative z-[1] w-[22%] max-w-[220px] shrink-0 aspect-video rounded-lg overflow-hidden border border-stone-200 bg-white shadow-sm opacity-80 hover:opacity-100 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+                            aria-label={`查看公告：${announceCarouselItems[(announceCarouselIndex - 1 + announceCarouselLen) % announceCarouselLen]?.title || ''}`}
+                            onClick={() => {
+                              const ann =
+                                announceCarouselItems[(announceCarouselIndex - 1 + announceCarouselLen) % announceCarouselLen];
+                              if (ann) {
+                                setViewingAnnounce(ann);
+                                setShowAnnouncementModal(true);
+                              }
+                            }}
+                          >
+                            <img
+                              src={
+                                announceCarouselItems[(announceCarouselIndex - 1 + announceCarouselLen) % announceCarouselLen].image
+                              }
+                              alt=""
+                              className="h-full w-full object-contain object-center bg-white"
+                              loading="eager"
+                              decoding="async"
+                              fetchPriority="low"
+                            />
+                          </button>
+                          <div
+                            ref={announceDeskCenterCardRef}
+                            className="relative z-[2] w-[52%] max-w-3xl shrink-0 aspect-video rounded-xl overflow-hidden border-2 border-amber-300/90 bg-white shadow-lg ring-1 ring-amber-200/50"
+                          >
+                            <img
+                              src={announceCarouselItems[announceCarouselIndex].image}
+                              alt={announceCarouselItems[announceCarouselIndex].title || '公告圖'}
+                              className="h-full w-full object-contain object-center bg-white"
+                              loading="eager"
+                              decoding="async"
+                              fetchPriority="high"
+                            />
+                            <button
+                              type="button"
+                              className="absolute inset-0 z-[2] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-inset"
+                              aria-label="查看公告詳情"
+                              onClick={() => {
+                                const ann = announceCarouselItems[announceCarouselIndex];
+                                if (ann) {
+                                  setViewingAnnounce(ann);
+                                  setShowAnnouncementModal(true);
+                                }
+                              }}
+                            />
+                          </div>
+                          <button
+                            ref={announceDeskRightCardRef}
+                            type="button"
+                            className="relative z-[1] w-[22%] max-w-[220px] shrink-0 aspect-video rounded-lg overflow-hidden border border-stone-200 bg-white shadow-sm opacity-80 hover:opacity-100 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+                            aria-label={`查看公告：${announceCarouselItems[(announceCarouselIndex + 1) % announceCarouselLen]?.title || ''}`}
+                            onClick={() => {
+                              const ann = announceCarouselItems[(announceCarouselIndex + 1) % announceCarouselLen];
+                              if (ann) {
+                                setViewingAnnounce(ann);
+                                setShowAnnouncementModal(true);
+                              }
+                            }}
+                          >
+                            <img
+                              src={announceCarouselItems[(announceCarouselIndex + 1) % announceCarouselLen].image}
+                              alt=""
+                              className="h-full w-full object-contain object-center bg-white"
+                              loading="eager"
+                              decoding="async"
+                              fetchPriority="low"
+                            />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {announceCarouselLen > 1 && (
+                      <>
+                        <button
+                          type="button"
+                          className="absolute left-0 top-[42%] z-[40] -translate-y-1/2 rounded-full bg-black/45 p-2 text-white shadow-md hover:bg-black/60 active:scale-95 transition-colors disabled:opacity-40"
+                          aria-label="上一則公告"
+                          disabled={!!announceDeskFly}
+                          onClick={goAnnounceCarouselPrev}
+                        >
+                          <ChevronLeft size={22} />
+                        </button>
+                        <button
+                          type="button"
+                          className="absolute right-0 top-[42%] z-[40] -translate-y-1/2 rounded-full bg-black/45 p-2 text-white shadow-md hover:bg-black/60 active:scale-95 transition-colors disabled:opacity-40"
+                          aria-label="下一則公告"
+                          disabled={!!announceDeskFly}
+                          onClick={goAnnounceCarouselNext}
+                        >
+                          <ChevronRight size={22} />
+                        </button>
+                        <div className="mt-3 flex justify-center gap-1.5 pointer-events-none">
+                          {announceCarouselItems.map((_, i) => (
+                            <span
+                              key={i}
+                              className={`rounded-full bg-stone-600 shadow-sm transition-all ${
+                                i === announceCarouselIndex ? 'h-1.5 w-5 opacity-100' : 'h-1.5 w-1.5 opacity-35'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
