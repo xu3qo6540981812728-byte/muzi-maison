@@ -20,6 +20,7 @@ import {
   ImagePlus,
   Trash2,
   ChevronRight,
+  ChevronLeft,
   MapPin,
   Phone,
   Mail,
@@ -189,6 +190,10 @@ function toAbsoluteOgUrl(origin, url) {
       const [tempAboutData, setTempAboutData] = useState(defaultAboutData);
 
       const [announcements, setAnnouncements] = useState([]);
+      /** 首頁公告輪播間隔（秒），存於 settings/announcements.carouselIntervalSec */
+      const [announceCarouselIntervalSec, setAnnounceCarouselIntervalSec] = useState(3);
+      /** 首頁公告圖輪播目前索引（僅含「有圖」且啟用中之公告） */
+      const [announceCarouselIndex, setAnnounceCarouselIndex] = useState(0);
       const [viewingAnnounce, setViewingAnnounce] = useState(null);
       const [isEditingAnnounce, setIsEditingAnnounce] = useState(false);
       const [tempAnnounce, setTempAnnounce] = useState({});
@@ -362,6 +367,7 @@ const [publicTopSellers, setPublicTopSellers] = useState({ items: [], label: '�
           announcement_saved: '儲存公告',
           announcement_deleted: '刪除公告',
           announcement_reordered: '調整公告順序',
+          announcement_carousel_interval: '設定公告輪播秒數',
           catalog_deleted: '移除型錄'
         }
 
@@ -424,6 +430,8 @@ const [publicTopSellers, setPublicTopSellers] = useState({ items: [], label: '�
           summary = `公告 ${d.id || '-'} 已刪除`
         } else if (log.action === 'announcement_reordered') {
           summary = `公告順序已調整（原索引 ${d.fromIndex ?? '-'}，方向 ${d.direction === -1 ? '上移' : '下移'}）`
+        } else if (log.action === 'announcement_carousel_interval') {
+          summary = `公告輪播間隔已設為 ${d.seconds ?? '-'} 秒`
         } else if (log.action === 'catalog_deleted') {
           summary = '產品型錄已移除'
         } else {
@@ -679,23 +687,25 @@ useEffect(() => {
           }
         });
 
-        const unsubscribeAnnounce = db.collection('settings').doc('announcements').onSnapshot(doc => {
-          const handleAnnouncementsUpdate = (data) => {
-            setAnnouncements(data);
-            const unread = data.filter(a => a.isActive && a.showOnLoad && !isAnnounceExpired(a) && !sessionStorage.getItem(`seenAnnounce_${a.id}`));
-            if (unread.length > 0) {
-               setViewingAnnounce(unread[0]);
-               setShowAnnouncementModal(true);
-               sessionStorage.setItem(`seenAnnounce_${unread[0].id}`, 'true');
-            }
+        const unsubscribeAnnounce = db.collection('settings').doc('announcements').onSnapshot((doc) => {
+          const readCarouselIntervalSec = (d) => {
+            const n = Number(d?.carouselIntervalSec);
+            if (!Number.isFinite(n)) return 3;
+            return Math.min(120, Math.max(2, Math.round(n)));
           };
 
+          if (doc.exists) {
+            setAnnounceCarouselIntervalSec(readCarouselIntervalSec(doc.data()));
+          } else {
+            setAnnounceCarouselIntervalSec(3);
+          }
+
           if (doc.exists && Array.isArray(doc.data().list)) {
-            handleAnnouncementsUpdate(doc.data().list);
+            setAnnouncements(doc.data().list);
           } else {
             db.collection('settings').doc('announcement').get().then(oldDoc => {
               if (oldDoc.exists && oldDoc.data().title) {
-                handleAnnouncementsUpdate([{ ...oldDoc.data(), id: 'legacy-1' }]);
+                setAnnouncements([{ ...oldDoc.data(), id: 'legacy-1' }]);
               } else {
                 setAnnouncements([]);
               }
@@ -3499,13 +3509,19 @@ const uploadTask = await storageRef.put(blob, metadata);
 
       const saveAnnouncement = async () => {
          if (!requireAdminAccess()) return;
+         const stripLegacyPopup = (a) => {
+           if (!a || typeof a !== 'object') return a;
+           const { showOnLoad, ...rest } = a;
+           return rest;
+         };
+         const t = stripLegacyPopup(tempAnnounce);
          let newList = [...announcements];
-         if (tempAnnounce.id) {
-            newList = newList.map(a => a.id === tempAnnounce.id ? tempAnnounce : a);
+         if (t.id) {
+            newList = newList.map(a => a.id === t.id ? t : a);
          } else {
-            newList.push({ ...tempAnnounce, id: Date.now().toString() });
+            newList.push({ ...t, id: Date.now().toString() });
          }
-         if (db) { await db.collection('settings').doc('announcements').set({ list: newList }); alert("公告已儲存！"); setIsEditingAnnounce(false); }
+         if (db) { await db.collection('settings').doc('announcements').set({ list: newList }, { merge: true }); alert("公告已儲存！"); setIsEditingAnnounce(false); }
          await writeAdminLog('announcement_saved', {
            id: tempAnnounce.id || 'new',
            title: tempAnnounce.title || '',
@@ -3516,7 +3532,6 @@ const uploadTask = await storageRef.put(blob, metadata);
                { key: 'title', label: '公告標題' },
                { key: 'content', label: '公告內容' },
                { key: 'isActive', label: '是否啟用' },
-               { key: 'showOnLoad', label: '是否進站彈出' },
                { key: 'isPermanent', label: '是否永久顯示' },
                { key: 'expireDate', label: '到期日' }
              ]
@@ -3528,7 +3543,7 @@ const uploadTask = await storageRef.put(blob, metadata);
          if (!requireAdminAccess()) return;
          if(!window.confirm('確定刪除此公告？')) return;
          const newList = announcements.filter(a => a.id !== id);
-         if (db) await db.collection('settings').doc('announcements').set({ list: newList });
+         if (db) await db.collection('settings').doc('announcements').set({ list: newList }, { merge: true });
          await writeAdminLog('announcement_deleted', { id })
       };
 
@@ -3541,12 +3556,46 @@ const uploadTask = await storageRef.put(blob, metadata);
          newList[index] = newList[index + direction];
          newList[index + direction] = temp;
          setAnnouncements(newList); 
-         if (db) await db.collection('settings').doc('announcements').set({ list: newList });
+         if (db) await db.collection('settings').doc('announcements').set({ list: newList }, { merge: true });
          await writeAdminLog('announcement_reordered', { fromIndex: index, direction })
+      };
+
+      const saveAnnounceCarouselInterval = async () => {
+        if (!requireAdminAccess()) return;
+        const n = Math.round(Number(announceCarouselIntervalSec));
+        const sec = Number.isFinite(n) ? Math.min(120, Math.max(2, n)) : 3;
+        setAnnounceCarouselIntervalSec(sec);
+        if (db) {
+          await db.collection('settings').doc('announcements').set({ carouselIntervalSec: sec }, { merge: true });
+        }
+        await writeAdminLog('announcement_carousel_interval', { seconds: sec });
+        alert('輪播間隔已儲存！');
       };
 
       const myOrders = currentUser ? allOrders.filter(o => o.userId === currentUser.uid) : [];
       const isAnnounceExpired = (ann) => !ann.isPermanent && ann.expireDate && new Date() > new Date(ann.expireDate);
+
+      const announceCarouselItems = useMemo(
+        () => announcements.filter((a) => a.isActive && !isAnnounceExpired(a) && a.image),
+        [announcements]
+      );
+
+      useEffect(() => {
+        if (announceCarouselItems.length === 0) {
+          setAnnounceCarouselIndex(0);
+          return;
+        }
+        setAnnounceCarouselIndex((i) => Math.min(i, announceCarouselItems.length - 1));
+      }, [announceCarouselItems]);
+
+      useEffect(() => {
+        if (announceCarouselItems.length <= 1) return undefined;
+        const ms = Math.max(2000, Math.min(120000, announceCarouselIntervalSec * 1000));
+        const id = window.setInterval(() => {
+          setAnnounceCarouselIndex((i) => (i + 1) % announceCarouselItems.length);
+        }, ms);
+        return () => clearInterval(id);
+      }, [announceCarouselItems.length, announceCarouselIntervalSec]);
 
       if (isAppLoading) {
         return (
@@ -3952,12 +4001,78 @@ const uploadTask = await storageRef.put(blob, metadata);
               </div>
             </header>
 
-            {/* 公告列 */}
-            {announcements.filter(a => a.isActive && !isAnnounceExpired(a)).map(ann => (
-               <div key={ann.id} onClick={() => { setViewingAnnounce(ann); setShowAnnouncementModal(true); }} className="mx-4 mt-2 mb-1 bg-blue-50 border border-blue-200 text-blue-700 px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-2 cursor-pointer shadow-sm animate-pulse-slow">
-                  <Megaphone size={18} className="shrink-0"/> <span className="truncate">{ann.title}</span>
-               </div>
-            ))}
+            {/* 公告圖輪播（16:9 外框；圖片完整置入 object-contain，不足處白底；點擊開大視窗） */}
+            {announceCarouselItems.length > 0 && (
+              <div className="mx-4 mt-2 mb-1 relative rounded-xl overflow-hidden border border-stone-200 shadow-md bg-white aspect-video group">
+                {announceCarouselItems.map((ann, idx) => (
+                  <div
+                    key={ann.id}
+                    className={`absolute inset-0 bg-white transition-opacity duration-500 ease-out ${
+                      idx === announceCarouselIndex ? 'opacity-100 z-[1]' : 'opacity-0 z-0 pointer-events-none'
+                    }`}
+                  >
+                    <img
+                      src={ann.image}
+                      alt={ann.title || '公告圖'}
+                      className="h-full w-full object-contain object-center"
+                      loading="eager"
+                      decoding="async"
+                      fetchPriority="high"
+                    />
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  className="absolute inset-0 z-[2] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-inset"
+                  aria-label="查看公告詳情"
+                  onClick={() => {
+                    const ann = announceCarouselItems[announceCarouselIndex];
+                    if (ann) {
+                      setViewingAnnounce(ann);
+                      setShowAnnouncementModal(true);
+                    }
+                  }}
+                />
+                {announceCarouselItems.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      className="absolute left-2 top-1/2 z-[3] -translate-y-1/2 rounded-full bg-black/45 p-2 text-white shadow-md hover:bg-black/60 active:scale-95 transition-colors"
+                      aria-label="上一則公告"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setAnnounceCarouselIndex(
+                          (i) => (i - 1 + announceCarouselItems.length) % announceCarouselItems.length
+                        );
+                      }}
+                    >
+                      <ChevronLeft size={22} />
+                    </button>
+                    <button
+                      type="button"
+                      className="absolute right-2 top-1/2 z-[3] -translate-y-1/2 rounded-full bg-black/45 p-2 text-white shadow-md hover:bg-black/60 active:scale-95 transition-colors"
+                      aria-label="下一則公告"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setAnnounceCarouselIndex((i) => (i + 1) % announceCarouselItems.length);
+                      }}
+                    >
+                      <ChevronRight size={22} />
+                    </button>
+                    <div className="absolute bottom-2 left-0 right-0 z-[3] flex justify-center gap-1.5 pointer-events-none">
+                      {announceCarouselItems.map((_, i) => (
+                        <span
+                          key={i}
+                          className={`rounded-full bg-white shadow-sm transition-all ${
+                            i === announceCarouselIndex ? 'h-1.5 w-5 opacity-100' : 'h-1.5 w-1.5 opacity-60'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
 
             {activeFriendGroupSid && (
               <div className="mx-4 mt-2 rounded-2xl border border-indigo-200 bg-gradient-to-r from-indigo-50 to-violet-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-sm">
@@ -5226,13 +5341,24 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
             </div>
           )}
 
-          {/* 系統設定彈窗 */}
+          {/* 系統設定彈窗（標題／關閉與儲存固定，內容可捲動） */}
           {showConfigModal && (
-            <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4">
-              <div className="bg-white p-6 rounded-3xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 relative border border-stone-100">
-                <button onClick={() => setShowConfigModal(false)} className="absolute top-4 right-4 text-stone-400"><X size={20} /></button>
-                <h2 className="text-lg font-bold text-stone-800 mb-5 flex items-center gap-2 border-b border-stone-100 pb-3"><SettingsIcon size={20} className="text-amber-600"/> 系統規則設定</h2>
-                <div className="space-y-4">
+            <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto overscroll-contain">
+              <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm max-h-[min(90dvh,880px)] flex flex-col border border-stone-100 animate-in zoom-in-95 duration-200 relative my-auto">
+                <div className="shrink-0 flex items-center justify-between gap-2 border-b border-stone-100 px-5 pt-5 pb-3">
+                  <h2 className="text-lg font-bold text-stone-800 flex items-center gap-2 min-w-0">
+                    <SettingsIcon size={20} className="text-amber-600 shrink-0" /> 系統規則設定
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => setShowConfigModal(false)}
+                    className="shrink-0 text-stone-400 hover:bg-stone-100 p-2 rounded-full"
+                    aria-label="關閉"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+                <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 py-4 space-y-4">
                   <div className="bg-stone-50 p-3 rounded-xl border border-stone-200">
                     <p className="text-sm font-bold text-stone-700 mb-2 flex items-center gap-1"><Truck size={16}/> 運費與免運</p>
                     <div className="flex items-center justify-between mb-2"><span className="text-xs text-stone-500">基本運費 ($)</span><input type="number" value={tempConfig.shippingFee} onChange={e => setTempConfig({...tempConfig, shippingFee: e.target.value})} className="w-20 bg-white border border-stone-300 rounded p-1 text-sm outline-none text-right font-bold focus:border-amber-500" /></div>
@@ -5275,9 +5401,10 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
                   />
                 </div>
                 {/* 👆👆 =================================== 👆👆 */}
-
-              </div>
-              <button onClick={saveSystemConfig} className="mt-5 w-full bg-stone-800 text-white font-bold py-3 rounded-xl shadow-md active:scale-95 transition-transform">儲存設定</button>
+                </div>
+                <div className="shrink-0 border-t border-stone-100 px-5 py-4 bg-white">
+                  <button type="button" onClick={saveSystemConfig} className="w-full bg-stone-800 text-white font-bold py-3 rounded-xl shadow-md active:scale-95 transition-transform">儲存設定</button>
+                </div>
               </div>
             </div>
           )}
@@ -5289,9 +5416,35 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
                 <button onClick={() => {setShowAnnounceConfig(false); setIsEditingAnnounce(false);}} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full"><X size={20} /></button>
                 <h2 className="text-lg font-bold text-stone-800 mb-4 flex items-center justify-between border-b border-stone-100 pb-3">
                   <span className="flex items-center gap-2"><Megaphone size={20} className="text-purple-600"/> 系統公告設定</span>
-                  {!isEditingAnnounce && <button onClick={() => {setTempAnnounce({ title: '', content: '', image: '', isActive: false, showOnLoad: false, isPermanent: true, expireDate: '' }); setIsEditingAnnounce(true);}} className="bg-purple-100 text-purple-700 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-purple-200 flex items-center gap-1"><Plus size={14}/>新增公告</button>}
+                  {!isEditingAnnounce && <button onClick={() => {setTempAnnounce({ title: '', content: '', image: '', isActive: false, isPermanent: true, expireDate: '' }); setIsEditingAnnounce(true);}} className="bg-purple-100 text-purple-700 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-purple-200 flex items-center gap-1"><Plus size={14}/>新增公告</button>}
                 </h2>
-                
+
+                <div className="mb-4 rounded-2xl border border-purple-100 bg-purple-50/70 px-3 py-3 space-y-2">
+                  <div className="text-xs font-bold text-stone-700">首頁公告輪播間隔</div>
+                  <p className="text-[10px] text-stone-500 leading-relaxed">2～120 秒；多則有圖且啟用之公告會自動輪播。</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      type="number"
+                      min={2}
+                      max={120}
+                      className="w-24 bg-white border border-stone-200 rounded-lg px-2 py-2 text-sm font-bold outline-none focus:border-purple-500"
+                      value={announceCarouselIntervalSec}
+                      onChange={(e) => {
+                        const v = Number(e.target.value);
+                        if (Number.isFinite(v)) setAnnounceCarouselIntervalSec(v);
+                      }}
+                    />
+                    <span className="text-sm text-stone-600 font-bold">秒</span>
+                    <button
+                      type="button"
+                      onClick={saveAnnounceCarouselInterval}
+                      className="ml-auto bg-purple-600 text-white text-xs font-bold px-3 py-2 rounded-xl hover:bg-purple-700 active:scale-95 transition-transform"
+                    >
+                      儲存間隔
+                    </button>
+                  </div>
+                </div>
+
                 <div className="flex-1 overflow-y-auto min-h-[50vh]">
                   {!isEditingAnnounce ? (
                     <div className="space-y-3">
@@ -5310,12 +5463,12 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
                                </div>
                                <p className="text-xs text-stone-500 truncate mb-1">{ann.content}</p>
                                <div className="text-[10px] text-stone-400 mt-auto">
-                                 {ann.isPermanent ? '永久顯示' : (ann.expireDate ? `顯示至 ${ann.expireDate}` : '未設定期限')} | {ann.showOnLoad ? '進站主動彈出' : '僅顯示標題列'}
+                                 {ann.isPermanent ? '永久顯示' : (ann.expireDate ? `顯示至 ${ann.expireDate}` : '未設定期限')} | 首頁輪播（有圖）
                                </div>
                              </div>
                              
                              <div className="absolute top-3 right-3 flex gap-1">
-                               <button onClick={() => {setTempAnnounce(ann); setIsEditingAnnounce(true);}} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-md bg-white border border-blue-100 shadow-sm"><EditIcon size={16}/></button>
+                               <button onClick={() => { const { showOnLoad: _ignored, ...rest } = ann; setTempAnnounce(rest); setIsEditingAnnounce(true);}} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-md bg-white border border-blue-100 shadow-sm"><EditIcon size={16}/></button>
                                <button onClick={() => deleteAnnouncement(ann.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-md bg-white border border-red-100 shadow-sm"><Trash2 size={16}/></button>
                              </div>
                           </div>
@@ -5355,10 +5508,6 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
                        </div>
 
                        <div className="bg-stone-50 p-3 rounded-xl border border-stone-200 space-y-3">
-                          <label className="flex items-center gap-2 text-sm font-bold text-stone-700 cursor-pointer">
-                             <input type="checkbox" checked={tempAnnounce.showOnLoad} onChange={e=>setTempAnnounce({...tempAnnounce, showOnLoad: e.target.checked})} className="accent-purple-600 w-4 h-4"/> 首頁載入時主動跳出大視窗 (每個用戶只跳一次)
-                          </label>
-                          <div className="border-t border-stone-200 pt-3">
                              <label className="flex items-center gap-2 text-sm font-bold text-stone-700 cursor-pointer mb-2">
                                 <input type="checkbox" checked={tempAnnounce.isPermanent} onChange={e=>setTempAnnounce({...tempAnnounce, isPermanent: e.target.checked})} className="accent-purple-600 w-4 h-4"/> 永久顯示 (不設定期限)
                              </label>
@@ -5368,7 +5517,6 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
                                    <input type="date" value={tempAnnounce.expireDate||''} onChange={e=>setTempAnnounce({...tempAnnounce, expireDate: e.target.value})} className="bg-white border border-stone-300 rounded px-2 py-1 outline-none focus:border-purple-400" />
                                 </div>
                              )}
-                          </div>
                        </div>
                     </div>
                   )}
