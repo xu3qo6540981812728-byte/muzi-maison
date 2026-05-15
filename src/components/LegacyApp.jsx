@@ -54,8 +54,15 @@ import AdminDashboardModal from './admin/AdminDashboardModal'
 import AdminOrdersModal from './admin/AdminOrdersModal'
 import AdminLogsModal from './admin/AdminLogsModal'
 import AdminCustomersModal from './admin/AdminCustomersModal'
+import PaymentConfirmModal from './admin/PaymentConfirmModal'
 import GroupBuyHost from './group/GroupBuyHost'
-import { PAID_STATUSES, STATUS_MAP } from '../constants/orderStatus'
+import {
+  AWAITING_PAYMENT_STATUSES,
+  CANCELLABLE_ORDER_STATUSES,
+  PAID_STATUSES,
+  STATUS_MAP
+} from '../constants/orderStatus'
+import { getPaymentMethodLabel } from '../constants/paymentMethod'
 import useMonthlyStats from '../hooks/useMonthlyStats'
 import { getDiscountDisplay, getDiscountPdfBlockHtml } from '../utils/discountDisplay'
 import {
@@ -73,6 +80,13 @@ import {
   appendGiftLinesToCart,
   buildPricingSnapshot
 } from '../shared/orderPricing.js'
+import {
+  LINE_PAYMENT_REMINDER,
+  LINE_PAYMENT_REMINDER_SHORT,
+  buildCheckoutLineReportText,
+  buildOrderLineReportText
+} from '../constants/linePayment'
+import { stripBankAccountFromContact } from '../utils/stripPublicContact'
 
 if (typeof window !== 'undefined') {
   window.jspdf = { jsPDF }
@@ -145,13 +159,12 @@ function toAbsoluteOgUrl(origin, url) {
       const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '', address: '', email: '', lineId: '', gender: '女' });
       
       const [orderNote, setOrderNote] = useState('');
-      const [checkoutBankCode, setCheckoutBankCode] = useState('');
-      
-
-      const [bankCodeInputs, setBankCodeInputs] = useState({});
       const [trackingInputs, setTrackingInputs] = useState({});
       const [adminNoteInputs, setAdminNoteInputs] = useState({});
       const [adminDiscountInputs, setAdminDiscountInputs] = useState({});
+      const [paymentConfirmOrder, setPaymentConfirmOrder] = useState(null);
+      const [paymentConfirmMethod, setPaymentConfirmMethod] = useState('');
+      const [paymentConfirmNote, setPaymentConfirmNote] = useState('');
 
       const [orderSearchId, setOrderSearchId] = useState('');
       const [orderStatusFilter, setOrderStatusFilter] = useState('all');
@@ -714,7 +727,16 @@ useEffect(() => {
         });
 
         const unsubscribeContact = db.collection('settings').doc('contact').onSnapshot(doc => {
-          if (doc.exists) setContactData({ address: '', phone: '', lineLink: '', email: '', bankAccount: '', businessHours: '', ...doc.data() });
+          if (doc.exists) {
+            setContactData({
+              address: '',
+              phone: '',
+              lineLink: '',
+              email: '',
+              businessHours: '',
+              ...stripBankAccountFromContact(doc.data())
+            })
+          }
         });
 
         const unsubscribeConfig = db.collection('settings').doc('config').onSnapshot(doc => {
@@ -1718,12 +1740,9 @@ useEffect(() => {
         if (!currentUser && !adminOrderingFor) return alert("請先登入或註冊會員！");
         if (!customerInfo.name || !customerInfo.phone) return alert("請填寫訂購人姓名與電話！");
         if (!customerInfo.address) return alert("請務必填寫聯絡/收件地址！");
-        if (checkoutBankCode && checkoutBankCode.length > 0 && checkoutBankCode.length < 5) return alert("若要直接回報匯款，請輸入完整的後五碼！");
-      
-
         let finalUserId = adminOrderingFor ? adminOrderingFor.id : (currentUser ? currentUser.uid : 'guest');
         const orderId = `MZ${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 900 + 100)}`;
-        const initialStatus = (checkoutBankCode && checkoutBankCode.length === 5) ? 'confirming' : 'pending';
+        const initialStatus = 'confirming';
         const orderDraftItems = cartData.items
           .filter((item) => !item.isGift)
           .map((item) => ({ ...item }))
@@ -1760,7 +1779,7 @@ useEffect(() => {
                 : {})
             },
             pricingSnapshot: buildPricingSnapshot(storeConfig),
-            deliveryMethod, status: initialStatus, bankAccountLast5: checkoutBankCode || '', trackingNumber: '', orderNote, adminDiscount: 0,
+            deliveryMethod, status: initialStatus, bankAccountLast5: '', trackingNumber: '', orderNote, adminDiscount: 0,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             createdByAdmin: !!adminOrderingFor 
           }
@@ -1816,14 +1835,14 @@ try {
         } catch (e) {
           console.log("LINE通知模組執行錯誤", e);
         }
-        setCart({}); setIsCartOpen(false); setOrderNote(''); setCheckoutBankCode(''); 
+        setCart({}); setIsCartOpen(false); setOrderNote('');
 
         if (adminOrderingFor) {
            alert(`成功為客戶 ${adminOrderingFor.name} 建立訂單！`);
            setAdminOrderingFor(null);
            setShowAdminOrders(true);
         } else {
-           alert("訂單已成功送出！請於您的訂單列表複製明細並加 LINE 通知我們喔！");
+           alert(`訂單已成功送出！${LINE_PAYMENT_REMINDER_SHORT}`);
            setCheckoutSuccessInfo({
              orderId,
              customerName: customerInfo.name,
@@ -1831,7 +1850,6 @@ try {
              address: customerInfo.address,
              deliveryMethod,
              totalPrice: cartData.finalPrice,
-             bankCode: checkoutBankCode || '',
              lineLink: contactData.lineLink || ''
            })
            setShowMemberProfile(true);
@@ -1840,16 +1858,14 @@ try {
 
       const handleCopyCheckoutTemplate = () => {
         if (!checkoutSuccessInfo) return
-        const template = [
-          '【木子家 MUZI MAISON 訂單回報】',
-          `訂單編號：${checkoutSuccessInfo.orderId}`,
-          `訂購人：${checkoutSuccessInfo.customerName}`,
-          `聯絡電話：${checkoutSuccessInfo.customerPhone}`,
-          `取貨方式：${checkoutSuccessInfo.deliveryMethod === 'delivery' ? '宅配' : '自取'}`,
-          `地址：${checkoutSuccessInfo.address}`,
-          `總金額：$${checkoutSuccessInfo.totalPrice}`,
-          `匯款後五碼：${checkoutSuccessInfo.bankCode || '（尚未填寫）'}`
-        ].join('\n')
+        const template = buildCheckoutLineReportText({
+          orderId: checkoutSuccessInfo.orderId,
+          customerName: checkoutSuccessInfo.customerName,
+          customerPhone: checkoutSuccessInfo.customerPhone,
+          address: checkoutSuccessInfo.address,
+          deliveryMethod: checkoutSuccessInfo.deliveryMethod,
+          totalPrice: checkoutSuccessInfo.totalPrice
+        })
         const copyFallback = (t) => {
           const ta = document.createElement('textarea')
           ta.value = t
@@ -1865,24 +1881,12 @@ try {
         } else {
           copyFallback(template)
         }
-        alert('已複製「訂單編號 + 後五碼」回報模板')
+        alert('已複製訂單明細')
       }
 
       const handleCopyOrder = (order) => {
-        const currentBankCode = bankCodeInputs[order.id] || order.bankAccountLast5;
-        if (!currentBankCode || currentBankCode.length < 5) { alert("⚠️ 請先在下方填寫完整的「匯款後五碼」才可複製明細喔！"); return; }
-        let text = `*【木子家 MUZI MAISON 新訂單】*\n\n訂單編號：${order.id}\n訂購人：${order.customerInfo.name}\n聯絡電話：${order.customerInfo.phone}\n取貨方式：${order.deliveryMethod === 'delivery' ? '宅配' : '自取'}\n地址：${order.customerInfo.address}\n----------------------\n`;
-        order.items.forEach(item => {
-          const splitTag = item.groupSplitLabel ? `（${item.groupSplitLabel}）` : ''
-          text += `▪️ ${item.name} ${item.weight ? `(${item.weight})` : ''}${splitTag} x ${item.qty} ${item.unit || ''}\n`
-        });
-        text += `----------------------\n`;
-        if (order.adminDiscount > 0) text += `*手動折扣*：-$${order.adminDiscount}\n`;
-        
-        text += `*總計金額：$${order.totals.finalPrice}*\n`;
-        if (order.bankAccountLast5) { text += `*匯款後五碼*：${order.bankAccountLast5}\n`; }
-        if (order.orderNote) { text += `*備註事項*：${order.orderNote}\n`; }
-        text += `\n(⚠️ 已於網站送出訂單，請您確認喔！)\n`;
+        let text = buildOrderLineReportText(order)
+        text += `\n(⚠️ 已於網站送出訂單，請您確認喔！)\n`
 
         const copyFallback = (t) => {
           const ta = document.createElement("textarea"); ta.value = t; ta.style.position = "fixed"; ta.style.left = "-999999px";
@@ -1892,34 +1896,39 @@ try {
         if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(text).then(() => { setCopiedOrderId(order.id); setTimeout(() => setCopiedOrderId(null), 2000); }).catch(() => copyFallback(text)); } else { copyFallback(text); }
       };
 
-      const submitBankCode = async (orderId) => {
-        const code = bankCodeInputs[orderId];
-        if (!code || code.length < 5) return alert("請輸入完整的後五碼！");
-        if (db) { await db.collection('orders').doc(orderId).update({ bankAccountLast5: code, status: 'confirming' }); alert("已送出匯款後五碼，請稍候管理員確認！"); }
-      };
-
       const requestCancelOrder = async (orderOrId) => {
         const orderId = typeof orderOrId === 'string' ? orderOrId : orderOrId?.id
         const orderStatus =
           typeof orderOrId === 'string'
             ? (myOrders.find((o) => o.id === orderOrId)?.status || '')
             : (orderOrId?.status || '')
-        if (orderStatus && orderStatus !== 'pending') {
-          alert('訂單進入「確認中」或之後狀態後，無法再申請取消')
+        if (orderStatus && !CANCELLABLE_ORDER_STATUSES.includes(orderStatus)) {
+          alert('訂單進入「待付款確認」之後的狀態，無法再申請取消')
           return
         }
         if (!window.confirm("確定要申請取消此訂單嗎？（需等待管理員同意）")) return;
         if (db) { await db.collection('orders').doc(orderId).update({ status: 'cancel_requested' }); alert("已送出取消申請！"); }
       };
 
-      const updateOrderStatus = async (order, newStatus) => { 
+      const updateOrderStatus = async (order, newStatus, paymentInfo = null) => { 
          if (!requireAdminAccess()) return;
          if (!db) return;
+         if (newStatus === 'confirmed' && !PAID_STATUSES.includes(order.status)) {
+           if (!paymentInfo?.paymentMethod) {
+             alert('請選擇付款方式後再標記為已付款')
+             return
+           }
+         }
          const batch = db.batch();
          const orderRef = db.collection('orders').doc(order.id);
 
-         // 1. 更新訂單本身的狀態
-         batch.update(orderRef, { status: newStatus });
+         const statusPatch = { status: newStatus }
+         if (newStatus === 'confirmed' && paymentInfo?.paymentMethod) {
+           statusPatch.paymentMethod = paymentInfo.paymentMethod
+           statusPatch.paymentNote = paymentInfo.paymentNote || ''
+           statusPatch.paymentConfirmedAt = firebase.firestore.FieldValue.serverTimestamp()
+         }
+         batch.update(orderRef, statusPatch);
 
          // ==========================================
          // 🌟 終極防呆版：小白板記帳功能 (支援自動退帳與防重複計算)
@@ -1964,25 +1973,68 @@ try {
          // ==========================================
 
          await batch.commit();
+         const logChanges = [
+           {
+             field: 'status',
+             label: '訂單狀態',
+             before: STATUS_MAP[order.status]?.label || order.status || '（空）',
+             after: STATUS_MAP[newStatus]?.label || newStatus || '（空）'
+           }
+         ]
+         if (paymentInfo?.paymentMethod) {
+           logChanges.push({
+             field: 'paymentMethod',
+             label: '付款方式',
+             before: getPaymentMethodLabel(order.paymentMethod) || '（空）',
+             after: getPaymentMethodLabel(paymentInfo.paymentMethod)
+           })
+           if (paymentInfo.paymentNote) {
+             logChanges.push({
+               field: 'paymentNote',
+               label: '付款備註',
+               before: order.paymentNote || '（空）',
+               after: paymentInfo.paymentNote
+             })
+           }
+         }
          await writeAdminLog('order_status_updated', {
            orderId: order.id,
            fromStatus: order.status,
            toStatus: newStatus,
-           changes: [
-             {
-               field: 'status',
-               label: '訂單狀態',
-               before: STATUS_MAP[order.status]?.label || order.status || '（空）',
-               after: STATUS_MAP[newStatus]?.label || newStatus || '（空）'
-             }
-           ]
+           changes: logChanges
          })
 
-         // 🌟 修正2：消除視覺假死！手動更新沒有即時連線的「舊訂單」與「搜尋結果」的畫面狀態
-         setOldOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: newStatus } : o));
+         const localPatch = { status: newStatus, ...(paymentInfo?.paymentMethod ? {
+           paymentMethod: paymentInfo.paymentMethod,
+           paymentNote: paymentInfo.paymentNote || ''
+         } : {}) }
+         setOldOrders(prev => prev.map(o => o.id === order.id ? { ...o, ...localPatch } : o));
          if (cloudSearchResult && cloudSearchResult.id === order.id) {
-            setCloudSearchResult(prev => ({ ...prev, status: newStatus }));
+            setCloudSearchResult(prev => ({ ...prev, ...localPatch }));
          }
+      };
+
+      const requestOrderStatusChange = (order, newStatus) => {
+        if (newStatus === order.status) return
+        if (newStatus === 'confirmed' && !PAID_STATUSES.includes(order.status)) {
+          setPaymentConfirmOrder(order)
+          setPaymentConfirmMethod(order.paymentMethod || '')
+          setPaymentConfirmNote(order.paymentNote || '')
+          return
+        }
+        updateOrderStatus(order, newStatus)
+      };
+
+      const confirmPaymentAndUpdateStatus = async () => {
+        if (!paymentConfirmOrder) return
+        if (!paymentConfirmMethod) return alert('請選擇付款方式')
+        await updateOrderStatus(paymentConfirmOrder, 'confirmed', {
+          paymentMethod: paymentConfirmMethod,
+          paymentNote: paymentConfirmNote.trim()
+        })
+        setPaymentConfirmOrder(null)
+        setPaymentConfirmMethod('')
+        setPaymentConfirmNote('')
       };
       
       const saveTrackingNumber = async (orderId) => {
@@ -2374,7 +2426,7 @@ const ordersToMerge = currentOrders.filter(o => mergeSelection.includes(o.id));
                 : {})
             },
             pricingSnapshot: buildPricingSnapshot(storeConfig),
-            deliveryMethod: baseOrder.deliveryMethod, status: 'pending', bankAccountLast5: '', trackingNumber: '', orderNote: combinedNotes, adminDiscount: totalAdminDiscount,
+            deliveryMethod: baseOrder.deliveryMethod, status: 'confirming', bankAccountLast5: '', trackingNumber: '', orderNote: combinedNotes, adminDiscount: totalAdminDiscount,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(), isMerged: true, mergeNote: `系統備註：由舊單號 ${mergeSelection.join(', ')} 合併產生。`
           });
           mergeSelection.forEach(id => { batch.delete(db.collection('orders').doc(id)); });
@@ -2468,7 +2520,7 @@ const ordersToMerge = currentOrders.filter(o => mergeSelection.includes(o.id));
 
           // 3. 開始組合 CSV 內容
           let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; 
-          csvContent += "訂單編號,建立時間,狀態,訂購人,性別,電話,Line ID,取貨方式,地址,商品明細,運費,手動折扣,總金額,總成本,匯款後五碼,出貨單號,買家備註,系統備註\n";
+          csvContent += "訂單編號,建立時間,狀態,訂購人,性別,電話,Line ID,取貨方式,地址,商品明細,運費,手動折扣,總金額,總成本,付款方式,付款備註,出貨單號,買家備註,系統備註\n";
 
           snapshot.docs.forEach(doc => {
             const o = { id: doc.id, ...doc.data() };
@@ -2483,7 +2535,8 @@ const ordersToMerge = currentOrders.filter(o => mergeSelection.includes(o.id));
             const row = [
               o.id, date, status, o.customerInfo.name, o.customerInfo.gender || '', o.customerInfo.phone, o.customerInfo.lineId || '',
               o.deliveryMethod === 'delivery' ? '宅配' : '自取', o.customerInfo.address || '',
-              itemsStr, o.totals.shippingFee, o.adminDiscount || 0, o.totals.finalPrice, o.totals.totalCost || 0, o.bankAccountLast5 || '', o.trackingNumber || '', o.orderNote || '', o.mergeNote || ''
+              itemsStr, o.totals.shippingFee, o.adminDiscount || 0, o.totals.finalPrice, o.totals.totalCost || 0,
+              getPaymentMethodLabel(o.paymentMethod) || '', o.paymentNote || '', o.trackingNumber || '', o.orderNote || '', o.mergeNote || ''
             ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(',');
             
             csvContent += row + "\n";
@@ -2508,7 +2561,7 @@ const ordersToMerge = currentOrders.filter(o => mergeSelection.includes(o.id));
       const handlePrintConfirmedOrders = async () => {
         if (!requireAdminAccess()) return;
         const confirmedOrders = allOrders.filter(o => o.status === 'confirmed');
-        if (confirmedOrders.length === 0) return alert("目前沒有「已匯款，確認訂單」狀態的訂單可以列印！");
+        if (confirmedOrders.length === 0) return alert("目前沒有「已付款確認訂單」狀態的訂單可以列印！");
 
         alert("⏳ 系統正在為您進行「防裁切排版」並生成高畫質 PDF...\n(若訂單量較多，可能需要數十秒鐘，請勿關閉網頁)");
 
@@ -3471,7 +3524,8 @@ const uploadTask = await storageRef.put(blob, metadata);
 
       const saveContactInfo = async () => {
         if (!requireAdminAccess()) return;
-        if (db) await db.collection('settings').doc('contact').set(contactData, { merge: true });
+        const contactToSave = stripBankAccountFromContact(contactData)
+        if (db) await db.collection('settings').doc('contact').set(contactToSave, { merge: true });
         await writeAdminLog('contact_info_updated', {
           hasPhone: !!contactData.phone,
           hasAddress: !!contactData.address,
@@ -4917,9 +4971,6 @@ const uploadTask = await storageRef.put(blob, metadata);
             setCustomerInfo={setCustomerInfo}
             orderNote={orderNote}
             setOrderNote={setOrderNote}
-            contactData={contactData}
-            checkoutBankCode={checkoutBankCode}
-            setCheckoutBankCode={setCheckoutBankCode}
             onRequireLogin={() => {
               setIsCartOpen(false)
               openCheckoutEntryChoice()
@@ -5080,9 +5131,6 @@ const uploadTask = await storageRef.put(blob, metadata);
               contactData={contactData}
               copiedOrderId={copiedOrderId}
               handleCopyOrder={handleCopyOrder}
-              bankCodeInputs={bankCodeInputs}
-              setBankCodeInputs={setBankCodeInputs}
-              submitBankCode={submitBankCode}
               requestCancelOrder={requestCancelOrder}
               onQuickReorder={(productId) => navigate(`/product/${productId}`)}
               onReorderLastOrder={handleReorderLatest}
@@ -5103,15 +5151,18 @@ const uploadTask = await storageRef.put(blob, metadata);
             <div className="fixed inset-0 z-[70] flex justify-center items-center bg-black/50 backdrop-blur-sm px-4">
               <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-5 border border-stone-200">
                 <h3 className="text-lg font-black text-stone-800 mb-2">訂單送出成功</h3>
-                <p className="text-sm text-stone-600 mb-4">
-                  建議先複製回報模板，再前往 LINE 貼上，對帳會更快。
+                <p className="text-sm text-stone-600 mb-2">
+                  請複製訂單明細後，至官方 LINE 貼上傳送。
+                </p>
+                <p className="text-xs text-stone-500 mb-4 leading-relaxed">
+                  {LINE_PAYMENT_REMINDER}
                 </p>
                 <div className="bg-stone-50 border border-stone-200 rounded-lg p-3 text-sm text-stone-700 mb-4">
                   訂單編號：<span className="font-bold">{checkoutSuccessInfo.orderId}</span>
                 </div>
                 <div className="flex gap-2">
                   <button onClick={handleCopyCheckoutTemplate} className="flex-1 bg-stone-800 text-white py-2.5 rounded-lg font-bold">
-                    複製回報模板
+                    複製明細
                   </button>
                   {checkoutSuccessInfo.lineLink ? (
                     <a href={checkoutSuccessInfo.lineLink} target="_blank" rel="noreferrer" className="flex-1 bg-[#06C755] text-white py-2.5 rounded-lg font-bold text-center">
@@ -5247,8 +5298,8 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
                             </div>
                           </div>
                           <div className="bg-white p-4 rounded-2xl border border-amber-100 shadow-sm flex flex-col justify-center">
-                            <span className="text-xs font-bold text-amber-500 mb-1">未處理/確認中訂單</span>
-                            <span className="text-2xl md:text-3xl font-black text-stone-800 text-amber-600">{statusCounts.pending + statusCounts.confirming}</span>
+                            <span className="text-xs font-bold text-amber-500 mb-1">待付款確認</span>
+                            <span className="text-2xl md:text-3xl font-black text-stone-800 text-amber-600">{AWAITING_PAYMENT_STATUSES.reduce((n, k) => n + (statusCounts[k] || 0), 0)}</span>
                           </div>
                         </div>
 
@@ -5322,9 +5373,9 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
                             {totalOrdersCount === 0 ? <p className="text-sm text-stone-400 text-center py-6">尚無訂單數據</p> : (
                               <div className="space-y-3">
                                 {[
-                                  { key: 'pending', label: '未處理', color: 'bg-rose-500' },
-                                  { key: 'confirming', label: '確認中 (已傳後五碼)', color: 'bg-amber-500' },
-                                  { key: 'confirmed', label: '已確認 (待出貨)', color: 'bg-blue-500' },
+                                  { key: 'pending', label: '未處理（舊）', color: 'bg-rose-500' },
+                                  { key: 'confirming', label: '待付款確認', color: 'bg-amber-500' },
+                                  { key: 'confirmed', label: '已付款（待出貨）', color: 'bg-blue-500' },
                                   { key: 'shipping', label: '出貨中', color: 'bg-violet-500' },
                                   { key: 'shipped', label: '已出貨', color: 'bg-purple-500' },
                                   { key: 'completed', label: '已完成', color: 'bg-emerald-500' }
@@ -5376,7 +5427,7 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
               downloadOrdersCSV={downloadOrdersCSV}
               filteredAdminOrders={pagedAdminOrders}
               statusMap={STATUS_MAP}
-              updateOrderStatus={updateOrderStatus}
+              requestOrderStatusChange={requestOrderStatusChange}
               deleteOrder={deleteOrder}
               trackingInputs={trackingInputs}
               setTrackingInputs={setTrackingInputs}
@@ -5453,14 +5504,14 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
                                 {order.createdByAdmin && <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded mt-1 inline-block ml-1">代建單</span>}
                               </div>
                               <div className="flex items-center gap-2">
-                                <select value={order.status || 'pending'} onChange={(e) => updateOrderStatus(order, e.target.value)} className={`text-xs font-bold outline-none rounded p-1.5 cursor-pointer shadow-sm border border-stone-200 ${STATUS_MAP[order.status]?.color || 'bg-stone-100 text-stone-700'}`}>
+                                <select value={order.status || 'confirming'} onChange={(e) => requestOrderStatusChange(order, e.target.value)} className={`text-xs font-bold outline-none rounded p-1.5 cursor-pointer shadow-sm border border-stone-200 ${STATUS_MAP[order.status]?.color || 'bg-stone-100 text-stone-700'}`}>
                                   {Object.entries(STATUS_MAP).map(([key, info]) => <option key={key} value={key}>{info.label}</option>)}
                                 </select>
                                 <button onClick={() => deleteOrder(order.id)} className="text-stone-300 hover:text-red-500 transition-colors p-1"><Trash2 size={16} /></button>
                               </div>
                             </div>
                             
-                            {order.status === 'confirming' && <div className="mb-3 bg-amber-50 text-amber-700 text-xs font-bold p-2 rounded-lg text-center border border-amber-200">💰 客填後五碼：<span className="text-base tracking-widest">{order.bankAccountLast5}</span></div>}
+                            {order.status === 'confirming' && <div className="mb-3 bg-amber-50 text-amber-700 text-xs font-bold p-2 rounded-lg text-center border border-amber-200">等待 LINE 付款確認</div>}
                             {isCancelReq && <div className="mb-3 bg-orange-50 text-orange-700 text-xs font-bold p-2 rounded-lg text-center border border-orange-200 animate-pulse">⚠️ 買家已送出取消申請，請審核！</div>}
                             {(order.status === 'shipping' || order.status === 'shipped') && (
                               <div className="mb-3 flex gap-2">
@@ -6196,7 +6247,7 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
                   <div className="flex items-start gap-3"><div className="bg-stone-100 p-2 rounded-full text-stone-500 shrink-0"><Phone size={18} /></div><div className="flex-1"><p className="text-xs font-bold text-stone-400 mb-1">電話</p>{isAdminMode && !adminOrderingFor ? <input type="tel" value={contactData.phone} onChange={e => setContactData({...contactData, phone: e.target.value})} placeholder="聯絡電話" className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-500" /> : (contactData.phone ? <a href={`tel:${contactData.phone}`} className="text-sm font-bold text-amber-600 hover:underline">{contactData.phone}</a> : <p className="text-sm text-stone-700 font-medium">尚未設定</p>)}</div></div>
                   <div className="flex items-start gap-3"><div className="bg-[#06C755]/10 p-2 rounded-full text-[#06C755] shrink-0"><MessageCircle size={18} /></div><div className="flex-1"><p className="text-xs font-bold text-stone-400 mb-1">LINE 連結</p>{isAdminMode && !adminOrderingFor ? <input type="url" value={contactData.lineLink} onChange={e => setContactData({...contactData, lineLink: e.target.value})} placeholder="https://line.me/..." className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-500" /> : (contactData.lineLink ? <a href={contactData.lineLink} target="_blank" rel="noreferrer" className="text-sm font-bold text-[#06C755] hover:underline">點我加 LINE 聯繫</a> : <p className="text-sm text-stone-700 font-medium">尚未設定</p>)}</div></div>
                   <div className="flex items-start gap-3"><div className="bg-stone-100 p-2 rounded-full text-stone-500 shrink-0"><Mail size={18} /></div><div className="flex-1"><p className="text-xs font-bold text-stone-400 mb-1">Email</p>{isAdminMode && !adminOrderingFor ? <input type="email" value={contactData.email} onChange={e => setContactData({...contactData, email: e.target.value})} placeholder="Email" className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-500" /> : (contactData.email ? <a href={`mailto:${contactData.email}`} className="text-sm font-bold text-amber-600 hover:underline break-all">{contactData.email}</a> : <p className="text-sm text-stone-700 font-medium">尚未設定</p>)}</div></div>
-                  <div className="flex items-start gap-3"><div className="bg-stone-100 p-2 rounded-full text-stone-500 shrink-0"><CreditCard size={18} /></div><div className="flex-1"><p className="text-xs font-bold text-stone-400 mb-1">匯款帳號</p>{isAdminMode && !adminOrderingFor ? <textarea value={contactData.bankAccount || ''} onChange={e => setContactData({...contactData, bankAccount: e.target.value})} placeholder="例如：某某銀行 (808) 1234-5678-9000" rows="2" className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-500"></textarea> : <p className="text-sm text-stone-700 font-medium whitespace-pre-wrap">{contactData.bankAccount || '尚未設定'}</p>}</div></div>
+                  <div className="flex items-start gap-3"><div className="bg-[#06C755]/10 p-2 rounded-full text-[#06C755] shrink-0"><MessageCircle size={18} /></div><div className="flex-1"><p className="text-xs font-bold text-stone-400 mb-1">付款方式</p><p className="text-sm text-stone-700 font-medium whitespace-pre-wrap leading-relaxed">{LINE_PAYMENT_REMINDER}</p></div></div>
                 </div>
                 {isAdminMode && !adminOrderingFor && <button onClick={saveContactInfo} className="mt-6 w-full bg-amber-500 text-white font-bold py-3 rounded-xl shadow-md active:scale-95 transition-transform">儲存聯絡資訊</button>}
               </div>
@@ -6290,6 +6341,21 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
                 </div>
               </div>
             </div>
+          )}
+          {paymentConfirmOrder && (
+            <PaymentConfirmModal
+              order={paymentConfirmOrder}
+              paymentMethod={paymentConfirmMethod}
+              setPaymentMethod={setPaymentConfirmMethod}
+              paymentNote={paymentConfirmNote}
+              setPaymentNote={setPaymentConfirmNote}
+              onConfirm={confirmPaymentAndUpdateStatus}
+              onCancel={() => {
+                setPaymentConfirmOrder(null)
+                setPaymentConfirmMethod('')
+                setPaymentConfirmNote('')
+              }}
+            />
           )}
           <LineFloatButton lineLink={contactData.lineLink} />
         </div>

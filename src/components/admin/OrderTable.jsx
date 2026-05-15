@@ -1,12 +1,14 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { Eye, Trash2, X } from '../Icons'
 import { getDiscountDisplay } from '../../utils/discountDisplay'
+import { getPaymentMethodLabel } from '../../constants/paymentMethod'
+import { PAID_STATUSES } from '../../constants/orderStatus'
 
 function OrderDetailModal({
   order,
   onClose,
   statusMap,
-  updateOrderStatus,
+  requestOrderStatusChange,
   deleteOrder,
   trackingInputs,
   setTrackingInputs,
@@ -79,7 +81,15 @@ function OrderDetailModal({
 
         {order.status === 'confirming' && (
           <div className="mb-3 bg-amber-50 text-amber-700 text-xs font-bold p-2 rounded-lg text-center border border-amber-200">
-            客填後五碼：<span className="text-base tracking-widest">{order.bankAccountLast5}</span>
+            等待客戶於 LINE 完成付款確認
+          </div>
+        )}
+        {PAID_STATUSES.includes(order.status) && order.paymentMethod && (
+          <div className="mb-3 bg-blue-50 text-blue-800 text-xs font-bold p-2 rounded-lg border border-blue-200">
+            付款方式：{getPaymentMethodLabel(order.paymentMethod)}
+            {order.paymentNote ? (
+              <span className="block mt-1 font-normal text-blue-700">備註：{order.paymentNote}</span>
+            ) : null}
           </div>
         )}
 
@@ -151,8 +161,8 @@ function OrderDetailModal({
         <div className="flex flex-wrap gap-2 items-center mb-4 border-t border-stone-200 pt-3">
           <span className="text-xs font-bold text-stone-500">狀態</span>
           <select
-            value={order.status || 'pending'}
-            onChange={(e) => updateOrderStatus(order, e.target.value)}
+            value={order.status || 'confirming'}
+            onChange={(e) => requestOrderStatusChange(order, e.target.value)}
             className={`text-xs font-bold outline-none rounded p-1.5 cursor-pointer shadow-sm border border-stone-200 ${
               statusMap?.[order.status]?.color || 'bg-stone-100 text-stone-700'
             }`}
@@ -262,7 +272,7 @@ function OrderDetailModal({
 export default function OrderTable({
   orders,
   statusMap,
-  updateOrderStatus,
+  requestOrderStatusChange,
   deleteOrder,
   trackingInputs,
   setTrackingInputs,
@@ -353,8 +363,8 @@ export default function OrderTable({
                     </td>
                     <td className="px-2 py-2 align-top">
                       <select
-                        value={order.status || 'pending'}
-                        onChange={(e) => updateOrderStatus(order, e.target.value)}
+                        value={order.status || 'confirming'}
+                        onChange={(e) => requestOrderStatusChange(order, e.target.value)}
                         className={`w-full max-w-[132px] text-[11px] font-bold outline-none rounded p-1 cursor-pointer shadow-sm border border-stone-200 ${
                           statusMap?.[order.status]?.color || 'bg-stone-100 text-stone-700'
                         }`}
@@ -468,9 +478,12 @@ export default function OrderTable({
                     <tr className="bg-amber-50/80">
                       <td colSpan={10} className="px-3 py-2 text-[11px] font-bold border-b border-stone-100">
                         {order.status === 'confirming' && (
-                          <span className="text-amber-800">
-                            後五碼：{' '}
-                            <span className="tracking-widest font-mono">{order.bankAccountLast5 || '—'}</span>
+                          <span className="text-amber-800">待付款確認 — 請於 LINE 與客戶確認付款</span>
+                        )}
+                        {PAID_STATUSES.includes(order.status) && order.paymentMethod && (
+                          <span className="text-blue-800 block mt-1">
+                            付款：{getPaymentMethodLabel(order.paymentMethod)}
+                            {order.paymentNote ? ` · ${order.paymentNote}` : ''}
                           </span>
                         )}
                         {isCancelReq && (
@@ -492,7 +505,7 @@ export default function OrderTable({
         order={detailLiveOrder}
         onClose={() => setDetailOrder(null)}
         statusMap={statusMap}
-        updateOrderStatus={updateOrderStatus}
+        requestOrderStatusChange={requestOrderStatusChange}
         deleteOrder={deleteOrder}
         trackingInputs={trackingInputs}
         setTrackingInputs={setTrackingInputs}

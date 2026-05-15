@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowUp, ClipboardList, TrendingUp, X } from '../Icons'
+import { AWAITING_PAYMENT_STATUSES } from '../../constants/orderStatus'
 
 export default function AdminDashboardModal({
   onClose,
@@ -228,9 +229,9 @@ export default function AdminDashboardModal({
                   </div>
 
                   <div className="bg-white p-4 rounded-2xl border border-amber-100 shadow-sm flex flex-col justify-center">
-                    <span className="text-xs font-bold text-amber-500 mb-1">未處理/確認中訂單</span>
+                    <span className="text-xs font-bold text-amber-500 mb-1">待付款確認</span>
                     <span className="text-2xl md:text-3xl font-black text-stone-800 text-amber-600">
-                      {statusCounts.pending + statusCounts.confirming}
+                      {AWAITING_PAYMENT_STATUSES.reduce((n, k) => n + (statusCounts[k] || 0), 0)}
                     </span>
                   </div>
                 </div>
@@ -323,9 +324,9 @@ export default function AdminDashboardModal({
                     ) : (
                       <div className="space-y-3">
                         {[
-                          { key: 'pending', label: '未處理', color: 'bg-rose-500' },
-                          { key: 'confirming', label: '確認中 (已傳後五碼)', color: 'bg-amber-500' },
-                          { key: 'confirmed', label: '已確認 (待出貨)', color: 'bg-blue-500' },
+                          { key: 'pending', label: '未處理（舊）', color: 'bg-rose-500' },
+                          { key: 'confirming', label: '待付款確認', color: 'bg-amber-500' },
+                          { key: 'confirmed', label: '已付款（待出貨）', color: 'bg-blue-500' },
                           { key: 'shipping', label: '出貨中', color: 'bg-violet-500' },
                           { key: 'shipped', label: '已出貨', color: 'bg-purple-500' },
                           { key: 'completed', label: '已完成', color: 'bg-emerald-500' }

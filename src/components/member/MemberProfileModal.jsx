@@ -1,7 +1,6 @@
 import {
   CheckCircle,
   Copy,
-  CreditCard,
   EditIcon,
   MessageCircle,
   Minus,
@@ -10,6 +9,11 @@ import {
   X
 } from '../Icons'
 import { getDiscountDisplay } from '../../utils/discountDisplay'
+import { LINE_PAYMENT_REMINDER } from '../../constants/linePayment'
+import {
+  AWAITING_PAYMENT_STATUSES,
+  CANCELLABLE_ORDER_STATUSES
+} from '../../constants/orderStatus'
 
 export default function MemberProfileModal({
   onClose,
@@ -24,9 +28,6 @@ export default function MemberProfileModal({
   contactData,
   copiedOrderId,
   handleCopyOrder,
-  bankCodeInputs,
-  setBankCodeInputs,
-  submitBankCode,
   requestCancelOrder,
   products,
   onQuickReorder,
@@ -255,14 +256,12 @@ export default function MemberProfileModal({
               <div className="space-y-4">
                 {myOrders.map((order) => {
                   const statusInfo =
-                    statusMap?.[order.status] || statusMap?.pending
-                  const isCancellable = order.status === 'pending'
+                    statusMap?.[order.status] || statusMap?.confirming
+                  const isCancellable = CANCELLABLE_ORDER_STATUSES.includes(order.status)
                   const nextStepText =
-                    order.status === 'pending'
-                      ? '下一步：請匯款 + 填後五碼 + LINE 回報'
-                      : order.status === 'confirming'
-                        ? '下一步：等待對帳確認'
-                        : order.status === 'confirmed'
+                    AWAITING_PAYMENT_STATUSES.includes(order.status)
+                      ? '下一步：複製明細並至官方 LINE 傳送，我們會提供匯款帳號'
+                      : order.status === 'confirmed'
                           ? '下一步：預計 5-7 天出貨'
                           : order.status === 'shipping'
                             ? '下一步：店家備貨／出貨中，填寫物流後將顯示為已出貨'
@@ -273,7 +272,7 @@ export default function MemberProfileModal({
                       key={order.id}
                       className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm text-sm relative"
                     >
-                      {['pending', 'confirming'].includes(order.status) && (
+                      {AWAITING_PAYMENT_STATUSES.includes(order.status) && (
                         <div className="absolute top-0 left-0 w-full h-1 bg-[#06C755] rounded-t-2xl"></div>
                       )}
 
@@ -365,10 +364,13 @@ export default function MemberProfileModal({
                         )}
                       </div>
 
-                      {['pending', 'confirming'].includes(order.status) && (
+                      {AWAITING_PAYMENT_STATUSES.includes(order.status) && (
                         <div className="mb-4 p-4 bg-[#06C755]/10 border border-[#06C755]/30 rounded-xl flex flex-col items-center text-center space-y-3">
                           <p className="text-xs font-bold text-[#06C755] flex items-center gap-1">
-                            <MessageCircle size={16} /> 訂單已送出，請點擊下方加 LINE 通知我們才算完成訂單唷！
+                            <MessageCircle size={16} /> 訂單已送出，請複製明細並至官方 LINE 傳送！
+                          </p>
+                          <p className="text-[11px] text-stone-600 leading-relaxed px-1">
+                            {LINE_PAYMENT_REMINDER}
                           </p>
                           <div className="flex w-full gap-2">
                             <button
@@ -408,49 +410,9 @@ export default function MemberProfileModal({
                         </div>
                       )}
 
-                      {order.status === 'pending' && (
-                        <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl space-y-3">
-                          <div>
-                            <p className="text-xs font-bold text-rose-800 mb-1 flex items-center gap-1">
-                              <CreditCard size={14} /> 匯款帳號資訊：
-                            </p>
-                            <p className="text-xs text-rose-700 whitespace-pre-wrap font-medium bg-white/60 p-2 rounded border border-rose-100">
-                              {contactData.bankAccount ||
-                                '店家尚未設定匯款帳號，請加 LINE 詢問'}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs font-bold text-rose-700 mb-2">
-                              ⚠️ 請匯款後加 LINE 通知，並輸入帳戶後五碼：
-                            </p>
-                            <div className="flex gap-2">
-                              <input
-                                type="text"
-                                maxLength="5"
-                                placeholder="輸入後五碼"
-                                value={bankCodeInputs[order.id] || ''}
-                                onChange={(e) =>
-                                  setBankCodeInputs({
-                                    ...bankCodeInputs,
-                                    [order.id]: e.target.value
-                                  })
-                                }
-                                className="flex-1 min-w-0 bg-white border border-rose-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-rose-400 font-bold tracking-widest text-center"
-                              />
-                              <button
-                                onClick={() => submitBankCode(order.id)}
-                                className="shrink-0 whitespace-nowrap bg-rose-500 text-white font-bold px-4 rounded-lg shadow-sm active:scale-95 transition-transform"
-                              >
-                                送出
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
                       {order.status === 'confirming' && (
                         <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs font-bold text-amber-700 text-center">
-                          已送出後五碼 ({order.bankAccountLast5})，等待對帳確認中...
+                          已收到您的 LINE 訊息，等待店家確認付款中...
                         </div>
                       )}
 

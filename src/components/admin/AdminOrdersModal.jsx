@@ -26,7 +26,7 @@ export default function AdminOrdersModal({
   downloadOrdersCSV,
   filteredAdminOrders,
   statusMap,
-  updateOrderStatus,
+  requestOrderStatusChange,
   deleteOrder,
   trackingInputs,
   setTrackingInputs,
@@ -187,7 +187,7 @@ export default function AdminOrdersModal({
             <OrderTable
               orders={ordersForTable}
               statusMap={statusMap}
-              updateOrderStatus={updateOrderStatus}
+              requestOrderStatusChange={requestOrderStatusChange}
               deleteOrder={deleteOrder}
               trackingInputs={trackingInputs}
               setTrackingInputs={setTrackingInputs}

@@ -1,5 +1,4 @@
 import {
-  CreditCard,
   Info,
   Lock,
   MessageCircle,
@@ -13,6 +12,7 @@ import {
 } from '../Icons'
 import { Link } from 'react-router-dom'
 import { getDiscountDisplay } from '../../utils/discountDisplay'
+import { LINE_PAYMENT_REMINDER_SHORT } from '../../constants/linePayment'
 
 export default function CartDrawer({
   isOpen,
@@ -30,9 +30,6 @@ export default function CartDrawer({
   setCustomerInfo,
   orderNote,
   setOrderNote,
-  contactData,
-  checkoutBankCode,
-  setCheckoutBankCode,
   onRequireLogin,
   handleCheckout,
   products,
@@ -345,7 +342,7 @@ export default function CartDrawer({
               )}
               <p className="text-stone-600">出貨天數：接單後約 5-7 天出貨</p>
               <p className="text-stone-600 whitespace-pre-wrap">
-                匯款說明：下單後可輸入後五碼，並將訂單編號回報 LINE 以加速對帳。
+                付款說明：{LINE_PAYMENT_REMINDER_SHORT}
               </p>
             </div>
             )}
@@ -469,21 +466,13 @@ export default function CartDrawer({
                   />
 
                   {!adminOrderingFor && (
-                    <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-xl mt-4">
-                      <p className="text-sm font-bold text-emerald-800 flex items-center gap-1 mb-1">
-                        <CreditCard size={16} /> 匯款資訊 (若已匯款可直接填寫)
+                    <div className="bg-[#06C755]/10 border border-[#06C755]/30 p-4 rounded-xl mt-4">
+                      <p className="text-sm font-bold text-[#06C755] flex items-center gap-1 mb-1">
+                        <MessageCircle size={16} /> 付款方式
                       </p>
-                      <p className="text-xs text-emerald-700 whitespace-pre-wrap font-medium mb-3">
-                        {contactData.bankAccount || '店家尚未設定匯款帳號，請加 LINE 詢問'}
+                      <p className="text-xs text-stone-700 whitespace-pre-wrap font-medium leading-relaxed">
+                        {LINE_PAYMENT_REMINDER_SHORT}
                       </p>
-                      <input
-                        type="text"
-                        maxLength="5"
-                        placeholder="輸入帳戶後五碼 (選填)"
-                        value={checkoutBankCode}
-                        onChange={(e) => setCheckoutBankCode(e.target.value.replace(/\D/g, ''))}
-                        className="w-full bg-white border border-emerald-200 rounded-xl px-3 py-2.5 outline-none focus:border-emerald-500 text-sm tracking-widest font-bold"
-                      />
                     </div>
                   )}
                 </div>
