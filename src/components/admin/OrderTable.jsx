@@ -41,6 +41,27 @@ function OrderDetailModal({
           購買明細 · {order.id}
         </h3>
 
+        {order.priceAudit?.status === 'mismatch' && (
+          <div className="mb-3 bg-rose-50 text-rose-800 text-xs font-bold p-3 rounded-lg border border-rose-300 space-y-1">
+            <p>價格審計異常：伺服器試算與訂單金額不符，出貨前請務必人工核對。</p>
+            {Array.isArray(order.priceAudit.diffs) && order.priceAudit.diffs.length > 0 && (
+              <ul className="list-disc pl-4 text-[11px] font-mono">
+                {order.priceAudit.diffs.map((d, idx) => (
+                  <li key={idx}>
+                    {d.field}：訂單 {d.client} vs 試算 {d.server}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+        {order.priceAudit?.status === 'error' && (
+          <div className="mb-3 bg-orange-50 text-orange-800 text-xs font-bold p-3 rounded-lg border border-orange-200">
+            價格審計未完成：{order.priceAudit.reason || 'error'}
+            {order.priceAudit.missingProductId && `（缺商品：${order.priceAudit.missingProductId}）`}
+          </div>
+        )}
+
         {order.status === 'confirming' && (
           <div className="mb-3 bg-amber-50 text-amber-700 text-xs font-bold p-2 rounded-lg text-center border border-amber-200">
             客填後五碼：<span className="text-base tracking-widest">{order.bankAccountLast5}</span>
@@ -292,6 +313,16 @@ export default function OrderTable({
                         )}
                         {order.createdByAdmin && (
                           <span className="text-[9px] bg-blue-100 text-blue-700 px-1 rounded">代建</span>
+                        )}
+                        {order.priceAudit?.status === 'mismatch' && (
+                          <span className="text-[9px] bg-rose-200 text-rose-900 px-1 rounded font-black">
+                            價格異常
+                          </span>
+                        )}
+                        {order.priceAudit?.status === 'error' && (
+                          <span className="text-[9px] bg-orange-200 text-orange-900 px-1 rounded font-black">
+                            審計錯誤
+                          </span>
                         )}
                       </span>
                     </td>

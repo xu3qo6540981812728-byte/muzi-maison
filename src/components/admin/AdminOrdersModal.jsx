@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react'
 import {
   ClipboardList,
   DownloadIcon,
@@ -47,6 +48,19 @@ export default function AdminOrdersModal({
   canGoPrev,
   canGoNext
 }) {
+  const [priceAuditFilter, setPriceAuditFilter] = useState('all')
+  const ordersForTable = useMemo(() => {
+    if (priceAuditFilter === 'mismatch') {
+      return filteredAdminOrders.filter((o) => o.priceAudit?.status === 'mismatch')
+    }
+    return filteredAdminOrders
+  }, [filteredAdminOrders, priceAuditFilter])
+
+  const mismatchCount = useMemo(
+    () => filteredAdminOrders.filter((o) => o.priceAudit?.status === 'mismatch').length,
+    [filteredAdminOrders]
+  )
+
   return (
     <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-2 sm:px-4 md:px-5 py-4 md:py-6">
       <div className="bg-[#Fdfbf7] p-4 sm:p-6 rounded-3xl shadow-2xl w-full max-w-[min(96vw,1920px)] h-full max-h-[calc(100vh-2rem)] flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
@@ -96,6 +110,17 @@ export default function AdminOrdersModal({
           </div>
 
           <select
+            value={priceAuditFilter}
+            onChange={(e) => setPriceAuditFilter(e.target.value)}
+            className="bg-rose-50 px-3 py-2 rounded-lg border border-rose-200 text-sm font-bold text-rose-800 outline-none flex-1 min-w-[140px] cursor-pointer"
+          >
+            <option value="all">價格審計：全部</option>
+            <option value="mismatch">
+              價格審計：異常{mismatchCount > 0 ? `（${mismatchCount}）` : ''}
+            </option>
+          </select>
+
+          <select
             value={orderStatusFilter}
             onChange={(e) => setOrderStatusFilter(e.target.value)}
             className="bg-white px-3 py-2 rounded-lg border border-stone-200 text-sm font-bold text-stone-600 outline-none flex-1 min-w-[120px] cursor-pointer"
@@ -135,9 +160,13 @@ export default function AdminOrdersModal({
         <div className="flex-1 overflow-y-auto">
           {filteredAdminOrders.length === 0 ? (
             <p className="text-center text-stone-400 mt-10">找不到符合條件的訂單</p>
+          ) : ordersForTable.length === 0 ? (
+            <p className="text-center text-rose-500 font-bold mt-10">
+              目前載入的訂單中沒有「價格審計異常」項目（或 Cloud Function 尚未寫入審計結果）
+            </p>
           ) : (
             <OrderTable
-              orders={filteredAdminOrders}
+              orders={ordersForTable}
               statusMap={statusMap}
               updateOrderStatus={updateOrderStatus}
               deleteOrder={deleteOrder}

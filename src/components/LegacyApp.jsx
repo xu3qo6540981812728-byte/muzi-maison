@@ -67,6 +67,12 @@ import {
   GROUP_STORAGE_FRIEND_NAME,
   GROUP_STORAGE_FRIEND_PHONE
 } from '../utils/groupBuy'
+import {
+  DEFAULT_STORE_CONFIG as defaultStoreConfig,
+  calculateOrderTotals,
+  appendGiftLinesToCart,
+  buildPricingSnapshot
+} from '../shared/orderPricing.js'
 
 if (typeof window !== 'undefined') {
   window.jspdf = { jsPDF }
@@ -101,19 +107,6 @@ function toAbsoluteOgUrl(origin, url) {
 }
 
     const defaultProducts = [];
-    const defaultStoreConfig = { 
-  shippingFee: 100, 
-  freeShippingThreshold: 2000, 
-  promoQty: 3, 
-  promoPrice: 550, 
-  wholesaleThreshold: 12, 
-  freeAddonReminderMsg: '恭喜！您選購的主商品享有「0元加購」優惠！\n別忘了至下方加購專區挑選喔！',
-  giftThreshold: 30, // 預設滿 30 件送
-  giftProductId: '', // 預設送的商品品號（空字串代表不送或尚未設定）
-  /** 揪團複製連結時一併複製；使用 {link} 代入揪團網址 */
-  groupBuyShareTemplate:
-    '我開了一場木子家的揪團，點下面連結一起選購：\n{link}'
-};
 
     function App({ routeMode = 'home', routeProductId = '', routeGroupSessionId = '', bootstrapFriendSessionId = '', standaloneAdminPage = false }) {
       // 🌟 全局載入狀態，防止畫面閃現
@@ -1246,89 +1239,6 @@ useEffect(() => {
         });
       };
 
-      const calculateTotals = (itemsList, deliveryWay) => {
-        let totalQty = 0; let nonPromoPrice = 0; let promoItemsExpanded = [];
-        let totalCost = 0;
-        let freeShippingQty = 0;
-        let mainProductQty = 0; // 計算非加購品(主商品)的總數量
-  let giftCount = 0;      // 應該送幾個贈品
-  let appliedGiftId = ''; // 記錄送的贈品品號
-
-        let freeAddonQuota = 0;
-        itemsList.forEach(item => {
-          if (!item.isAddon && item.providesFreeAddon) {
-            freeAddonQuota += item.qty;
-          }
-        });
-
-        let itemsBaseTotal = 0; // 新增：分開計算小計
-
-        itemsList.forEach(item => {
-          totalQty += item.qty;
-          totalCost += (Number(item.cost) || 0) * item.qty;
-          if (item.isFreeShipping !== false) { freeShippingQty += item.qty; }
-
-          if (item.isAddon) {
-            let freeCount = Math.min(item.qty, freeAddonQuota);
-            let paidCount = item.qty - freeCount;
-            freeAddonQuota -= freeCount;
-
-            item.freeQty = freeCount;
-            item.paidQty = paidCount;
-            item.subtotal = paidCount * item.price; // 加購品：只算要付費的數量
-
-            nonPromoPrice += item.subtotal;
-            itemsBaseTotal += item.subtotal; // 加購品直接變0元，不計入活動折抵
-          } else {
-            item.subtotal = item.price * item.qty;
-            itemsBaseTotal += item.subtotal;
-mainProductQty += item.qty;
-            if (item.isPromo) {
-              for(let i = 0; i < item.qty; i++) promoItemsExpanded.push(item.price);
-            } else {
-              nonPromoPrice += item.subtotal;
-            }
-          }
-        });
-
-        promoItemsExpanded.sort((a,b) => b - a);
-        const promoSets = Math.floor(promoItemsExpanded.length / storeConfig.promoQty);
-        const promoTotal = promoSets * storeConfig.promoPrice;
-        let remainderTotal = 0;
-        for(let i = promoSets * storeConfig.promoQty; i < promoItemsExpanded.length; i++) remainderTotal += promoItemsExpanded[i];
-
-        const currentTotal = nonPromoPrice + promoTotal + remainderTotal;
-        const discountAmount = itemsBaseTotal - currentTotal; // 現在這裡只剩下「任選優惠」的折抵了
-
-        if (storeConfig.giftThreshold > 0 && storeConfig.giftProductId) {
-    // 只有主商品數量超過門檻才送
-    giftCount = Math.floor(mainProductQty / storeConfig.giftThreshold);
-    if (giftCount > 0) {
-      appliedGiftId = storeConfig.giftProductId;
-    }
-  }
-
-        let shippingFee = 0;
-        if (deliveryWay === 'delivery' && currentTotal < storeConfig.freeShippingThreshold) shippingFee = storeConfig.shippingFee;
-        const finalPrice = currentTotal + shippingFee;
-
-        return {
-          totalQty,
-          freeShippingQty,
-          currentTotal,
-          finalPrice,
-          shippingFee,
-          discountAmount,
-          itemsBaseTotal,
-          totalCost,
-          giftCount,
-          appliedGiftId,
-          promoBundleQty: storeConfig.promoQty,
-          promoBundlePrice: storeConfig.promoPrice,
-          promoBundleSets: promoSets
-        }
-      };
-
       const cartData = useMemo(() => {
         const sid =
           routeMode === 'group-host' && routeGroupSessionId ? routeGroupSessionId : activeHostGroupSid
@@ -1358,20 +1268,13 @@ mainProductQty += item.qty;
               }
             })
             .filter(Boolean)
-          const totals = calculateTotals(items, deliveryMethod)
-          if (totals.giftCount > 0 && totals.appliedGiftId) {
-            const giftProduct = products.find((p) => p.id === totals.appliedGiftId)
-            if (giftProduct) {
-              items.push({
-                ...giftProduct,
-                isGift: true,
-                qty: totals.giftCount,
-                subtotal: 0,
-                price: 0
-              })
-            }
-          }
-          return { items, ...totals }
+          const { items: calcItems, ...totalsRest } = calculateOrderTotals(
+            items,
+            deliveryMethod,
+            storeConfig
+          )
+          const itemsWithGift = appendGiftLinesToCart(calcItems, totalsRest, products)
+          return { items: itemsWithGift, ...totalsRest }
         }
 
         if (
@@ -1397,20 +1300,13 @@ mainProductQty += item.qty;
               }
             })
             .filter(Boolean)
-          const totals = calculateTotals(items, deliveryMethod)
-          if (totals.giftCount > 0 && totals.appliedGiftId) {
-            const giftProduct = products.find((p) => p.id === totals.appliedGiftId)
-            if (giftProduct) {
-              items.push({
-                ...giftProduct,
-                isGift: true,
-                qty: totals.giftCount,
-                subtotal: 0,
-                price: 0
-              })
-            }
-          }
-          return { items, ...totals }
+          const { items: calcItemsFriend, ...totalsRestFriend } = calculateOrderTotals(
+            items,
+            deliveryMethod,
+            storeConfig
+          )
+          const itemsWithGiftFriend = appendGiftLinesToCart(calcItemsFriend, totalsRestFriend, products)
+          return { items: itemsWithGiftFriend, ...totalsRestFriend }
         }
 
         let items = Object.entries(cart)
@@ -1421,21 +1317,13 @@ mainProductQty += item.qty;
           })
           .filter(Boolean)
 
-        const totals = calculateTotals(items, deliveryMethod)
-
-        if (totals.giftCount > 0 && totals.appliedGiftId) {
-          const giftProduct = products.find((p) => p.id === totals.appliedGiftId)
-          if (giftProduct) {
-            items.push({
-              ...giftProduct,
-              isGift: true,
-              qty: totals.giftCount,
-              subtotal: 0,
-              price: 0
-            })
-          }
-        }
-        return { items, ...totals }
+        const { items: calcItemsCart, ...totalsRestCart } = calculateOrderTotals(
+          items,
+          deliveryMethod,
+          storeConfig
+        )
+        const itemsWithGiftCart = appendGiftLinesToCart(calcItemsCart, totalsRestCart, products)
+        return { items: itemsWithGiftCart, ...totalsRestCart }
       }, [
         cart,
         products,
@@ -1871,6 +1759,7 @@ mainProductQty += item.qty;
                   }
                 : {})
             },
+            pricingSnapshot: buildPricingSnapshot(storeConfig),
             deliveryMethod, status: initialStatus, bankAccountLast5: checkoutBankCode || '', trackingNumber: '', orderNote, adminDiscount: 0,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             createdByAdmin: !!adminOrderingFor 
@@ -2458,16 +2347,18 @@ const ordersToMerge = currentOrders.filter(o => mergeSelection.includes(o.id));
         const newItems = Object.values(combinedItemsMap);
         const combinedNotes = ordersToMerge.map(o => o.orderNote).filter(Boolean).join('\n---\n');
 
-        const baseOrder = ordersToMerge[0]; 
-        const newTotals = calculateTotals(newItems, baseOrder.deliveryMethod);
-        newTotals.finalPrice -= totalAdminDiscount;
-        const newOrderId = `MZ${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 900 + 100)}`;
+        const baseOrder = ordersToMerge[0]
+        const mergedCalcInput = newItems.map((row) => ({ ...row }))
+        const mergedBase = calculateOrderTotals(mergedCalcInput, baseOrder.deliveryMethod, storeConfig)
+        const mergedItemsWithGift = appendGiftLinesToCart(mergedBase.items, mergedBase, products)
+        const newTotals = { ...mergedBase, finalPrice: mergedBase.finalPrice - totalAdminDiscount }
+        const newOrderId = `MZ${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 900 + 100)}`
 
         try {
           const batch = db.batch();
           const newOrderRef = db.collection('orders').doc(newOrderId);
           batch.set(newOrderRef, {
-            orderId: newOrderId, userId: selectedCustomer.id, customerInfo: selectedCustomer, items: newItems,
+            orderId: newOrderId, userId: selectedCustomer.id, customerInfo: selectedCustomer, items: mergedItemsWithGift,
             totals: {
               itemsBaseTotal: newTotals.itemsBaseTotal,
               discountAmount: newTotals.discountAmount,
@@ -2482,6 +2373,7 @@ const ordersToMerge = currentOrders.filter(o => mergeSelection.includes(o.id));
                   }
                 : {})
             },
+            pricingSnapshot: buildPricingSnapshot(storeConfig),
             deliveryMethod: baseOrder.deliveryMethod, status: 'pending', bankAccountLast5: '', trackingNumber: '', orderNote: combinedNotes, adminDiscount: totalAdminDiscount,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(), isMerged: true, mergeNote: `系統備註：由舊單號 ${mergeSelection.join(', ')} 合併產生。`
           });
