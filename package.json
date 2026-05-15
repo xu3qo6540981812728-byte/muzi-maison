@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "images:migrate": "node scripts/migrate-product-thumbs.mjs"
+    "images:migrate": "node scripts/migrate-product-thumbs.mjs",
+    "sync-pricing": "node scripts/sync-pricing.mjs",
+    "test:pricing": "node tests/orderPricing.test.mjs",
+    "predeploy:functions": "npm run sync-pricing"
   },
   "dependencies": {
     "firebase": "^10.14.1",
