@@ -61,6 +61,21 @@ function OrderDetailModal({
             {order.priceAudit.missingProductId && `（缺商品：${order.priceAudit.missingProductId}）`}
           </div>
         )}
+        {order.priceAudit?.status === 'ok' && (
+          <div className="mb-3 bg-emerald-50 text-emerald-800 text-xs font-bold p-3 rounded-lg border border-emerald-200">
+            價格審計：通過（伺服器依商品與促銷設定重算後，與本訂單金額一致）
+            {order.priceAudit?.checkedAt?.toDate && (
+              <span className="block mt-1 font-mono font-normal text-[11px] text-emerald-700">
+                審計時間：{order.priceAudit.checkedAt.toDate().toLocaleString()}
+              </span>
+            )}
+          </div>
+        )}
+        {order.priceAudit?.status === 'skipped' && (
+          <div className="mb-3 bg-stone-100 text-stone-600 text-xs font-bold p-2 rounded-lg border border-stone-200">
+            價格審計：略過（{order.priceAudit.reason === 'no_items' ? '無訂單明細' : order.priceAudit.reason || '略過'}）
+          </div>
+        )}
 
         {order.status === 'confirming' && (
           <div className="mb-3 bg-amber-50 text-amber-700 text-xs font-bold p-2 rounded-lg text-center border border-amber-200">
@@ -322,6 +337,16 @@ export default function OrderTable({
                         {order.priceAudit?.status === 'error' && (
                           <span className="text-[9px] bg-orange-200 text-orange-900 px-1 rounded font-black">
                             審計錯誤
+                          </span>
+                        )}
+                        {order.priceAudit?.status === 'ok' && (
+                          <span className="text-[9px] bg-emerald-100 text-emerald-800 px-1 rounded font-bold">
+                            審計通過
+                          </span>
+                        )}
+                        {order.priceAudit?.status === 'skipped' && (
+                          <span className="text-[9px] bg-stone-200 text-stone-600 px-1 rounded font-bold">
+                            審計略過
                           </span>
                         )}
                       </span>

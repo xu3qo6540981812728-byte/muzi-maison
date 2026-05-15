@@ -53,11 +53,22 @@ export default function AdminOrdersModal({
     if (priceAuditFilter === 'mismatch') {
       return filteredAdminOrders.filter((o) => o.priceAudit?.status === 'mismatch')
     }
+    if (priceAuditFilter === 'ok') {
+      return filteredAdminOrders.filter((o) => o.priceAudit?.status === 'ok')
+    }
+    if (priceAuditFilter === 'skipped') {
+      return filteredAdminOrders.filter((o) => o.priceAudit?.status === 'skipped')
+    }
     return filteredAdminOrders
   }, [filteredAdminOrders, priceAuditFilter])
 
   const mismatchCount = useMemo(
     () => filteredAdminOrders.filter((o) => o.priceAudit?.status === 'mismatch').length,
+    [filteredAdminOrders]
+  )
+
+  const okAuditCount = useMemo(
+    () => filteredAdminOrders.filter((o) => o.priceAudit?.status === 'ok').length,
     [filteredAdminOrders]
   )
 
@@ -115,9 +126,13 @@ export default function AdminOrdersModal({
             className="bg-rose-50 px-3 py-2 rounded-lg border border-rose-200 text-sm font-bold text-rose-800 outline-none flex-1 min-w-[140px] cursor-pointer"
           >
             <option value="all">價格審計：全部</option>
+            <option value="ok">
+              價格審計：僅通過{okAuditCount > 0 ? `（${okAuditCount}）` : ''}
+            </option>
             <option value="mismatch">
               價格審計：異常{mismatchCount > 0 ? `（${mismatchCount}）` : ''}
             </option>
+            <option value="skipped">價格審計：略過</option>
           </select>
 
           <select
@@ -162,7 +177,11 @@ export default function AdminOrdersModal({
             <p className="text-center text-stone-400 mt-10">找不到符合條件的訂單</p>
           ) : ordersForTable.length === 0 ? (
             <p className="text-center text-rose-500 font-bold mt-10">
-              目前載入的訂單中沒有「價格審計異常」項目（或 Cloud Function 尚未寫入審計結果）
+              {priceAuditFilter === 'mismatch'
+                ? '目前載入的訂單中沒有「價格審計異常」項目（或 Cloud Function 尚未寫入審計結果）'
+                : priceAuditFilter === 'ok'
+                  ? '目前載入的訂單中沒有「審計通過」項目（舊單可能尚無 priceAudit 欄位）'
+                  : '目前載入的訂單中沒有符合此審計篩選的項目'}
             </p>
           ) : (
             <OrderTable
