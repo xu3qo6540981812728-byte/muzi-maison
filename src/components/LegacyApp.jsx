@@ -83,7 +83,6 @@ import {
 import {
   LINE_PAYMENT_REMINDER,
   LINE_PAYMENT_REMINDER_SHORT,
-  buildCheckoutLineReportText,
   buildOrderLineReportText
 } from '../constants/linePayment'
 import { stripBankAccountFromContact } from '../utils/stripPublicContact'
@@ -1845,11 +1844,21 @@ try {
            alert(`訂單已成功送出！${LINE_PAYMENT_REMINDER_SHORT}`);
            setCheckoutSuccessInfo({
              orderId,
-             customerName: customerInfo.name,
-             customerPhone: customerInfo.phone,
-             address: customerInfo.address,
+             customerInfo: {
+               name: customerInfo.name,
+               phone: customerInfo.phone,
+               address: customerInfo.address
+             },
              deliveryMethod,
-             totalPrice: cartData.finalPrice,
+             items: cartData.items,
+             totals: {
+               finalPrice: cartData.finalPrice,
+               itemsBaseTotal: cartData.itemsBaseTotal,
+               discountAmount: cartData.discountAmount,
+               shippingFee: cartData.shippingFee
+             },
+             adminDiscount: 0,
+             orderNote,
              lineLink: contactData.lineLink || ''
            })
            setShowMemberProfile(true);
@@ -1858,13 +1867,14 @@ try {
 
       const handleCopyCheckoutTemplate = () => {
         if (!checkoutSuccessInfo) return
-        const template = buildCheckoutLineReportText({
-          orderId: checkoutSuccessInfo.orderId,
-          customerName: checkoutSuccessInfo.customerName,
-          customerPhone: checkoutSuccessInfo.customerPhone,
-          address: checkoutSuccessInfo.address,
+        const template = buildOrderLineReportText({
+          id: checkoutSuccessInfo.orderId,
+          customerInfo: checkoutSuccessInfo.customerInfo,
           deliveryMethod: checkoutSuccessInfo.deliveryMethod,
-          totalPrice: checkoutSuccessInfo.totalPrice
+          items: checkoutSuccessInfo.items || [],
+          totals: checkoutSuccessInfo.totals,
+          adminDiscount: checkoutSuccessInfo.adminDiscount || 0,
+          orderNote: checkoutSuccessInfo.orderNote || ''
         })
         const copyFallback = (t) => {
           const ta = document.createElement('textarea')
@@ -1885,8 +1895,7 @@ try {
       }
 
       const handleCopyOrder = (order) => {
-        let text = buildOrderLineReportText(order)
-        text += `\n(⚠️ 已於網站送出訂單，請您確認喔！)\n`
+        const text = buildOrderLineReportText(order)
 
         const copyFallback = (t) => {
           const ta = document.createElement("textarea"); ta.value = t; ta.style.position = "fixed"; ta.style.left = "-999999px";

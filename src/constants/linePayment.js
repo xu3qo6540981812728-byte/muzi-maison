@@ -16,27 +16,5 @@ export function buildOrderLineReportText(order) {
   if (order.adminDiscount > 0) text += `*手動折扣*：-$${order.adminDiscount}\n`
   text += `*總計金額：$${order.totals.finalPrice}*\n`
   if (order.orderNote) text += `*備註事項*：${order.orderNote}\n`
-  text += `\n${LINE_PAYMENT_REMINDER}\n`
   return text
-}
-
-export function buildCheckoutLineReportText({
-  orderId,
-  customerName,
-  customerPhone,
-  address,
-  deliveryMethod,
-  totalPrice
-}) {
-  return [
-    '【木子家 MUZI MAISON 訂單回報】',
-    `訂單編號：${orderId}`,
-    `訂購人：${customerName}`,
-    `聯絡電話：${customerPhone}`,
-    `取貨方式：${deliveryMethod === 'delivery' ? '宅配' : '自取'}`,
-    `地址：${address}`,
-    `總金額：$${totalPrice}`,
-    '',
-    LINE_PAYMENT_REMINDER
-  ].join('\n')
 }
