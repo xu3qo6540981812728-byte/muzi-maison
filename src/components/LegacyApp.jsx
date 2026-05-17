@@ -699,11 +699,7 @@ useEffect(() => {
                 auth.signOut();
                 return;
               }
-              if (userData.role === 'customer') {
-                setIsAdminMode(false);
-              } else {
-                setIsAdminMode(true);
-              }
+              setIsAdminMode(userData.role === 'admin');
               setUserProfile(userData);
             } else {
               setIsAdminMode(false);
