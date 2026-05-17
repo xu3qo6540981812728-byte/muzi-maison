@@ -64,7 +64,7 @@ export default function MemberProfileModal({
         </button>
 
         <h2 className="text-xl md:text-2xl font-bold text-stone-800 mb-4 flex items-center gap-2 border-b border-stone-200 pb-2">
-          <UserIcon size={24} className="text-amber-600" /> 會員中心
+          <UserIcon size={24} className="brand-accent" /> 會員中心
         </h2>
 
         <div className="flex-1 overflow-y-auto space-y-6 md:flex md:space-y-0 md:gap-6">
@@ -75,7 +75,7 @@ export default function MemberProfileModal({
                 {!isEditingProfile ? (
                   <button
                     onClick={() => setIsEditingProfile(true)}
-                    className="text-xs flex items-center gap-1 text-amber-600 font-bold hover:text-amber-700"
+                    className="text-xs flex items-center gap-1 brand-accent font-bold hover:text-[#6B5A45]"
                   >
                     <EditIcon size={14} /> 修改
                   </button>
@@ -108,7 +108,7 @@ export default function MemberProfileModal({
                     onChange={(e) =>
                       setCustomerInfo({ ...customerInfo, name: e.target.value })
                     }
-                    className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 outline-none focus:border-amber-500"
+                    className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 outline-none auth-input-focus"
                   />
                   <div className="flex gap-4">
                     <label className="flex items-center gap-1">
@@ -120,7 +120,7 @@ export default function MemberProfileModal({
                         onChange={(e) =>
                           setCustomerInfo({ ...customerInfo, gender: e.target.value })
                         }
-                        className="accent-amber-500"
+                        className="auth-accent-control"
                       />
                       男
                     </label>
@@ -133,7 +133,7 @@ export default function MemberProfileModal({
                         onChange={(e) =>
                           setCustomerInfo({ ...customerInfo, gender: e.target.value })
                         }
-                        className="accent-amber-500"
+                        className="auth-accent-control"
                       />
                       女
                     </label>
@@ -145,7 +145,7 @@ export default function MemberProfileModal({
                     onChange={(e) =>
                       setCustomerInfo({ ...customerInfo, phone: e.target.value })
                     }
-                    className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 outline-none focus:border-amber-500"
+                    className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 outline-none auth-input-focus"
                   />
                   <input
                     type="text"
@@ -154,7 +154,7 @@ export default function MemberProfileModal({
                     onChange={(e) =>
                       setCustomerInfo({ ...customerInfo, lineId: e.target.value })
                     }
-                    className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 outline-none focus:border-amber-500"
+                    className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 outline-none auth-input-focus"
                   />
                   <textarea
                     placeholder="預設地址"
@@ -163,11 +163,11 @@ export default function MemberProfileModal({
                       setCustomerInfo({ ...customerInfo, address: e.target.value })
                     }
                     rows="2"
-                    className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 outline-none focus:border-amber-500"
+                    className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 outline-none auth-input-focus"
                   />
                   <button
                     onClick={handleUpdateMyProfile}
-                    className="w-full bg-amber-500 text-white font-bold py-2.5 rounded-lg shadow-sm hover:bg-amber-600 transition-colors"
+                    className="w-full brand-btn-primary font-bold py-2.5 rounded-lg shadow-sm transition-colors"
                   >
                     儲存修改
                   </button>
@@ -217,20 +217,20 @@ export default function MemberProfileModal({
                   {quickReorderProducts.map((product) => (
                     <div
                       key={product.id}
-                      className="w-full bg-amber-50 border border-amber-200 text-amber-800 px-3 py-2 rounded-xl flex items-center justify-between gap-3"
+                      className="w-full brand-surface px-3 py-2 rounded-xl flex items-center justify-between gap-3"
                     >
                       <button
                         onClick={() => onQuickReorder(product.id)}
-                        className="text-xs font-bold hover:text-amber-900 text-left min-w-0 truncate"
+                        className="text-xs font-bold hover:text-[#5C4A3A] text-left min-w-0 truncate"
                       >
                         {product.name}（歷史 {product.orderedQty} 件）
                       </button>
-                      <div className="flex items-center gap-2 bg-white border border-amber-200 rounded-full px-2 py-1 shrink-0">
+                      <div className="flex items-center gap-2 bg-white border border-[#D4C4B0] rounded-full px-2 py-1 shrink-0">
                         <button onClick={() => onAdjustQuickReorder(product.id, -1)} className="text-stone-500 p-0.5">
                           <Minus size={12} />
                         </button>
                         <span className="text-xs font-bold w-4 text-center">{cart?.[product.id] || 0}</span>
-                        <button onClick={() => onAdjustQuickReorder(product.id, 1)} className="text-amber-700 p-0.5">
+                        <button onClick={() => onAdjustQuickReorder(product.id, 1)} className="brand-accent p-0.5">
                           <Plus size={12} />
                         </button>
                       </div>
@@ -309,7 +309,7 @@ export default function MemberProfileModal({
                         </div>
                       </div>
                       {nextStepText && (
-                        <div className="mb-3 text-xs font-bold text-stone-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                        <div className="mb-3 text-xs font-bold text-stone-700 brand-surface rounded-xl px-3 py-2">
                           {nextStepText}
                         </div>
                       )}
@@ -357,7 +357,7 @@ export default function MemberProfileModal({
                           </div>
                         ))}
                         {order.orderNote && (
-                          <div className="mt-2 pt-2 border-t border-stone-200 text-amber-700">
+                          <div className="mt-2 pt-2 border-t border-stone-200 brand-accent">
                             <strong>備註：</strong>
                             {order.orderNote}
                           </div>
@@ -411,7 +411,7 @@ export default function MemberProfileModal({
                       )}
 
                       {order.status === 'confirming' && (
-                        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs font-bold text-amber-700 text-center">
+                        <div className="mb-4 p-3 brand-surface rounded-xl text-xs font-bold brand-accent text-center">
                           已收到您的 LINE 訊息，等待店家確認付款中...
                         </div>
                       )}
@@ -451,7 +451,7 @@ export default function MemberProfileModal({
                             )
                           })()}
                           {order.adminDiscount > 0 && (
-                            <div className="text-amber-500">特別折扣：-${order.adminDiscount}</div>
+                            <div className="brand-accent">特別折扣：-${order.adminDiscount}</div>
                           )}
                           <div>運費：${order.totals.shippingFee}</div>
                           <div className="font-black text-stone-800 text-xl pt-1">

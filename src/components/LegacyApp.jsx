@@ -4067,7 +4067,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                           src={img}
                           onClick={() => setMainDisplayImg(img)}
                           className={`w-16 h-16 object-cover rounded-lg cursor-pointer border-2 ${
-                            currentImage === img ? 'border-amber-500' : 'border-stone-200'
+                            currentImage === img ? 'border-[#8B7355]' : 'border-stone-200'
                           }`}
                         />
                       ))}
@@ -4079,7 +4079,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                   <div>
                     {routeProduct.isPromo && <span className="inline-block bg-rose-100 text-rose-600 text-[10px] font-bold px-2 py-0.5 rounded-md mb-2 mr-2 border border-rose-200">享任選優惠活動</span>}
                     {routeProduct.isAddon && <span className="inline-block bg-purple-100 text-purple-600 text-[10px] font-bold px-2 py-0.5 rounded-md mb-2 border border-purple-200">可做為加購商品</span>}
-                    <div className="text-3xl font-bold text-amber-600 mb-1">
+                    <div className="text-3xl font-bold brand-accent mb-1">
                       ${routeProduct.price}{' '}
                       {routeProduct.unit && <span className="text-sm font-normal text-stone-500">/{routeProduct.unit}</span>}
                     </div>
@@ -4090,7 +4090,7 @@ const uploadTask = await storageRef.put(blob, metadata);
 
                   {routeProduct.intro && (
                     <div className="space-y-1.5">
-                      <h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 bg-amber-500 rounded-full"></span>產品介紹</h3>
+                      <h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 brand-dot rounded-full"></span>產品介紹</h3>
                       <p className="text-sm text-stone-600 whitespace-pre-wrap">{routeProduct.intro}</p>
                     </div>
                   )}
@@ -4120,9 +4120,9 @@ const uploadTask = await storageRef.put(blob, metadata);
                   <div className="flex items-center gap-4 bg-stone-50 rounded-xl px-4 py-3 border border-stone-200 flex-1 justify-center">
                     <button onClick={() => updateCart(routeProduct.id, -1)} className="p-1 text-stone-500"><Minus size={18} /></button>
                     <span className="w-6 text-center text-lg font-bold">{getDisplayQtyForProduct(routeProduct.id)}</span>
-                    <button onClick={() => updateCart(routeProduct.id, 1)} className="p-1 text-amber-600"><Plus size={18} /></button>
+                    <button onClick={() => updateCart(routeProduct.id, 1)} className="p-1 brand-accent"><Plus size={18} /></button>
                   </div>
-                  <Link to="/cart" className="flex-[1.5] bg-amber-500 text-white font-bold py-3.5 rounded-xl shadow-lg text-center active:scale-95 transition-transform">{groupBuyFriendMode ? '查看揪團選購' : '前往購物車'}</Link>
+                  <Link to="/cart" className="flex-[1.5] brand-btn-primary font-bold py-3.5 rounded-xl shadow-lg text-center active:scale-95 transition-transform">{groupBuyFriendMode ? '查看揪團選購' : '前往購物車'}</Link>
                 </div>
               </div>
             </div>
@@ -4210,7 +4210,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                   value={friendNicknameDraft}
                   onChange={(e) => setFriendNicknameDraft(e.target.value)}
                   placeholder="姓名"
-                  className="w-full border border-stone-200 rounded-xl px-3 py-2.5 mb-3 outline-none focus:border-amber-500"
+                  className="w-full border border-stone-200 rounded-xl px-3 py-2.5 mb-3 outline-none auth-input-focus"
                   maxLength={40}
                   autoFocus
                 />
@@ -4221,7 +4221,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                   value={friendPhoneDraft}
                   onChange={(e) => setFriendPhoneDraft(e.target.value)}
                   placeholder="0912345678"
-                  className="w-full border border-stone-200 rounded-xl px-3 py-2.5 mb-4 outline-none focus:border-amber-500"
+                  className="w-full border border-stone-200 rounded-xl px-3 py-2.5 mb-4 outline-none auth-input-focus"
                   maxLength={12}
                 />
                 <button
@@ -4238,7 +4238,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                     setFriendGroupParticipantName(n)
                     setFriendGroupParticipantPhone(digits)
                   }}
-                  className="w-full bg-amber-600 text-white font-black py-3 rounded-xl shadow-md hover:bg-amber-700 transition-colors"
+                  className="w-full brand-btn-primary font-black py-3 rounded-xl shadow-md transition-colors"
                 >
                   開始選購
                 </button>
@@ -4254,16 +4254,16 @@ const uploadTask = await storageRef.put(blob, metadata);
                </div>
                <div className="flex-1 overflow-y-auto py-4">
                   <ul className="space-y-1">
-                     <li><button onClick={() => { setSidebarOpen(false); setShowAboutModal(true); }} className="w-full text-left px-6 py-3 hover:bg-amber-50 font-medium text-stone-700 flex items-center gap-3"><Info size={18}/>關於我們</button></li>
-                    <li><button onClick={() => { setSidebarOpen(false); setShowCatalogModal(true); }} className="w-full text-left px-6 py-3 hover:bg-blue-50 font-medium text-stone-700 flex items-center gap-3"><DownloadIcon size={18}/>產品型錄</button></li>
-                     <li><button onClick={() => { setSidebarOpen(false); setShowContactModal(true); }} className="w-full text-left px-6 py-3 hover:bg-amber-50 font-medium text-stone-700 flex items-center gap-3"><Phone size={18}/>聯絡我們</button></li>
-                     <li><button onClick={() => { setSidebarOpen(false); handleShareWebsite(); }} className="w-full text-left px-6 py-3 hover:bg-emerald-50 font-medium text-stone-700 flex items-center gap-3"><Share2 size={18}/>分享商店</button></li>
+                     <li><button onClick={() => { setSidebarOpen(false); setShowAboutModal(true); }} className="w-full text-left px-6 py-3 brand-sidebar-hover font-medium text-stone-700 flex items-center gap-3"><Info size={18}/>關於我們</button></li>
+                    <li><button onClick={() => { setSidebarOpen(false); setShowCatalogModal(true); }} className="w-full text-left px-6 py-3 brand-sidebar-hover font-medium text-stone-700 flex items-center gap-3"><DownloadIcon size={18}/>產品型錄</button></li>
+                     <li><button onClick={() => { setSidebarOpen(false); setShowContactModal(true); }} className="w-full text-left px-6 py-3 brand-sidebar-hover font-medium text-stone-700 flex items-center gap-3"><Phone size={18}/>聯絡我們</button></li>
+                     <li><button onClick={() => { setSidebarOpen(false); handleShareWebsite(); }} className="w-full text-left px-6 py-3 brand-sidebar-hover font-medium text-stone-700 flex items-center gap-3"><Share2 size={18}/>分享商店</button></li>
                      
                      <li className="my-2 border-t border-stone-200"></li>
                      
                      {currentUser && !isAdminMode && (
                         <>
-                        <li><Link to="/member" onClick={() => setSidebarOpen(false)} className="w-full text-left px-6 py-3 hover:bg-stone-100 font-bold text-stone-800 flex items-center gap-3"><UserIcon size={18}/>會員中心</Link></li>
+                        <li><Link to="/member" onClick={() => setSidebarOpen(false)} className="w-full text-left px-6 py-3 brand-sidebar-hover font-bold text-stone-800 flex items-center gap-3"><UserIcon size={18}/>會員中心</Link></li>
                         {activeFriendGroupSid ? (
                           <li>
                             <button
@@ -4274,7 +4274,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                                   `${typeof window !== 'undefined' ? window.location.origin : ''}/group/join/${activeFriendGroupSid}`
                                 )
                               }}
-                              className="w-full text-left px-6 py-3 hover:bg-indigo-50 font-bold text-indigo-900 flex items-center gap-3"
+                              className="w-full text-left px-6 py-3 brand-sidebar-hover font-bold text-indigo-900 flex items-center gap-3"
                             >
                               <Copy size={18} /> 複製本場揪團連結
                             </button>
@@ -4284,7 +4284,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                             <Link
                               to={`/group/host/${activeHostGroupSid}`}
                               onClick={() => setSidebarOpen(false)}
-                              className="w-full text-left px-6 py-3 hover:bg-amber-50 font-bold text-amber-900 flex items-center gap-3"
+                              className="w-full text-left px-6 py-3 brand-sidebar-hover font-bold text-[#5C4A3A] flex items-center gap-3"
                             >
                               <UsersIcon size={18} /> 揪團管理
                             </Link>
@@ -4297,7 +4297,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                                 setSidebarOpen(false)
                                 createGroupBuySession()
                               }}
-                              className="w-full text-left px-6 py-3 hover:bg-amber-50 font-bold text-amber-900 flex items-center gap-3"
+                              className="w-full text-left px-6 py-3 brand-sidebar-hover font-bold text-[#5C4A3A] flex items-center gap-3"
                             >
                               <UsersIcon size={18} /> 揪團購物（開團）
                             </button>
@@ -4309,13 +4309,13 @@ const uploadTask = await storageRef.put(blob, metadata);
                      {isAdminMode && (
                         <>
                            <li className="px-6 py-2 text-xs font-bold text-stone-400 uppercase tracking-widest mt-2">管理員專區</li>
-                          <li><Link to="/admin/dashboard" onClick={() => setSidebarOpen(false)} className="w-full text-left px-6 py-3 hover:bg-indigo-50 font-medium text-indigo-700 flex items-center gap-3"><TrendingUp size={18}/>營運儀表板</Link></li> 
-                          <li><Link to="/admin/customers" onClick={() => setSidebarOpen(false)} className="w-full text-left px-6 py-3 hover:bg-blue-50 font-medium text-blue-700 flex items-center gap-3"><UsersIcon size={18}/>客戶管理</Link></li>
-                           <li><Link to="/admin/orders" onClick={() => setSidebarOpen(false)} className="w-full text-left px-6 py-3 hover:bg-amber-50 font-medium text-amber-700 flex items-center gap-3"><ClipboardList size={18}/>訂單管理</Link></li>
-                          <li><Link to="/admin/products" onClick={() => setSidebarOpen(false)} className="w-full text-left px-6 py-3 hover:bg-emerald-50 font-medium text-emerald-700 flex items-center gap-3"><ClipboardList size={18}/>商品總覽編輯(表單)</Link></li>
-                           <li><button onClick={() => { setSidebarOpen(false); setTempConfig(storeConfig); setShowConfigModal(true); }} className="w-full text-left px-6 py-3 hover:bg-rose-50 font-medium text-rose-700 flex items-center gap-3"><SettingsIcon size={18}/>系統設定</button></li>
-                           <li><button onClick={() => { setSidebarOpen(false); setShowAdminPrivacyModal(true); }} className="w-full text-left px-6 py-3 hover:bg-teal-50 font-medium text-teal-700 flex items-center gap-3"><Lock size={18}/>個資政策設定</button></li>
-                           <li><button onClick={() => { setSidebarOpen(false); setTempAnnounce({}); setIsEditingAnnounce(false); setShowAnnounceConfig(true); }} className="w-full text-left px-6 py-3 hover:bg-purple-50 font-medium text-purple-700 flex items-center gap-3"><Megaphone size={18}/>公告設定</button></li>
+                          <li><Link to="/admin/dashboard" onClick={() => setSidebarOpen(false)} className="w-full text-left px-6 py-3 brand-sidebar-hover font-medium text-indigo-700 flex items-center gap-3"><TrendingUp size={18}/>營運儀表板</Link></li> 
+                          <li><Link to="/admin/customers" onClick={() => setSidebarOpen(false)} className="w-full text-left px-6 py-3 brand-sidebar-hover font-medium text-blue-700 flex items-center gap-3"><UsersIcon size={18}/>客戶管理</Link></li>
+                           <li><Link to="/admin/orders" onClick={() => setSidebarOpen(false)} className="w-full text-left px-6 py-3 brand-sidebar-hover font-medium brand-accent-strong flex items-center gap-3"><ClipboardList size={18}/>訂單管理</Link></li>
+                          <li><Link to="/admin/products" onClick={() => setSidebarOpen(false)} className="w-full text-left px-6 py-3 brand-sidebar-hover font-medium text-emerald-700 flex items-center gap-3"><ClipboardList size={18}/>商品總覽編輯(表單)</Link></li>
+                           <li><button onClick={() => { setSidebarOpen(false); setTempConfig(storeConfig); setShowConfigModal(true); }} className="w-full text-left px-6 py-3 brand-sidebar-hover font-medium text-rose-700 flex items-center gap-3"><SettingsIcon size={18}/>系統設定</button></li>
+                           <li><button onClick={() => { setSidebarOpen(false); setShowAdminPrivacyModal(true); }} className="w-full text-left px-6 py-3 brand-sidebar-hover font-medium text-teal-700 flex items-center gap-3"><Lock size={18}/>個資政策設定</button></li>
+                           <li><button onClick={() => { setSidebarOpen(false); setTempAnnounce({}); setIsEditingAnnounce(false); setShowAnnounceConfig(true); }} className="w-full text-left px-6 py-3 brand-sidebar-hover font-medium text-purple-700 flex items-center gap-3"><Megaphone size={18}/>公告設定</button></li>
                         </>
                      )}
                   </ul>
@@ -4396,7 +4396,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                   ))}
                   <button
                     type="button"
-                    className="absolute inset-0 z-[2] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-inset"
+                    className="absolute inset-0 z-[2] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8B7355] focus-visible:ring-inset"
                     aria-label="查看公告詳情"
                     onClick={() => {
                       const ann = announceCarouselItems[announceCarouselIndex];
@@ -4461,7 +4461,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                         />
                         <button
                           type="button"
-                          className="absolute inset-0 z-[2] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-inset rounded-xl"
+                          className="absolute inset-0 z-[2] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8B7355] focus-visible:ring-inset rounded-xl"
                           aria-label="查看公告詳情"
                           onClick={() => {
                             setViewingAnnounce(announceCarouselItems[0]);
@@ -4477,7 +4477,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                         {announceDeskFly?.kind === 'next' && (
                           <>
                             <div
-                              className="pointer-events-none absolute overflow-hidden rounded-xl border-2 border-amber-300/90 bg-white shadow-lg ring-1 ring-amber-200/50 z-[25]"
+                              className="pointer-events-none absolute overflow-hidden rounded-xl border-2 border-stone-400/80 bg-white shadow-lg ring-1 ring-stone-300/50 z-[25]"
                               style={{
                                 left: announceDeskFly.centerStart.left,
                                 top: announceDeskFly.centerStart.top,
@@ -4605,7 +4605,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                               />
                             </div>
                             <div
-                              className="pointer-events-none absolute overflow-hidden rounded-xl border-2 border-amber-300/90 bg-white shadow-lg ring-1 ring-amber-200/50 z-[23]"
+                              className="pointer-events-none absolute overflow-hidden rounded-xl border-2 border-stone-400/80 bg-white shadow-lg ring-1 ring-stone-300/50 z-[23]"
                               style={{
                                 left: announceDeskFly.centerStart.left,
                                 top: announceDeskFly.centerStart.top,
@@ -4643,7 +4643,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                           <button
                             ref={announceDeskLeftCardRef}
                             type="button"
-                            className="relative z-[1] w-[22%] max-w-[220px] shrink-0 aspect-video rounded-lg overflow-hidden border border-stone-200 bg-white shadow-sm opacity-80 hover:opacity-100 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+                            className="relative z-[1] w-[22%] max-w-[220px] shrink-0 aspect-video rounded-lg overflow-hidden border border-stone-200 bg-white shadow-sm opacity-80 hover:opacity-100 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8B7355]"
                             aria-label={`查看公告：${announceCarouselItems[(announceCarouselIndex - 1 + announceCarouselLen) % announceCarouselLen]?.title || ''}`}
                             onClick={() => {
                               const ann =
@@ -4667,7 +4667,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                           </button>
                           <div
                             ref={announceDeskCenterCardRef}
-                            className="relative z-[2] w-[52%] max-w-3xl shrink-0 aspect-video rounded-xl overflow-hidden border-2 border-amber-300/90 bg-white shadow-lg ring-1 ring-amber-200/50"
+                            className="relative z-[2] w-[52%] max-w-3xl shrink-0 aspect-video rounded-xl overflow-hidden border-2 border-stone-400/80 bg-white shadow-lg ring-1 ring-stone-300/50"
                           >
                             <img
                               src={announceCarouselItems[announceCarouselIndex].image}
@@ -4679,7 +4679,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                             />
                             <button
                               type="button"
-                              className="absolute inset-0 z-[2] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-inset"
+                              className="absolute inset-0 z-[2] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8B7355] focus-visible:ring-inset"
                               aria-label="查看公告詳情"
                               onClick={() => {
                                 const ann = announceCarouselItems[announceCarouselIndex];
@@ -4693,7 +4693,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                           <button
                             ref={announceDeskRightCardRef}
                             type="button"
-                            className="relative z-[1] w-[22%] max-w-[220px] shrink-0 aspect-video rounded-lg overflow-hidden border border-stone-200 bg-white shadow-sm opacity-80 hover:opacity-100 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+                            className="relative z-[1] w-[22%] max-w-[220px] shrink-0 aspect-video rounded-lg overflow-hidden border border-stone-200 bg-white shadow-sm opacity-80 hover:opacity-100 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8B7355]"
                             aria-label={`查看公告：${announceCarouselItems[(announceCarouselIndex + 1) % announceCarouselLen]?.title || ''}`}
                             onClick={() => {
                               const ann = announceCarouselItems[(announceCarouselIndex + 1) % announceCarouselLen];
@@ -4777,9 +4777,9 @@ const uploadTask = await storageRef.put(blob, metadata);
             )}
 
             {currentUser && !isAdminMode && !adminOrderingFor && !activeFriendGroupSid && (
-              <div className="relative z-30 mx-4 mt-2 rounded-2xl border border-amber-300/80 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-sm">
-                <div className="flex items-start gap-2 text-sm font-bold text-amber-950 leading-snug">
-                  <UsersIcon size={20} className="text-amber-600 shrink-0 mt-0.5" />
+              <div className="relative z-30 mx-4 mt-2 rounded-2xl border border-[#D4C4B0] bg-gradient-to-r from-[#F5F0E8] to-[#EBE3D6] px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-sm">
+                <div className="flex items-start gap-2 text-sm font-bold text-[#5C4A3A] leading-snug">
+                  <UsersIcon size={20} className="brand-accent shrink-0 mt-0.5" />
                   <span>
                     揪團購物：一場揪團對應一個連結；開團後分享連結給朋友，由主揪統一結帳。進行中時無法再開新團。
                   </span>
@@ -4789,14 +4789,14 @@ const uploadTask = await storageRef.put(blob, metadata);
                     <button
                       type="button"
                       onClick={() => createGroupBuySession()}
-                      className="px-4 py-2 rounded-xl bg-amber-600 text-white text-xs font-black shadow hover:bg-amber-700 transition-colors"
+                      className="px-4 py-2 rounded-xl brand-btn-primary text-xs font-black shadow transition-colors"
                     >
                       立即開團
                     </button>
                   ) : (
                     <Link
                       to={`/group/host/${activeHostGroupSid}`}
-                      className="px-4 py-2 rounded-xl bg-white border border-amber-400 text-amber-900 text-xs font-black shadow-sm hover:bg-amber-50 transition-colors text-center"
+                      className="px-4 py-2 rounded-xl bg-white border border-[#8B7355] text-[#5C4A3A] text-xs font-black shadow-sm hover:bg-[#F5F0E8] transition-colors text-center"
                     >
                       揪團管理（本場連結）
                     </Link>
@@ -4822,9 +4822,9 @@ const uploadTask = await storageRef.put(blob, metadata);
            {/* --- 首頁客戶端熱銷排行榜 (公用看板版) --- */}
             {(!isAdminMode || adminOrderingFor) && publicTopSellers.items && publicTopSellers.items.length >= 3 && activeCategory === '全部' && (
               <div className="mt-6 mb-8 bg-brand-marble p-5 rounded-2xl shadow-sm border border-stone-100 relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-300 via-amber-500 to-amber-300"></div>
+                <div className="absolute top-0 left-0 w-full h-1 brand-bar-top-gray"></div>
                 <h2 className="text-lg font-black mb-6 text-stone-800 flex items-center gap-2 justify-center">
-                  <TrendingUp size={20} className="text-amber-500"/> {publicTopSellers.label}人氣熱銷 Top 5
+                  <TrendingUp size={20} className="brand-accent"/> {publicTopSellers.label}人氣熱銷 Top 5
                 </h2>
 
                 {/* 頒獎台設計 (Top 3) */}
@@ -4835,7 +4835,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                         <img src={publicTopSellers.items[1].thumbUrl || publicTopSellers.items[1].image} loading="eager" decoding="async" fetchPriority="high" className="w-full h-full object-cover rounded-full border-4 border-slate-200 shadow-md transition-transform duration-300 group-hover:scale-105" />
                         <div className="absolute -bottom-1 -right-1 bg-slate-400 text-white text-[11px] font-black w-7 h-7 rounded-full flex items-center justify-center border-2 border-white shadow-sm">2</div>
                      </div>
-                     <span className="text-xs md:text-sm font-bold text-stone-700 w-full text-center px-1 group-hover:text-amber-600 transition-colors leading-snug break-words">{publicTopSellers.items[1].name}</span>
+                     <span className="text-xs md:text-sm font-bold text-stone-700 w-full text-center px-1 group-hover:text-[#7D6B52] transition-colors leading-snug break-words">{publicTopSellers.items[1].name}</span>
                      <div className="w-full bg-gradient-to-b from-slate-100 to-white h-20 md:h-24 rounded-t-2xl mt-3 flex items-start justify-center pt-3 border-t-4 border-slate-300 shadow-[0_-2px_10px_rgba(0,0,0,0.02)] group-hover:bg-slate-50 transition-colors">
                         {typeof publicTopSellers.items[1].percentage === 'number' ? (
                           <span className="text-slate-500 font-black text-sm md:text-base">{publicTopSellers.items[1].percentage}%</span>
@@ -4851,7 +4851,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                         <img src={publicTopSellers.items[0].thumbUrl || publicTopSellers.items[0].image} loading="eager" decoding="async" fetchPriority="high" className="w-full h-full object-cover rounded-full border-4 border-amber-400 shadow-xl transition-transform duration-300 group-hover:scale-105" />
                         <div className="absolute -bottom-1 -right-1 bg-amber-500 text-white text-sm font-black w-8 h-8 rounded-full flex items-center justify-center border-2 border-white shadow-sm">1</div>
                      </div>
-                     <span className="text-sm md:text-base font-black text-stone-800 w-full text-center px-1 group-hover:text-amber-600 transition-colors leading-snug break-words">{publicTopSellers.items[0].name}</span>
+                     <span className="text-sm md:text-base font-black text-stone-800 w-full text-center px-1 group-hover:text-[#7D6B52] transition-colors leading-snug break-words">{publicTopSellers.items[0].name}</span>
                      <div className="w-full bg-gradient-to-b from-amber-50 to-white h-28 md:h-36 rounded-t-2xl mt-3 flex items-start justify-center pt-3 border-t-4 border-amber-400 shadow-[0_-4px_15px_rgba(251,191,36,0.2)] group-hover:bg-amber-100/50 transition-colors">
                         {typeof publicTopSellers.items[0].percentage === 'number' ? (
                           <span className="text-amber-600 font-black text-xl md:text-2xl">{publicTopSellers.items[0].percentage}%</span>
@@ -4867,7 +4867,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                         <img src={publicTopSellers.items[2].thumbUrl || publicTopSellers.items[2].image} loading="eager" decoding="async" fetchPriority="high" className="w-full h-full object-cover rounded-full border-4 border-orange-200 shadow-md transition-transform duration-300 group-hover:scale-105" />
                         <div className="absolute -bottom-1 -right-1 bg-orange-400 text-white text-[11px] font-black w-7 h-7 rounded-full flex items-center justify-center border-2 border-white shadow-sm">3</div>
                      </div>
-                     <span className="text-xs md:text-sm font-bold text-stone-700 w-full text-center px-1 group-hover:text-amber-600 transition-colors leading-snug break-words">{publicTopSellers.items[2].name}</span>
+                     <span className="text-xs md:text-sm font-bold text-stone-700 w-full text-center px-1 group-hover:text-[#7D6B52] transition-colors leading-snug break-words">{publicTopSellers.items[2].name}</span>
                      <div className="w-full bg-gradient-to-b from-orange-50 to-white h-16 md:h-20 rounded-t-2xl mt-3 flex items-start justify-center pt-3 border-t-4 border-orange-300 shadow-[0_-2px_10px_rgba(0,0,0,0.02)] group-hover:bg-orange-50 transition-colors">
                         {typeof publicTopSellers.items[2].percentage === 'number' ? (
                           <span className="text-orange-600 font-black text-sm md:text-base">{publicTopSellers.items[2].percentage}%</span>
@@ -4882,11 +4882,11 @@ const uploadTask = await storageRef.put(blob, metadata);
                 {publicTopSellers.items.length > 3 && (
                   <div className="space-y-2 pt-4 border-t border-stone-100">
                      {publicTopSellers.items.slice(3, 5).map((item, index) => (
-                       <div key={item.id || `${item.name}-${index}`} onClick={() => { rememberHomeScroll(); navigate(`/product/${item.id}`) }} className="flex items-center gap-3 bg-white p-2.5 rounded-xl border border-stone-200 shadow-md hover:shadow-lg hover:bg-amber-50 cursor-pointer transition-all duration-300 group">
-                           <span className="text-stone-700 text-base font-black w-5 text-center group-hover:text-amber-600 transition-colors">{index + 4}</span>
+                       <div key={item.id || `${item.name}-${index}`} onClick={() => { rememberHomeScroll(); navigate(`/product/${item.id}`) }} className="flex items-center gap-3 bg-white p-2.5 rounded-xl border border-stone-200 shadow-md hover:shadow-lg hover:bg-[#F5F0E8] cursor-pointer transition-all duration-300 group">
+                           <span className="text-stone-700 text-base font-black w-5 text-center group-hover:text-[#7D6B52] transition-colors">{index + 4}</span>
                            <img src={item.thumbUrl || item.image} loading="eager" decoding="async" fetchPriority="high" className="w-10 h-10 object-cover rounded-lg shadow-sm transition-transform duration-300 group-hover:scale-105" />
-                           <span className="flex-1 text-sm font-bold text-stone-700 truncate group-hover:text-amber-700 transition-colors">{item.name}</span>
-                           <span className="text-xs font-black bg-white px-2 py-1 rounded shadow-md text-stone-600 border border-stone-200 group-hover:border-amber-200 group-hover:text-amber-600 transition-colors">
+                           <span className="flex-1 text-sm font-bold text-stone-700 truncate group-hover:text-[#6B5A45] transition-colors">{item.name}</span>
+                           <span className="text-xs font-black bg-white px-2 py-1 rounded shadow-md text-stone-600 border border-stone-200 group-hover:border-amber-200 group-hover:text-[#7D6B52] transition-colors">
                              {typeof item.percentage === 'number' ? `${item.percentage}%` : `#${index + 4}`}
                            </span>
                         </div>
@@ -4896,14 +4896,14 @@ const uploadTask = await storageRef.put(blob, metadata);
               </div>
             )}
             {isAdminMode && !adminOrderingFor && (
-              <button onClick={handleAddProduct} className="w-full mt-4 bg-white border-2 border-dashed border-stone-300 rounded-2xl p-4 text-stone-500 font-bold flex flex-col items-center justify-center gap-2 hover:border-amber-500 hover:text-amber-600 transition-colors">
+              <button onClick={handleAddProduct} className="w-full mt-4 bg-white border-2 border-dashed border-stone-300 rounded-2xl p-4 text-stone-500 font-bold flex flex-col items-center justify-center gap-2 hover:border-[#8B7355] hover:text-[#7D6B52] transition-colors">
                 <div className="bg-stone-100 p-2 rounded-full"><Plus size={24} /></div> 新增商品
               </button>
             )}
 
             {displayedCategories.map(category => (
               <div key={category} className="mt-6">
-                <h2 className="text-lg font-bold mb-3 text-stone-700 flex items-center gap-2 border-b border-stone-200 pb-1">
+                <h2 className="text-lg font-bold mb-3 brand-accent-strong flex items-center gap-2 border-b border-stone-200 pb-1">
                   {category} 
                   {mergedCategories.find(c => c.name === category)?.isHidden && <span className="text-xs font-normal text-stone-400 bg-stone-100 px-2 py-0.5 rounded ml-2">隱藏分類</span>}
                 </h2>
@@ -4928,34 +4928,34 @@ const uploadTask = await storageRef.put(blob, metadata);
                   <button
                     type="button"
                     onClick={() => setShowAboutModal(true)}
-                    className="hover:text-amber-800 underline-offset-2 hover:underline"
+                    className="hover:text-[#6B5A45] underline-offset-2 hover:underline"
                   >
                     關於我們
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowCatalogModal(true)}
-                    className="hover:text-amber-800 underline-offset-2 hover:underline"
+                    className="hover:text-[#6B5A45] underline-offset-2 hover:underline"
                   >
                     產品型錄
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowContactModal(true)}
-                    className="hover:text-amber-800 underline-offset-2 hover:underline"
+                    className="hover:text-[#6B5A45] underline-offset-2 hover:underline"
                   >
                     聯絡我們
                   </button>
                   <button
                     type="button"
                     onClick={() => handleShareWebsite()}
-                    className="hover:text-amber-800 underline-offset-2 hover:underline"
+                    className="hover:text-[#6B5A45] underline-offset-2 hover:underline"
                   >
                     分享商店
                   </button>
                   <Link
                     to="/member"
-                    className="hover:text-amber-800 underline-offset-2 hover:underline"
+                    className="hover:text-[#6B5A45] underline-offset-2 hover:underline"
                   >
                     會員中心
                   </Link>
@@ -4986,13 +4986,13 @@ const uploadTask = await storageRef.put(blob, metadata);
                       <div className="relative shrink-0 group">
                         {editingProduct.image ? (
                            <>
-                             <img src={editingProduct.image} loading="eager" decoding="async" fetchPriority="high" onClick={() => setMainDisplayImg(editingProduct.image)} className={`w-16 h-16 object-cover rounded-lg cursor-pointer border-2 ${mainDisplayImg === editingProduct.image ? 'border-amber-500' : 'border-stone-200'}`} />
+                             <img src={editingProduct.image} loading="eager" decoding="async" fetchPriority="high" onClick={() => setMainDisplayImg(editingProduct.image)} className={`w-16 h-16 object-cover rounded-lg cursor-pointer border-2 ${mainDisplayImg === editingProduct.image ? 'border-[#8B7355]' : 'border-stone-200'}`} />
                              {isAdminMode && !adminOrderingFor && (
                                 <button onClick={() => { setEditingProduct({...editingProduct, image: ''}); if(mainDisplayImg === editingProduct.image) setMainDisplayImg(''); }} className="absolute -top-1 -right-1 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center shadow-md z-10"><X size={12} /></button>
                              )}
                            </>
                         ) : (
-                           <div className="w-16 h-16 border-2 border-dashed border-stone-300 rounded-lg flex flex-col items-center justify-center text-stone-400 cursor-pointer hover:border-amber-500 relative">
+                           <div className="w-16 h-16 border-2 border-dashed border-stone-300 rounded-lg flex flex-col items-center justify-center text-stone-400 cursor-pointer hover:border-[#8B7355] relative">
                                <Camera size={20} />
                                {isAdminMode && !adminOrderingFor && <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleImageUpload(e.target.files[0], (img) => { setEditingProduct({...editingProduct, image: img}); setMainDisplayImg(img); })} />}
                            </div>
@@ -5002,14 +5002,14 @@ const uploadTask = await storageRef.put(blob, metadata);
                       {/* ======== 額外圖片 ======== */}
                       {(editingProduct.extraImages || []).map((img, idx) => (
                         <div key={idx} className="relative shrink-0 group">
-                         <img src={img} loading="eager" decoding="async" fetchPriority="high" onClick={() => setMainDisplayImg(img)} className={`w-16 h-16 object-cover rounded-lg cursor-pointer border-2 ${mainDisplayImg === img ? 'border-amber-500' : 'border-stone-200'}`} />
+                         <img src={img} loading="eager" decoding="async" fetchPriority="high" onClick={() => setMainDisplayImg(img)} className={`w-16 h-16 object-cover rounded-lg cursor-pointer border-2 ${mainDisplayImg === img ? 'border-[#8B7355]' : 'border-stone-200'}`} />
                           {isAdminMode && !adminOrderingFor && <button onClick={() => { const newExtra = [...editingProduct.extraImages]; newExtra.splice(idx, 1); setEditingProduct({...editingProduct, extraImages: newExtra}); if(mainDisplayImg === img) setMainDisplayImg(editingProduct.image); }} className="absolute -top-1 -right-1 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center shadow-md z-10"><X size={12} /></button>}
                         </div>
                       ))}
 
                       {/* ======== 新增額外圖片按鈕 ======== */}
                       {isAdminMode && !adminOrderingFor && (editingProduct.extraImages || []).length < 4 && (
-                        <label className="w-16 h-16 shrink-0 border-2 border-dashed border-stone-300 rounded-lg flex flex-col items-center justify-center text-stone-400 cursor-pointer hover:border-amber-500"><ImagePlus size={20} /><input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], (img) => setEditingProduct({...editingProduct, extraImages: [...(editingProduct.extraImages||[]), img]}))} /></label>
+                        <label className="w-16 h-16 shrink-0 border-2 border-dashed border-stone-300 rounded-lg flex flex-col items-center justify-center text-stone-400 cursor-pointer hover:border-[#8B7355]"><ImagePlus size={20} /><input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], (img) => setEditingProduct({...editingProduct, extraImages: [...(editingProduct.extraImages||[]), img]}))} /></label>
                       )}
                     </div>
                   </div>
@@ -5034,34 +5034,34 @@ const uploadTask = await storageRef.put(blob, metadata);
                             <label className="flex items-center gap-1.5 bg-emerald-50 text-emerald-700 px-2 py-1 rounded-md cursor-pointer border border-emerald-100"><input type="checkbox" checked={editingProduct.isFreeShipping !== false} onChange={e => setEditingProduct({...editingProduct, isFreeShipping: e.target.checked})} className="accent-emerald-500 w-3 h-3" />計入免運件數</label>
                             
                         </div>
-                        <div className="flex gap-3"><input type="text" value={editingProduct.id} onChange={e => setEditingProduct({...editingProduct, id: e.target.value.toUpperCase()})} disabled={!editingProduct.isNew} placeholder="品號 (如D01)" className="w-1/3 bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500 disabled:bg-stone-100" /><input type="text" value={editingProduct.name} onChange={e => setEditingProduct({...editingProduct, name: e.target.value})} placeholder="商品名稱" className="w-2/3 bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500" /></div>
+                        <div className="flex gap-3"><input type="text" value={editingProduct.id} onChange={e => setEditingProduct({...editingProduct, id: e.target.value.toUpperCase()})} disabled={!editingProduct.isNew} placeholder="品號 (如D01)" className="w-1/3 bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-[#8B7355] disabled:bg-stone-100" /><input type="text" value={editingProduct.name} onChange={e => setEditingProduct({...editingProduct, name: e.target.value})} placeholder="商品名稱" className="w-2/3 bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-[#8B7355]" /></div>
                         <div className="flex gap-3">
                            <div className="flex-[1.5] flex gap-1">
-                              <select value={editingProduct.category} onChange={e => setEditingProduct({...editingProduct, category: e.target.value})} className="flex-1 w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500">
+                              <select value={editingProduct.category} onChange={e => setEditingProduct({...editingProduct, category: e.target.value})} className="flex-1 w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-[#8B7355]">
                                  {adminCategoryNames.map(c => <option key={c} value={c}>{c}</option>)}
                               </select>
                               <button onClick={() => setShowCategoryManager(true)} className="bg-stone-200 text-stone-600 px-3 rounded hover:bg-stone-300 text-xs font-bold shrink-0 whitespace-nowrap">管理分類</button>
                            </div>
-                           <div className="flex-[0.5]"><input type="text" value={editingProduct.unit || ''} onChange={e => setEditingProduct({...editingProduct, unit: e.target.value})} placeholder="單位(罐/袋)" className="w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500 text-center" /></div>
-                           <input type="number" value={editingProduct.price} onChange={e => setEditingProduct({...editingProduct, price: e.target.value})} placeholder="售價" className="flex-1 w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none text-amber-600 font-bold focus:border-amber-500" />
+                           <div className="flex-[0.5]"><input type="text" value={editingProduct.unit || ''} onChange={e => setEditingProduct({...editingProduct, unit: e.target.value})} placeholder="單位(罐/袋)" className="w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-[#8B7355] text-center" /></div>
+                           <input type="number" value={editingProduct.price} onChange={e => setEditingProduct({...editingProduct, price: e.target.value})} placeholder="售價" className="flex-1 w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none brand-accent font-bold focus:border-[#8B7355]" />
                            <input type="number" value={editingProduct.cost || ''} onChange={e => setEditingProduct({...editingProduct, cost: e.target.value})} placeholder="成本" className="flex-1 w-full bg-stone-200 border border-stone-300 rounded p-2 text-sm outline-none text-purple-600 font-bold focus:border-purple-500" title="僅管理員可見之成本" />
                         </div>
-                        <input type="text" value={editingProduct.desc} onChange={e => setEditingProduct({...editingProduct, desc: e.target.value})} placeholder="簡介 (顯示於列表)" className="w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500" />
+                        <input type="text" value={editingProduct.desc} onChange={e => setEditingProduct({...editingProduct, desc: e.target.value})} placeholder="簡介 (顯示於列表)" className="w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-[#8B7355]" />
                       </div>
                     ) : (
                       <div>
                         {editingProduct.isPromo && <span className="inline-block bg-rose-100 text-rose-600 text-[10px] font-bold px-2 py-0.5 rounded-md mb-2 mr-2 border border-rose-200">享任選優惠活動</span>}
                         {editingProduct.isAddon && <span className="inline-block bg-purple-100 text-purple-600 text-[10px] font-bold px-2 py-0.5 rounded-md mb-2 border border-purple-200">可做為加購商品</span>}
-                        <div className="text-3xl font-bold text-amber-600 mb-1">${editingProduct.price} {editingProduct.unit && <span className="text-sm font-normal text-stone-500">/{editingProduct.unit}</span>}</div>
+                        <div className="text-3xl font-bold brand-accent mb-1">${editingProduct.price} {editingProduct.unit && <span className="text-sm font-normal text-stone-500">/{editingProduct.unit}</span>}</div>
                         <h1 className="text-2xl font-bold text-stone-800">{editingProduct.name}</h1>
                         <p className="text-sm text-stone-500 mt-1">{editingProduct.desc}</p>
                       </div>
                     )}
                     <hr className="border-stone-200" />
-                    {(isAdminMode || editingProduct.intro) && <div className="space-y-1.5"><h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 bg-amber-500 rounded-full"></span>產品介紹</h3>{isAdminMode && !adminOrderingFor ? <textarea rows="3" value={editingProduct.intro} onChange={e => setEditingProduct({...editingProduct, intro: e.target.value})} className="w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500"></textarea> : <p className="text-sm text-stone-600 whitespace-pre-wrap">{editingProduct.intro}</p>}</div>}
-                    {(isAdminMode || editingProduct.ingredients) && <div className="space-y-1.5"><h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 bg-emerald-500 rounded-full"></span>產品成分</h3>{isAdminMode && !adminOrderingFor ? <textarea rows="2" value={editingProduct.ingredients} onChange={e => setEditingProduct({...editingProduct, ingredients: e.target.value})} className="w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500"></textarea> : <p className="text-sm text-stone-600 whitespace-pre-wrap">{editingProduct.ingredients}</p>}</div>}
-                    {(isAdminMode || editingProduct.weight) && <div className="space-y-1.5"><h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 bg-blue-500 rounded-full"></span>產品重量</h3>{isAdminMode && !adminOrderingFor ? <input type="text" value={editingProduct.weight} onChange={e => setEditingProduct({...editingProduct, weight: e.target.value})} className="w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500" /> : <p className="text-sm text-stone-600">{editingProduct.weight}</p>}</div>}
-                    {(isAdminMode || editingProduct.notices) && <div className="space-y-1.5"><h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 bg-rose-500 rounded-full"></span>注意事項</h3>{isAdminMode && !adminOrderingFor ? <textarea rows="50" value={editingProduct.notices} onChange={e => setEditingProduct({...editingProduct, notices: e.target.value})} className="w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-amber-500"></textarea> : <div className="bg-rose-50 text-rose-700 p-3 rounded-xl text-sm whitespace-pre-wrap">{editingProduct.notices}</div>}</div>}
+                    {(isAdminMode || editingProduct.intro) && <div className="space-y-1.5"><h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 brand-dot rounded-full"></span>產品介紹</h3>{isAdminMode && !adminOrderingFor ? <textarea rows="3" value={editingProduct.intro} onChange={e => setEditingProduct({...editingProduct, intro: e.target.value})} className="w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-[#8B7355]"></textarea> : <p className="text-sm text-stone-600 whitespace-pre-wrap">{editingProduct.intro}</p>}</div>}
+                    {(isAdminMode || editingProduct.ingredients) && <div className="space-y-1.5"><h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 bg-emerald-500 rounded-full"></span>產品成分</h3>{isAdminMode && !adminOrderingFor ? <textarea rows="2" value={editingProduct.ingredients} onChange={e => setEditingProduct({...editingProduct, ingredients: e.target.value})} className="w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-[#8B7355]"></textarea> : <p className="text-sm text-stone-600 whitespace-pre-wrap">{editingProduct.ingredients}</p>}</div>}
+                    {(isAdminMode || editingProduct.weight) && <div className="space-y-1.5"><h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 bg-blue-500 rounded-full"></span>產品重量</h3>{isAdminMode && !adminOrderingFor ? <input type="text" value={editingProduct.weight} onChange={e => setEditingProduct({...editingProduct, weight: e.target.value})} className="w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-[#8B7355]" /> : <p className="text-sm text-stone-600">{editingProduct.weight}</p>}</div>}
+                    {(isAdminMode || editingProduct.notices) && <div className="space-y-1.5"><h3 className="font-bold text-stone-700 flex items-center gap-1"><span className="w-1 h-4 bg-rose-500 rounded-full"></span>注意事項</h3>{isAdminMode && !adminOrderingFor ? <textarea rows="50" value={editingProduct.notices} onChange={e => setEditingProduct({...editingProduct, notices: e.target.value})} className="w-full bg-white border border-stone-300 rounded p-2 text-sm outline-none focus:border-[#8B7355]"></textarea> : <div className="bg-rose-50 text-rose-700 p-3 rounded-xl text-sm whitespace-pre-wrap">{editingProduct.notices}</div>}</div>}
                   </div>
                 </div>
                 <div className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-stone-200">
@@ -5072,8 +5072,8 @@ const uploadTask = await storageRef.put(blob, metadata);
                     </div>
                   ) : (
                     <div className="flex gap-4">
-                      <div className="flex items-center gap-4 bg-stone-50 rounded-xl px-4 py-3 border border-stone-200 flex-1 justify-center"><button onClick={() => updateCart(editingProduct.id, -1)} className="p-1 text-stone-500"><Minus size={18} /></button><span className="w-6 text-center text-lg font-bold">{getDisplayQtyForProduct(editingProduct.id)}</span><button onClick={() => updateCart(editingProduct.id, 1)} className="p-1 text-amber-600"><Plus size={18} /></button></div>
-                      <button onClick={() => setEditingProduct(null)} className="flex-[1.5] bg-amber-500 text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform">確認返回</button>
+                      <div className="flex items-center gap-4 bg-stone-50 rounded-xl px-4 py-3 border border-stone-200 flex-1 justify-center"><button onClick={() => updateCart(editingProduct.id, -1)} className="p-1 text-stone-500"><Minus size={18} /></button><span className="w-6 text-center text-lg font-bold">{getDisplayQtyForProduct(editingProduct.id)}</span><button onClick={() => updateCart(editingProduct.id, 1)} className="p-1 brand-accent"><Plus size={18} /></button></div>
+                      <button onClick={() => setEditingProduct(null)} className="flex-[1.5] brand-btn-primary font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform">確認返回</button>
                     </div>
                   )}
                 </div>
@@ -5092,7 +5092,7 @@ const uploadTask = await storageRef.put(blob, metadata);
             <div className="fixed bottom-[5.5rem] left-0 right-0 max-w-md md:max-w-4xl lg:max-w-6xl mx-auto px-4 z-[35] pointer-events-none flex justify-start">
               <Link
                 to={`/group/host/${activeHostGroupSid}`}
-                className="pointer-events-auto inline-flex items-center gap-2 bg-amber-700 text-white text-xs font-black px-4 py-2.5 rounded-full shadow-lg border border-amber-800 hover:bg-amber-800 transition-colors"
+                className="pointer-events-auto inline-flex items-center gap-2 bg-[#7D6B52] text-white text-xs font-black px-4 py-2.5 rounded-full shadow-lg border border-[#6A5A45] hover:bg-[#6A5A45] transition-colors"
               >
                 <LinkIcon size={14} /> 揪團管理・複製連結
               </Link>
@@ -5103,7 +5103,7 @@ const uploadTask = await storageRef.put(blob, metadata);
           {cartData.totalQty > 0 && (!isAdminMode || adminOrderingFor) && !editingProduct && (
             <div className="fixed bottom-0 left-0 right-0 max-w-md md:max-w-4xl lg:max-w-6xl mx-auto p-4 bg-gradient-to-t from-white via-white to-transparent pointer-events-none z-[34]">
               <Link to="/cart" className="w-full bg-stone-800 text-white rounded-2xl p-4 flex items-center justify-between shadow-xl pointer-events-auto active:scale-95 transition-transform">
-                <div className="flex items-center gap-3"><div className="relative"><ShoppingCart size={24} /><span className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">{cartData.totalQty}</span></div><span className="font-medium">{groupBuyFriendMode ? '查看揪團選購' : '查看購物車'}</span></div>
+                <div className="flex items-center gap-3"><div className="relative"><ShoppingCart size={24} /><span className="absolute -top-2 -right-2 bg-[#7D6B52] text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">{cartData.totalQty}</span></div><span className="font-medium">{groupBuyFriendMode ? '查看揪團選購' : '查看購物車'}</span></div>
                 <div className="text-lg font-bold">${cartData.currentTotal}</div>
               </Link>
             </div>
@@ -5157,7 +5157,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                       <div className="flex justify-between items-center mb-4 border-b border-stone-100 pb-2">
                         <h3 className="font-bold text-stone-700">我的資料</h3>
                         {!isEditingProfile ? (
-                          <button onClick={() => setIsEditingProfile(true)} className="text-xs flex items-center gap-1 text-amber-600 font-bold hover:text-amber-700"><EditIcon size={14}/> 修改</button>
+                          <button onClick={() => setIsEditingProfile(true)} className="text-xs flex items-center gap-1 text-amber-600 font-bold hover:text-[#6B5A45]"><EditIcon size={14}/> 修改</button>
                         ) : (
                           <button onClick={() => { setIsEditingProfile(false); setCustomerInfo({ name: userProfile?.name||'', phone: userProfile?.phone||'', address: userProfile?.address||'', email: userProfile?.email||'', lineId: userProfile?.lineId||'', gender: userProfile?.gender||'女' }); }} className="text-xs text-stone-400 font-bold hover:text-stone-600">取消</button>
                         )}
@@ -5165,14 +5165,14 @@ const uploadTask = await storageRef.put(blob, metadata);
 
                       {isEditingProfile ? (
                         <div className="space-y-3 text-sm">
-                          <input type="text" placeholder="姓名" value={customerInfo.name} onChange={e=>setCustomerInfo({...customerInfo, name: e.target.value})} className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 outline-none focus:border-amber-500" />
+                          <input type="text" placeholder="姓名" value={customerInfo.name} onChange={e=>setCustomerInfo({...customerInfo, name: e.target.value})} className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 outline-none focus:border-[#8B7355]" />
                           <div className="flex gap-4">
                              <label className="flex items-center gap-1"><input type="radio" name="gender" value="男" checked={customerInfo.gender==='男'} onChange={e=>setCustomerInfo({...customerInfo, gender:e.target.value})} className="accent-amber-500"/>男</label>
                              <label className="flex items-center gap-1"><input type="radio" name="gender" value="女" checked={customerInfo.gender==='女'} onChange={e=>setCustomerInfo({...customerInfo, gender:e.target.value})} className="accent-amber-500"/>女</label>
                           </div>
-                          <input type="tel" placeholder="聯絡電話" value={customerInfo.phone} onChange={e=>setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 outline-none focus:border-amber-500" />
-                          <input type="text" placeholder="Line ID" value={customerInfo.lineId} onChange={e=>setCustomerInfo({...customerInfo, lineId: e.target.value})} className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 outline-none focus:border-amber-500" />
-                          <textarea placeholder="預設地址" value={customerInfo.address} onChange={e=>setCustomerInfo({...customerInfo, address: e.target.value})} rows="2" className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 outline-none focus:border-amber-500"></textarea>
+                          <input type="tel" placeholder="聯絡電話" value={customerInfo.phone} onChange={e=>setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 outline-none focus:border-[#8B7355]" />
+                          <input type="text" placeholder="Line ID" value={customerInfo.lineId} onChange={e=>setCustomerInfo({...customerInfo, lineId: e.target.value})} className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 outline-none focus:border-[#8B7355]" />
+                          <textarea placeholder="預設地址" value={customerInfo.address} onChange={e=>setCustomerInfo({...customerInfo, address: e.target.value})} rows="2" className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 outline-none focus:border-[#8B7355]"></textarea>
                           <button onClick={handleUpdateMyProfile} className="w-full bg-amber-500 text-white font-bold py-2.5 rounded-lg shadow-sm hover:bg-amber-600 transition-colors">儲存修改</button>
                         </div>
                       ) : (
@@ -5894,38 +5894,38 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
                     </thead>
                     <tbody>
                       {tableProducts.map((item, index) => (
-                        <tr key={index} className="hover:bg-amber-50/30 transition-colors group">
+                        <tr key={index} className="hover:bg-[#F5F0E8]/30 transition-colors group">
                           <td className="p-2 border-b border-stone-200 text-center ">
                             <button onClick={() => deleteTableItem(index)} className="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded hover:bg-red-200">刪除</button>
                           </td>
                           <td className="p-2 border-b border-stone-200">
-                            <input type="text" value={item.id} onChange={e => handleTableFieldChange(index, 'id', e.target.value.toUpperCase())} disabled={!item.isNew} className="w-full bg-transparent border border-transparent hover:border-stone-300 focus:border-amber-500 focus:bg-white rounded px-1 py-0.5 text-sm outline-none disabled:text-stone-400" placeholder="品號" />
+                            <input type="text" value={item.id} onChange={e => handleTableFieldChange(index, 'id', e.target.value.toUpperCase())} disabled={!item.isNew} className="w-full bg-transparent border border-transparent hover:border-stone-300 focus:border-[#8B7355] focus:bg-white rounded px-1 py-0.5 text-sm outline-none disabled:text-stone-400" placeholder="品號" />
                           </td>
                           <td className="p-2 border-b border-stone-200">
                             <div className="flex items-center gap-1">
-                              <input type="text" value={item.name} onChange={e => handleTableFieldChange(index, 'name', e.target.value)} className="w-full bg-transparent border border-transparent hover:border-stone-300 focus:border-amber-500 focus:bg-white rounded px-1 py-0.5 text-sm font-bold text-stone-800 outline-none" placeholder="商品名稱" />
+                              <input type="text" value={item.name} onChange={e => handleTableFieldChange(index, 'name', e.target.value)} className="w-full bg-transparent border border-transparent hover:border-stone-300 focus:border-[#8B7355] focus:bg-white rounded px-1 py-0.5 text-sm font-bold text-stone-800 outline-none" placeholder="商品名稱" />
                               <button onClick={() => openProductDetail(item)} className="shrink-0 text-amber-600 hover:text-amber-800 p-1" title="編輯圖文/成分/介紹"><EditIcon size={14}/></button>
                             </div>
                           </td>
                           <td className="p-2 border-b border-stone-200">
-                            <select value={item.category} onChange={e => handleTableFieldChange(index, 'category', e.target.value)} className="w-full bg-transparent border border-transparent hover:border-stone-300 focus:border-amber-500 focus:bg-white rounded px-1 py-0.5 text-sm outline-none cursor-pointer">
+                            <select value={item.category} onChange={e => handleTableFieldChange(index, 'category', e.target.value)} className="w-full bg-transparent border border-transparent hover:border-stone-300 focus:border-[#8B7355] focus:bg-white rounded px-1 py-0.5 text-sm outline-none cursor-pointer">
                               {adminCategoryNames.map(c => <option key={c} value={c}>{c}</option>)}
                             </select>
                           </td>
                           <td className="p-2 border-b border-stone-200">
-                            <input type="text" value={item.desc || ''} onChange={e => handleTableFieldChange(index, 'desc', e.target.value)} className="w-full bg-transparent border border-transparent hover:border-stone-300 focus:border-amber-500 focus:bg-white rounded px-1 py-0.5 text-sm outline-none" placeholder="簡介" />
+                            <input type="text" value={item.desc || ''} onChange={e => handleTableFieldChange(index, 'desc', e.target.value)} className="w-full bg-transparent border border-transparent hover:border-stone-300 focus:border-[#8B7355] focus:bg-white rounded px-1 py-0.5 text-sm outline-none" placeholder="簡介" />
                           </td>
                           <td className="p-2 border-b border-stone-200">
-                            <input type="text" value={item.unit || ''} onChange={e => handleTableFieldChange(index, 'unit', e.target.value)} className="w-full bg-transparent border border-transparent hover:border-stone-300 focus:border-amber-500 focus:bg-white rounded px-1 py-0.5 text-sm outline-none" placeholder="單位" />
+                            <input type="text" value={item.unit || ''} onChange={e => handleTableFieldChange(index, 'unit', e.target.value)} className="w-full bg-transparent border border-transparent hover:border-stone-300 focus:border-[#8B7355] focus:bg-white rounded px-1 py-0.5 text-sm outline-none" placeholder="單位" />
                           </td>
                           <td className="p-2 border-b border-stone-200">
-                            <input type="number" value={item.price} onChange={e => handleTableFieldChange(index, 'price', e.target.value)} className="w-full bg-transparent border border-transparent hover:border-stone-300 focus:border-amber-500 focus:bg-white rounded px-1 py-0.5 text-sm outline-none font-bold text-amber-600" />
+                            <input type="number" value={item.price} onChange={e => handleTableFieldChange(index, 'price', e.target.value)} className="w-full bg-transparent border border-transparent hover:border-stone-300 focus:border-[#8B7355] focus:bg-white rounded px-1 py-0.5 text-sm outline-none font-bold text-amber-600" />
                           </td>
                           <td className="p-2 border-b border-stone-200">
-                            <input type="number" value={item.cost || ''} onChange={e => handleTableFieldChange(index, 'cost', e.target.value)} className="w-full bg-transparent border border-transparent hover:border-stone-300 focus:border-amber-500 focus:bg-white rounded px-1 py-0.5 text-sm outline-none text-purple-600" />
+                            <input type="number" value={item.cost || ''} onChange={e => handleTableFieldChange(index, 'cost', e.target.value)} className="w-full bg-transparent border border-transparent hover:border-stone-300 focus:border-[#8B7355] focus:bg-white rounded px-1 py-0.5 text-sm outline-none text-purple-600" />
                           </td>
                           <td className="p-2 border-b border-stone-200">
-                            <input type="text" value={item.weight || ''} onChange={e => handleTableFieldChange(index, 'weight', e.target.value)} className="w-full bg-transparent border border-transparent hover:border-stone-300 focus:border-amber-500 focus:bg-white rounded px-1 py-0.5 text-sm outline-none" placeholder="重量" />
+                            <input type="text" value={item.weight || ''} onChange={e => handleTableFieldChange(index, 'weight', e.target.value)} className="w-full bg-transparent border border-transparent hover:border-stone-300 focus:border-[#8B7355] focus:bg-white rounded px-1 py-0.5 text-sm outline-none" placeholder="重量" />
                           </td>
                           <td className="p-2 border-b border-stone-200 text-center"><input type="checkbox" checked={item.isFreeShipping !== false} onChange={e => handleTableFieldChange(index, 'isFreeShipping', e.target.checked)} className="w-4 h-4 accent-emerald-500 cursor-pointer" /></td>
                           <td className="p-2 border-b border-stone-200 text-center"><input type="checkbox" checked={item.isPromo} onChange={e => handleTableFieldChange(index, 'isPromo', e.target.checked)} className="w-4 h-4 accent-rose-500 cursor-pointer" /></td>
@@ -6169,7 +6169,7 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
                         setPasswordResetEmailInput('')
                         setLoginMode('customer')
                       }}
-                      className="hover:text-amber-600 w-full text-center"
+                      className="hover:text-[#7D6B52] w-full text-center"
                     >
                       返回會員登入
                     </button>
@@ -6201,8 +6201,8 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
                 <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 py-4 space-y-4">
                   <div className="bg-stone-50 p-3 rounded-xl border border-stone-200">
                     <p className="text-sm font-bold text-stone-700 mb-2 flex items-center gap-1"><Truck size={16}/> 運費與免運</p>
-                    <div className="flex items-center justify-between mb-2"><span className="text-xs text-stone-500">基本運費 ($)</span><input type="number" value={tempConfig.shippingFee} onChange={e => setTempConfig({...tempConfig, shippingFee: e.target.value})} className="w-20 bg-white border border-stone-300 rounded p-1 text-sm outline-none text-right font-bold focus:border-amber-500" /></div>
-                    <div className="flex items-center justify-between"><span className="text-xs text-stone-500">免運門檻 (滿X元)</span><input type="number" value={tempConfig.freeShippingThreshold} onChange={e => setTempConfig({...tempConfig, freeShippingThreshold: e.target.value})} className="w-20 bg-white border border-stone-300 rounded p-1 text-sm outline-none text-right font-bold focus:border-amber-500" /></div>
+                    <div className="flex items-center justify-between mb-2"><span className="text-xs text-stone-500">基本運費 ($)</span><input type="number" value={tempConfig.shippingFee} onChange={e => setTempConfig({...tempConfig, shippingFee: e.target.value})} className="w-20 bg-white border border-stone-300 rounded p-1 text-sm outline-none text-right font-bold focus:border-[#8B7355]" /></div>
+                    <div className="flex items-center justify-between"><span className="text-xs text-stone-500">免運門檻 (滿X元)</span><input type="number" value={tempConfig.freeShippingThreshold} onChange={e => setTempConfig({...tempConfig, freeShippingThreshold: e.target.value})} className="w-20 bg-white border border-stone-300 rounded p-1 text-sm outline-none text-right font-bold focus:border-[#8B7355]" /></div>
                   </div>
                   <div className="bg-rose-50 p-3 rounded-xl border border-rose-100">
                     <p className="text-sm font-bold text-rose-700 mb-2 flex items-center gap-1"><Info size={16}/> 任選優惠活動</p>
@@ -6400,7 +6400,7 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
                  <button onClick={() => setShowCategoryManager(false)} className="absolute top-4 right-4 text-stone-400 hover:text-stone-800"><X size={20} /></button>
                  <h2 className="text-lg font-bold text-stone-800 mb-4 border-b border-stone-100 pb-2">管理商品分類</h2>
                  <div className="flex gap-2 mb-4">
-                    <input type="text" value={newCatName} onChange={e=>setNewCatName(e.target.value)} placeholder="新增分類名稱..." className="flex-1 bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-500" />
+                    <input type="text" value={newCatName} onChange={e=>setNewCatName(e.target.value)} placeholder="新增分類名稱..." className="flex-1 bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#8B7355]" />
                     <button onClick={handleAddCategory} className="bg-stone-800 text-white px-4 rounded-lg font-bold text-sm hover:bg-stone-700 shadow-sm">新增</button>
                  </div>
                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
@@ -6426,15 +6426,15 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
           )}
           {/* 聯絡我們 */}
           {showContactModal && (
-            <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4">
-              <div className="bg-brand-marble p-6 rounded-3xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 relative border border-stone-100">
-                <button onClick={() => setShowContactModal(false)} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full transition-colors"><X size={20} /></button>
-                <div className="flex flex-col items-center mb-6">
-                  <div className="h-48 mb-2 flex items-center justify-center relative group cursor-pointer">
+            <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4 py-6">
+              <div className="bg-brand-marble p-5 sm:p-6 rounded-3xl shadow-2xl w-full max-w-sm max-h-[min(92dvh,100%)] flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
+                <button onClick={() => setShowContactModal(false)} className="absolute top-4 right-4 z-10 text-stone-400 hover:bg-stone-100 p-1 rounded-full transition-colors"><X size={20} /></button>
+                <div className="flex flex-col items-center mb-4 shrink-0 pt-1">
+                  <div className="h-32 sm:h-40 mb-2 flex items-center justify-center relative group cursor-pointer max-w-full">
   {contactData.image ? (
     <img src={contactData.image} alt="Contact" className="max-h-full max-w-[300px] object-contain" />
   ) : (
-    <Store size={50} className="text-amber-700" />
+    <Store size={50} className="brand-accent-strong" />
   )}
   {isAdminMode && !adminOrderingFor && (
     <>
@@ -6447,15 +6447,15 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
 </div>
                   <h2 className="text-xl font-bold text-stone-800">聯絡我們</h2>
                 </div>
-                <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-                  <div className="flex items-start gap-3"><div className="bg-stone-100 p-2 rounded-full text-stone-500 shrink-0"><Clock size={18} /></div><div className="flex-1"><p className="text-xs font-bold text-stone-400 mb-1">營業時間</p>{isAdminMode && !adminOrderingFor ? <textarea value={contactData.businessHours} onChange={e => setContactData({...contactData, businessHours: e.target.value})} placeholder="例如：週一至週五 10:00~18:00" rows="2" className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-500"></textarea> : <p className="text-sm text-stone-700 font-medium whitespace-pre-wrap">{contactData.businessHours || '尚未設定'}</p>}</div></div>
-                  <div className="flex items-start gap-3"><div className="bg-stone-100 p-2 rounded-full text-stone-500 shrink-0"><MapPin size={18} /></div><div className="flex-1"><p className="text-xs font-bold text-stone-400 mb-1">地點</p>{isAdminMode && !adminOrderingFor ? <input type="text" value={contactData.address} onChange={e => setContactData({...contactData, address: e.target.value})} placeholder="門市地址" className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-500" /> : <p className="text-sm text-stone-700 font-medium">{contactData.address || '尚未設定'}</p>}</div></div>
-                  <div className="flex items-start gap-3"><div className="bg-stone-100 p-2 rounded-full text-stone-500 shrink-0"><Phone size={18} /></div><div className="flex-1"><p className="text-xs font-bold text-stone-400 mb-1">電話</p>{isAdminMode && !adminOrderingFor ? <input type="tel" value={contactData.phone} onChange={e => setContactData({...contactData, phone: e.target.value})} placeholder="聯絡電話" className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-500" /> : (contactData.phone ? <a href={`tel:${contactData.phone}`} className="text-sm font-bold text-amber-600 hover:underline">{contactData.phone}</a> : <p className="text-sm text-stone-700 font-medium">尚未設定</p>)}</div></div>
-                  <div className="flex items-start gap-3"><div className="bg-[#06C755]/10 p-2 rounded-full text-[#06C755] shrink-0"><MessageCircle size={18} /></div><div className="flex-1"><p className="text-xs font-bold text-stone-400 mb-1">LINE 連結</p>{isAdminMode && !adminOrderingFor ? <input type="url" value={contactData.lineLink} onChange={e => setContactData({...contactData, lineLink: e.target.value})} placeholder="https://line.me/..." className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-500" /> : (contactData.lineLink ? <a href={contactData.lineLink} target="_blank" rel="noreferrer" className="text-sm font-bold text-[#06C755] hover:underline">點我加 LINE 聯繫</a> : <p className="text-sm text-stone-700 font-medium">尚未設定</p>)}</div></div>
-                  <div className="flex items-start gap-3"><div className="bg-stone-100 p-2 rounded-full text-stone-500 shrink-0"><Mail size={18} /></div><div className="flex-1"><p className="text-xs font-bold text-stone-400 mb-1">Email</p>{isAdminMode && !adminOrderingFor ? <input type="email" value={contactData.email} onChange={e => setContactData({...contactData, email: e.target.value})} placeholder="Email" className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-500" /> : (contactData.email ? <a href={`mailto:${contactData.email}`} className="text-sm font-bold text-amber-600 hover:underline break-all">{contactData.email}</a> : <p className="text-sm text-stone-700 font-medium">尚未設定</p>)}</div></div>
+                <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pr-1 overscroll-contain">
+                  <div className="flex items-start gap-3"><div className="bg-stone-100 p-2 rounded-full text-stone-500 shrink-0"><Clock size={18} /></div><div className="flex-1"><p className="text-xs font-bold text-stone-400 mb-1">營業時間</p>{isAdminMode && !adminOrderingFor ? <textarea value={contactData.businessHours} onChange={e => setContactData({...contactData, businessHours: e.target.value})} placeholder="例如：週一至週五 10:00~18:00" rows="2" className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#8B7355]"></textarea> : <p className="text-sm text-stone-700 font-medium whitespace-pre-wrap">{contactData.businessHours || '尚未設定'}</p>}</div></div>
+                  <div className="flex items-start gap-3"><div className="bg-stone-100 p-2 rounded-full text-stone-500 shrink-0"><MapPin size={18} /></div><div className="flex-1"><p className="text-xs font-bold text-stone-400 mb-1">地點</p>{isAdminMode && !adminOrderingFor ? <input type="text" value={contactData.address} onChange={e => setContactData({...contactData, address: e.target.value})} placeholder="門市地址" className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#8B7355]" /> : <p className="text-sm text-stone-700 font-medium">{contactData.address || '尚未設定'}</p>}</div></div>
+                  <div className="flex items-start gap-3"><div className="bg-stone-100 p-2 rounded-full text-stone-500 shrink-0"><Phone size={18} /></div><div className="flex-1"><p className="text-xs font-bold text-stone-400 mb-1">電話</p>{isAdminMode && !adminOrderingFor ? <input type="tel" value={contactData.phone} onChange={e => setContactData({...contactData, phone: e.target.value})} placeholder="聯絡電話" className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#8B7355]" /> : (contactData.phone ? <a href={`tel:${contactData.phone}`} className="text-sm font-bold brand-accent hover:underline">{contactData.phone}</a> : <p className="text-sm text-stone-700 font-medium">尚未設定</p>)}</div></div>
+                  <div className="flex items-start gap-3"><div className="bg-[#06C755]/10 p-2 rounded-full text-[#06C755] shrink-0"><MessageCircle size={18} /></div><div className="flex-1"><p className="text-xs font-bold text-stone-400 mb-1">LINE 連結</p>{isAdminMode && !adminOrderingFor ? <input type="url" value={contactData.lineLink} onChange={e => setContactData({...contactData, lineLink: e.target.value})} placeholder="https://line.me/..." className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#8B7355]" /> : (contactData.lineLink ? <a href={contactData.lineLink} target="_blank" rel="noreferrer" className="text-sm font-bold text-[#06C755] hover:underline">點我加 LINE 聯繫</a> : <p className="text-sm text-stone-700 font-medium">尚未設定</p>)}</div></div>
+                  <div className="flex items-start gap-3"><div className="bg-stone-100 p-2 rounded-full text-stone-500 shrink-0"><Mail size={18} /></div><div className="flex-1"><p className="text-xs font-bold text-stone-400 mb-1">Email</p>{isAdminMode && !adminOrderingFor ? <input type="email" value={contactData.email} onChange={e => setContactData({...contactData, email: e.target.value})} placeholder="Email" className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#8B7355]" /> : (contactData.email ? <a href={`mailto:${contactData.email}`} className="text-sm font-bold brand-accent hover:underline break-all">{contactData.email}</a> : <p className="text-sm text-stone-700 font-medium">尚未設定</p>)}</div></div>
                   <div className="flex items-start gap-3"><div className="bg-[#06C755]/10 p-2 rounded-full text-[#06C755] shrink-0"><MessageCircle size={18} /></div><div className="flex-1"><p className="text-xs font-bold text-stone-400 mb-1">付款方式</p><p className="text-sm text-stone-700 font-medium whitespace-pre-wrap leading-relaxed">{LINE_PAYMENT_REMINDER}</p></div></div>
                 </div>
-                {isAdminMode && !adminOrderingFor && <button onClick={saveContactInfo} className="mt-6 w-full bg-amber-500 text-white font-bold py-3 rounded-xl shadow-md active:scale-95 transition-transform">儲存聯絡資訊</button>}
+                {isAdminMode && !adminOrderingFor && <button onClick={saveContactInfo} className="mt-4 shrink-0 w-full brand-btn-primary font-bold py-3 rounded-xl shadow-md active:scale-95 transition-transform">儲存聯絡資訊</button>}
               </div>
             </div>
           )}
@@ -6476,8 +6476,8 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
                           {tempAboutData.image ? <img src={tempAboutData.image} className="w-full h-full object-contain group-hover:opacity-50 transition-opacity" /> : <div className="flex flex-col items-center text-stone-400"><ImagePlus size={32} className="mb-2"/><span className="text-sm font-bold">點擊上傳圖片</span></div>}
                           <label className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/30 cursor-pointer transition-opacity"><Camera size={32} className="text-white" /><input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], (img) => setTempAboutData({...tempAboutData, image: img}))} /></label>
                         </div>
-                        <div className="space-y-2"><label className="text-xs font-bold text-stone-500">標題</label><input type="text" value={tempAboutData.title} onChange={e => setTempAboutData({...tempAboutData, title: e.target.value})} className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-500 font-bold" /></div>
-                        <div className="space-y-2"><label className="text-xs font-bold text-stone-500">內容介紹</label><textarea value={tempAboutData.content} onChange={e => setTempAboutData({...tempAboutData, content: e.target.value})} rows="6" className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-500"></textarea></div>
+                        <div className="space-y-2"><label className="text-xs font-bold text-stone-500">標題</label><input type="text" value={tempAboutData.title} onChange={e => setTempAboutData({...tempAboutData, title: e.target.value})} className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#8B7355] font-bold" /></div>
+                        <div className="space-y-2"><label className="text-xs font-bold text-stone-500">內容介紹</label><textarea value={tempAboutData.content} onChange={e => setTempAboutData({...tempAboutData, content: e.target.value})} rows="6" className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#8B7355]"></textarea></div>
                       </div>
                     ) : (
                       <div className="space-y-5">

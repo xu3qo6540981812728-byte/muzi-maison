@@ -21,7 +21,7 @@ export default function ProductCard({
       {isEditableAdmin ? (
         <div
           onClick={onOpenDetail}
-          className="relative block w-24 h-24 rounded-xl shrink-0 overflow-hidden cursor-pointer hover:ring-2 hover:ring-amber-400 transition-all"
+          className="relative block w-24 h-24 rounded-xl shrink-0 overflow-hidden cursor-pointer hover:ring-2 hover:ring-[#8B7355] transition-all"
         >
           <img src={listImage} alt={product.name} loading="eager" decoding="async" fetchPriority="high" className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-black/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -42,7 +42,7 @@ export default function ProductCard({
         <Link
           to={`/product/${product.id}`}
           onClick={rememberHomeScroll}
-          className="relative block w-24 h-24 rounded-xl shrink-0 overflow-hidden cursor-pointer hover:ring-2 hover:ring-amber-400 transition-all"
+          className="relative block w-24 h-24 rounded-xl shrink-0 overflow-hidden cursor-pointer hover:ring-2 hover:ring-[#8B7355] transition-all"
         >
           <img src={listImage} alt={product.name} loading="eager" decoding="async" fetchPriority="high" className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-black/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -85,7 +85,7 @@ export default function ProductCard({
         )}
 
         <div className="flex items-center justify-between mt-2">
-          <span className="text-lg font-bold text-amber-600">
+          <span className="text-lg font-bold brand-accent">
             ${product.price}{' '}
             {product.unit && <span className="text-xs text-stone-400 font-normal">/{product.unit}</span>}
           </span>
@@ -100,7 +100,7 @@ export default function ProductCard({
               <span className="w-4 text-center text-sm font-bold">{cartQty}</span>
               <button
                 onClick={() => onUpdateCart(1)}
-                className="w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-sm active:bg-amber-600"
+                className="w-6 h-6 rounded-full brand-btn-primary flex items-center justify-center shadow-sm"
               >
                 <Plus size={14} />
               </button>

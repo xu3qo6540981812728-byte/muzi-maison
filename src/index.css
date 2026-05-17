@@ -52,6 +52,44 @@ body.brand-page-bg {
   .auth-heading {
     @apply text-[#5C4A3A];
   }
+
+  /* 店鋪前台 — 深米色（商品、購物車、結帳、公告等） */
+  .brand-accent {
+    @apply text-[#7D6B52];
+  }
+  .brand-accent-strong {
+    @apply text-[#6B5A45];
+  }
+  .brand-btn-primary {
+    @apply bg-[#7D6B52] text-white hover:bg-[#6A5A45];
+  }
+  .brand-ring {
+    @apply ring-[#C4B5A0] hover:ring-[#8B7355] focus-visible:ring-[#8B7355];
+  }
+  .brand-border-selected {
+    @apply bg-[#F5F0E8] border-[#8B7355] text-[#6B5A45];
+  }
+  .brand-surface {
+    @apply bg-[#F5F0E8] border-[#D4C4B0];
+  }
+  .brand-surface-text {
+    @apply text-[#7A6A58];
+  }
+  .brand-bar-top-gray {
+    @apply bg-gradient-to-r from-stone-400 via-stone-600 to-stone-400;
+  }
+  .brand-dot {
+    @apply bg-[#8B7355];
+  }
+  .brand-sidebar-hover {
+    @apply hover:bg-[#F5F0E8];
+  }
+  .brand-surface-warm {
+    @apply bg-[#F5F0E8] border-[#D4C4B0] text-[#5C4A3A];
+  }
+  .brand-surface-warm-text {
+    @apply text-[#6B5A45];
+  }
 }
 
 /* 手機無左右菱格：淡大理石（避免 fixed 在 iOS 不穩） */

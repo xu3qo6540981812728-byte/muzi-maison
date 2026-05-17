@@ -180,7 +180,7 @@ export default function CartDrawer({
                         <span className="text-[10px] text-stone-400 line-through">
                           ${item.price * item.qty}
                         </span>
-                        <span className="text-amber-600">${item.subtotal}</span>
+                        <span className="brand-accent">${item.subtotal}</span>
                       </div>
                     ) : (
                       `$${item.subtotal}`
@@ -193,7 +193,7 @@ export default function CartDrawer({
             {addonProducts.length > 0 && (
               <div className="mt-6 pt-4 border-t border-stone-100">
                 <h3 className="font-bold text-stone-800 mb-3 flex items-center gap-2">
-                  <Plus size={18} className="text-amber-500" /> 加購專區
+                  <Plus size={18} className="brand-accent" /> 加購專區
                 </h3>
                 <div className="grid grid-cols-1 gap-3">
                   {addonProducts.map((addon) => (
@@ -213,7 +213,7 @@ export default function CartDrawer({
                           {addon.name}
                         </h4>
                         <div className="flex justify-between items-end mt-1">
-                          <span className="text-amber-600 font-bold text-sm">
+                          <span className="brand-accent font-bold text-sm">
                             ${addon.price}{' '}
                             {addon.unit && (
                               <span className="text-[10px] text-stone-400">/{addon.unit}</span>
@@ -230,7 +230,7 @@ export default function CartDrawer({
                               <span className="text-xs font-bold w-3 text-center">{qtyOf(addon.id)}</span>
                               <button
                                 onClick={() => updateCart(addon.id, 1)}
-                                className="text-amber-600 p-0.5"
+                                className="brand-accent p-0.5"
                               >
                                 <Plus size={10} />
                               </button>
@@ -258,7 +258,7 @@ export default function CartDrawer({
                 <label
                   className={`flex-1 border rounded-xl p-3 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors ${
                     deliveryMethod === 'delivery'
-                      ? 'bg-amber-50 border-amber-500 text-amber-700'
+                      ? 'brand-border-selected'
                       : 'bg-white border-stone-200 text-stone-500'
                   }`}
                 >
@@ -281,7 +281,7 @@ export default function CartDrawer({
                 <label
                   className={`flex-1 border rounded-xl p-3 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors ${
                     deliveryMethod === 'pickup'
-                      ? 'bg-amber-50 border-amber-500 text-amber-700'
+                      ? 'brand-border-selected'
                       : 'bg-white border-stone-200 text-stone-500'
                   }`}
                 >
@@ -313,15 +313,15 @@ export default function CartDrawer({
                   : '已達免運門檻，恭喜免運！'}
               </p>
               {recommendedForFreeShipping.length > 0 && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-2">
-                  <p className="text-amber-700 font-bold text-xs mb-2">免運推薦商品（可點擊查看）</p>
+                <div className="brand-surface border rounded-lg p-2">
+                  <p className="brand-surface-text font-bold text-xs mb-2">免運推薦商品（可點擊查看）</p>
                   <div className="grid grid-cols-1 gap-2">
                     {recommendedForFreeShipping.map((p) => (
                       <Link
                         key={p.id}
                         to={`/product/${p.id}`}
                         onClick={onClose}
-                        className="bg-white border border-amber-100 rounded-lg p-2 hover:border-amber-300 flex gap-2 items-center"
+                        className="bg-white border border-[#E8DFD2] rounded-lg p-2 hover:border-[#8B7355] flex gap-2 items-center"
                       >
                         <img
                           src={p.thumbUrl || p.image}
@@ -333,7 +333,7 @@ export default function CartDrawer({
                         />
                         <div className="min-w-0">
                           <p className="text-xs font-bold text-stone-700 leading-tight break-words">{p.name}</p>
-                          <p className="text-xs text-amber-700 font-bold mt-1">${p.price}</p>
+                          <p className="text-xs brand-surface-text font-bold mt-1">${p.price}</p>
                         </div>
                       </Link>
                     ))}
@@ -349,7 +349,7 @@ export default function CartDrawer({
 
             <div className="mt-4 bg-stone-50 p-4 rounded-2xl space-y-2">
               {groupBuyFriendMode && (
-                <p className="text-xs font-bold text-amber-800 mb-2">
+                <p className="text-xs font-bold brand-accent-strong mb-2">
                   以下金額為參考（含試算運費），實際結帳由主揪統一處理。
                 </p>
               )}
@@ -392,12 +392,12 @@ export default function CartDrawer({
 
           <div className="md:w-1/2 md:border-l border-stone-200 md:pl-8 flex flex-col mt-6 md:mt-0">
             {groupBuyFriendMode ? (
-              <div className="flex-1 flex flex-col justify-center bg-amber-50 border border-amber-200 p-6 rounded-2xl">
+              <div className="flex-1 flex flex-col justify-center brand-surface border p-6 rounded-2xl">
                 <div className="flex items-start gap-3">
-                  <Info size={22} className="text-amber-700 shrink-0 mt-0.5" />
+                  <Info size={22} className="brand-surface-text shrink-0 mt-0.5" />
                   <div>
-                    <h3 className="text-base font-black text-amber-950 mb-2">無法在此結帳</h3>
-                    <p className="text-sm text-amber-900 leading-relaxed">
+                    <h3 className="text-base font-black brand-accent-strong mb-2">無法在此結帳</h3>
+                    <p className="text-sm brand-accent-strong leading-relaxed">
                       揪團訂單須由主揪從購物車統一送出。你可在此確認自己的選購數量，或關閉視窗繼續逛商店。
                     </p>
                   </div>
@@ -433,14 +433,14 @@ export default function CartDrawer({
                       placeholder="姓名"
                       value={customerInfo.name}
                       onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
-                      className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500 text-sm"
+                      className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none auth-input-focus text-sm"
                     />
                     <input
                       type="tel"
                       placeholder="聯絡電話"
                       value={customerInfo.phone}
                       onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
-                      className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500 text-sm"
+                      className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none auth-input-focus text-sm"
                     />
                   </div>
                   <input
@@ -448,21 +448,21 @@ export default function CartDrawer({
                     placeholder="Line ID (必填，方便聯繫)"
                     value={customerInfo.lineId}
                     onChange={(e) => setCustomerInfo({ ...customerInfo, lineId: e.target.value })}
-                    className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500 text-sm"
+                    className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none auth-input-focus text-sm"
                   />
                   <input
                     type="text"
                     placeholder="收件/聯絡地址 (必填)"
                     value={customerInfo.address}
                     onChange={(e) => setCustomerInfo({ ...customerInfo, address: e.target.value })}
-                    className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500 text-sm"
+                    className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none auth-input-focus text-sm"
                   />
                   <textarea
                     placeholder="訂單備註 (選填，例如：請避開假日送件)"
                     value={orderNote}
                     onChange={(e) => setOrderNote(e.target.value)}
                     rows="2"
-                    className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500 text-sm mt-2"
+                    className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 outline-none auth-input-focus text-sm mt-2"
                   />
 
                   {!adminOrderingFor && (
