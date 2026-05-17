@@ -56,6 +56,7 @@ import AdminLogsModal from './admin/AdminLogsModal'
 import AdminCustomersModal from './admin/AdminCustomersModal'
 import AdminPrivacyModal from './admin/AdminPrivacyModal'
 import PrivacyConsentBlock from './register/PrivacyConsentBlock'
+import PrivacyReconsentModal from './member/PrivacyReconsentModal'
 import PaymentConfirmModal from './admin/PaymentConfirmModal'
 import GroupBuyHost from './group/GroupBuyHost'
 import {
@@ -88,8 +89,11 @@ import {
   buildOrderLineReportText
 } from '../constants/linePayment'
 import { stripBankAccountFromContact } from '../utils/stripPublicContact'
-import { mergePrivacySettings, buildPolicySnapshot } from '../constants/privacyPolicyDefaults'
+import { mergePrivacySettings } from '../constants/privacyPolicyDefaults'
 import { downloadConsentPdf } from '../utils/generateConsentPdf'
+import { savePrivacyConsentForUser, userNeedsPrivacyReconsent } from '../utils/privacyConsentRecord'
+
+const GUEST_CHECKOUT_LABEL = '非會員快速結帳（建立會員帳號）'
 
 if (typeof window !== 'undefined') {
   window.jspdf = { jsPDF }
@@ -143,6 +147,8 @@ function toAbsoluteOgUrl(origin, url) {
       const [privacyAgreed, setPrivacyAgreed] = useState(false);
       const [showAdminPrivacyModal, setShowAdminPrivacyModal] = useState(false);
       const [privacySaving, setPrivacySaving] = useState(false);
+      const [showPrivacyReconsentModal, setShowPrivacyReconsentModal] = useState(false);
+      const [privacyReconsentSubmitting, setPrivacyReconsentSubmitting] = useState(false);
       const [showCheckoutEntryChoice, setShowCheckoutEntryChoice] = useState(false);
       
       const [showMemberProfile, setShowMemberProfile] = useState(false);
@@ -243,6 +249,14 @@ const [adminLogs, setAdminLogs] = useState([]);
         [privacySettingsRaw]
       )
       const registerConsentReady = privacyUnderstood && privacyAgreed
+      const needsPrivacyReconsent = useMemo(
+        () =>
+          userNeedsPrivacyReconsent(userProfile, privacySettings, {
+            isAdmin: isAdminMode,
+            isAnonymous: !!currentUser?.isAnonymous
+          }),
+        [userProfile, privacySettings, isAdminMode, currentUser]
+      )
       const ORDERS_PER_PAGE = 50
       const [adminOrdersPage, setAdminOrdersPage] = useState(1)
       const [isOrdersPagingLoading, setIsOrdersPagingLoading] = useState(false)
@@ -650,7 +664,8 @@ useEffect(() => {
     showAdminLogs ||
     showProductTable ||
     showCatalogModal ||
-    showAdminPrivacyModal;
+    showAdminPrivacyModal ||
+    showPrivacyReconsentModal;
   // 2. 如果有彈窗開啟，就在瀏覽器塞入一個「假歷史紀錄」
   // 這樣客人在按返回鍵時，只會「消耗」掉這個假紀錄，而不會跳出網站
   if (isAnyModalOpen) {
@@ -674,6 +689,7 @@ useEffect(() => {
       if (showProductTable) setShowProductTable(false);
       if (showCatalogModal) setShowCatalogModal(false);
       if (showAdminPrivacyModal) setShowAdminPrivacyModal(false);
+      if (showPrivacyReconsentModal && !needsPrivacyReconsent) setShowPrivacyReconsentModal(false);
       if (showConfigModal) setShowConfigModal(false);
       if (showCategoryManager) setShowCategoryManager(false);
       if (showContactModal) setShowContactModal(false);
@@ -701,7 +717,7 @@ useEffect(() => {
   // 必須將所有會觸發攔截的 state 放進 dependency array，讓 useEffect 能抓到最新狀態
   isCartOpen, editingProduct, showMemberProfile, showLoginModal, sidebarOpen,
   showAdminOrders, showAdminCustomers, showAdminLogs, showProductTable, showConfigModal,
-  showCategoryManager, showContactModal, showAboutModal, showAnnouncementModal, showAnnounceConfig, showCatalogModal, showAdminDashboard, showAdminPrivacyModal
+  showCategoryManager, showContactModal, showAboutModal, showAnnouncementModal, showAnnounceConfig, showCatalogModal, showAdminDashboard, showAdminPrivacyModal, showPrivacyReconsentModal, needsPrivacyReconsent
 ]);
 // =======================================================
 
@@ -1446,6 +1462,52 @@ useEffect(() => {
         setPrivacyAgreed(false)
       }
 
+      useEffect(() => {
+        if (!isAppLoading && needsPrivacyReconsent) {
+          setShowPrivacyReconsentModal(true)
+          setPrivacyUnderstood(false)
+          setPrivacyAgreed(false)
+        } else if (!needsPrivacyReconsent) {
+          setShowPrivacyReconsentModal(false)
+        }
+      }, [needsPrivacyReconsent, isAppLoading])
+
+      const promptPrivacyReconsentIfNeeded = () => {
+        if (!needsPrivacyReconsent) return false
+        setShowPrivacyReconsentModal(true)
+        resetPrivacyConsentChecks()
+        return true
+      }
+
+      const handlePrivacyReconsentSubmit = async () => {
+        if (!privacyUnderstood || !privacyAgreed) {
+          return alert('請先閱讀政策並勾選「了解」與「同意」。')
+        }
+        if (!db || !currentUser || currentUser.isAnonymous) return
+        setPrivacyReconsentSubmitting(true)
+        try {
+          const snap = {
+            name: userProfile?.name || customerInfo.name,
+            gender: userProfile?.gender || customerInfo.gender,
+            phone: userProfile?.phone || customerInfo.phone,
+            address: userProfile?.address || customerInfo.address,
+            lineId: userProfile?.lineId || customerInfo.lineId || '',
+            email: userProfile?.email || currentUser.email || customerInfo.email || ''
+          }
+          await savePrivacyConsentForUser(db, currentUser.uid, {
+            customerSnapshot: snap,
+            privacySettings
+          })
+          setShowPrivacyReconsentModal(false)
+          resetPrivacyConsentChecks()
+          alert('感謝您完成同意，現在可以繼續購物與結帳。')
+        } catch (error) {
+          alert('儲存同意紀錄失敗：' + error.message)
+        } finally {
+          setPrivacyReconsentSubmitting(false)
+        }
+      }
+
       const closeLoginModal = () => {
         setShowLoginModal(false)
         setEmailInput('')
@@ -1460,6 +1522,7 @@ useEffect(() => {
         }
       }
       const openCheckoutEntryChoice = () => {
+        if (promptPrivacyReconsentIfNeeded()) return
         setLoginMode('customer')
         setShowCheckoutEntryChoice(true)
       }
@@ -1480,40 +1543,22 @@ useEffect(() => {
               return alert('請先閱讀個人資料政策，並勾選「了解」與「同意」後再送出。')
             }
             const cred = await auth.createUserWithEmailAndPassword(authEmail, passwordInput)
-            const consentId = `reg_${Date.now()}`
-            const policySnapshot = buildPolicySnapshot(privacySettings)
-            const customerSnapshot = {
-              name: customerInfo.name,
-              gender: customerInfo.gender,
-              phone: customerInfo.phone,
-              address: customerInfo.address,
-              lineId: customerInfo.lineId || '',
-              email: authEmail
-            }
-            const consentRecord = {
-              policyVersion: privacySettings.version,
-              understood: true,
-              agreed: true,
-              marketingAgreed: true,
-              customerSnapshot,
-              policySnapshot,
-              checkboxUnderstandLabel: privacySettings.checkboxUnderstandLabel,
-              checkboxAgreeLabel: privacySettings.checkboxAgreeLabel,
-              userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
-              clientAgreedAt: new Date().toISOString(),
-              agreedAt: firebase.firestore.FieldValue.serverTimestamp()
-            }
-            const userRef = db.collection('users').doc(cred.user.uid)
-            const batch = db.batch()
-            batch.set(userRef, {
+            await db.collection('users').doc(cred.user.uid).set({
               ...customerInfo,
               email: authEmail,
-              role: 'customer',
-              privacyConsentVersion: privacySettings.version,
-              privacyConsentAt: firebase.firestore.FieldValue.serverTimestamp()
+              role: 'customer'
             })
-            batch.set(userRef.collection('privacyConsents').doc(consentId), consentRecord)
-            await batch.commit()
+            await savePrivacyConsentForUser(db, cred.user.uid, {
+              customerSnapshot: {
+                name: customerInfo.name,
+                gender: customerInfo.gender,
+                phone: customerInfo.phone,
+                address: customerInfo.address,
+                lineId: customerInfo.lineId || '',
+                email: authEmail
+              },
+              privacySettings
+            })
             alert("註冊成功！歡迎加入木子家MUZI MAISON！");
           } else {
             if (!authEmail || !passwordInput) return alert('請輸入 Email 與密碼')
@@ -1545,7 +1590,7 @@ useEffect(() => {
           const code = error?.code
           if (code === 'auth/user-not-found') {
             alert(
-              '查無此 Email 的註冊紀錄。\n\n請確認是否與註冊時「完全一致」（含大小寫、多餘空格）；若可能打錯請修正後再試。\n若完全不記得註冊信箱，請點下方「開啟官方 LINE」向客服協助查詢。\n若尚未註冊會員，可先選「非會員快速結帳」建立帳號。'
+              `查無此 Email 的註冊紀錄。\n\n請確認是否與註冊時「完全一致」（含大小寫、多餘空格）；若可能打錯請修正後再試。\n若完全不記得註冊信箱，請點下方「開啟官方 LINE」向客服協助查詢。\n若尚未註冊會員，可先選「${GUEST_CHECKOUT_LABEL}」。`
             )
           } else if (code === 'auth/invalid-email') {
             alert('Email 格式不正確')
@@ -1786,6 +1831,10 @@ useEffect(() => {
       }
 
       const handleCheckout = async () => {
+        if (promptPrivacyReconsentIfNeeded()) {
+          alert('個人資料政策已更新，請先重新閱讀並同意後再結帳。')
+          return
+        }
         if (groupBuyFriendMode) {
           alert('揪團訂單須由主揪統一結帳，無法在此送出。')
           return
@@ -5781,6 +5830,20 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
             />
           )}
 
+          {showPrivacyReconsentModal && needsPrivacyReconsent && currentUser && !isAdminMode && (
+            <PrivacyReconsentModal
+              privacySettings={privacySettings}
+              understood={privacyUnderstood}
+              setUnderstood={setPrivacyUnderstood}
+              agreed={privacyAgreed}
+              setAgreed={setPrivacyAgreed}
+              onSubmit={handlePrivacyReconsentSubmit}
+              submitting={privacyReconsentSubmitting}
+              currentVersion={privacySettings.version}
+              userVersion={userProfile?.privacyConsentVersion}
+            />
+          )}
+
           {/* Excel 表單式：商品總覽編輯 */}
           {showProductTable && isAdminMode && (
             <div className="fixed inset-0 z-[45] flex justify-center items-center bg-black/60 backdrop-blur-sm px-2 md:px-6 py-4">
@@ -5919,9 +5982,9 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
                       resetPrivacyConsentChecks()
                       setShowLoginModal(true)
                     }}
-                    className="w-full bg-amber-500 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform"
+                    className="w-full auth-btn-secondary font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform"
                   >
-                    非會員：快速結帳
+                    非會員：快速結帳（建立會員帳號）
                   </button>
                 </div>
               </div>
@@ -5937,19 +6000,19 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
                     loginMode === 'admin' ? (
                       <Lock size={24} className="text-rose-600" />
                     ) : (
-                      <UserIcon size={24} className="text-amber-600" />
+                      <UserIcon size={24} className="auth-accent-text" />
                     )
                   ) : loginMode === 'admin' ? (
                     <Lock size={24} className="text-rose-600" />
                   ) : (
-                    <UserIcon size={24} className="text-amber-600" />
+                    <UserIcon size={24} className="auth-accent-text" />
                   )}
                   {forgotPasswordPanelOpen && !isRegistering
                     ? '重設密碼'
                     : loginMode === 'admin'
                       ? '管理員登入'
                       : isRegistering
-                        ? '非會員快速結帳'
+                        ? GUEST_CHECKOUT_LABEL
                         : '會員登入'}
                 </h3>
 
@@ -5965,7 +6028,7 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
                       value={passwordResetEmailInput}
                       onChange={(e) => setPasswordResetEmailInput(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleSendPasswordReset()}
-                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 text-sm"
+                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none auth-input-focus text-sm"
                       autoComplete="email"
                     />
                     <p className="text-[11px] text-stone-500 leading-relaxed">
@@ -5975,7 +6038,7 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
                       type="button"
                       onClick={handleSendPasswordReset}
                       disabled={passwordResetSending}
-                      className="w-full bg-amber-500 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform disabled:opacity-50 disabled:pointer-events-none"
+                      className="w-full auth-btn-primary font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform disabled:opacity-50 disabled:pointer-events-none"
                     >
                       {passwordResetSending ? '寄送中…' : '寄送重設信'}
                     </button>
@@ -6014,27 +6077,27 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
                   <>
                 {isRegistering && loginMode === 'customer' && (
                   <div className="grid grid-cols-2 gap-3 mb-3">
-                    <input type="text" placeholder="真實姓名 (必填)" value={customerInfo.name} onChange={e => setCustomerInfo({...customerInfo, name: e.target.value})} className="col-span-2 w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 text-sm"/>
+                    <input type="text" placeholder="真實姓名 (必填)" value={customerInfo.name} onChange={e => setCustomerInfo({...customerInfo, name: e.target.value})} className="col-span-2 w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none auth-input-focus text-sm"/>
                     <div className="col-span-2 flex gap-4 px-2 py-1">
                        <span className="text-sm text-stone-500 font-bold">性別：</span>
-                       <label className="flex items-center gap-1 text-sm"><input type="radio" name="regGender" value="男" checked={customerInfo.gender==='男'} onChange={e=>setCustomerInfo({...customerInfo, gender:e.target.value})} className="accent-amber-500"/>男</label>
-                       <label className="flex items-center gap-1 text-sm"><input type="radio" name="regGender" value="女" checked={customerInfo.gender==='女'} onChange={e=>setCustomerInfo({...customerInfo, gender:e.target.value})} className="accent-amber-500"/>女</label>
+                       <label className="flex items-center gap-1 text-sm"><input type="radio" name="regGender" value="男" checked={customerInfo.gender==='男'} onChange={e=>setCustomerInfo({...customerInfo, gender:e.target.value})} className="auth-accent-control"/>男</label>
+                       <label className="flex items-center gap-1 text-sm"><input type="radio" name="regGender" value="女" checked={customerInfo.gender==='女'} onChange={e=>setCustomerInfo({...customerInfo, gender:e.target.value})} className="auth-accent-control"/>女</label>
                     </div>
                     <div className="col-span-1">
-                      <input type="tel" placeholder="手機號碼 (必填)" value={customerInfo.phone} onChange={e => setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 text-sm"/>
+                      <input type="tel" placeholder="手機號碼 (必填)" value={customerInfo.phone} onChange={e => setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none auth-input-focus text-sm"/>
                       {!!customerInfo.phone && !isValidPhone(customerInfo.phone) && <p className="text-[10px] text-rose-600 font-bold mt-1 px-1">手機格式：請輸入 09 開頭 10 碼</p>}
                     </div>
-                    <input type="text" placeholder="Line ID (選填)" value={customerInfo.lineId} onChange={e => setCustomerInfo({...customerInfo, lineId: e.target.value})} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 text-sm"/>
-                    <input type="text" placeholder="聯絡地址 (必填)" value={customerInfo.address} onChange={e => setCustomerInfo({...customerInfo, address: e.target.value})} className="col-span-2 w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 text-sm"/>
+                    <input type="text" placeholder="Line ID (選填)" value={customerInfo.lineId} onChange={e => setCustomerInfo({...customerInfo, lineId: e.target.value})} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none auth-input-focus text-sm"/>
+                    <input type="text" placeholder="聯絡地址 (必填)" value={customerInfo.address} onChange={e => setCustomerInfo({...customerInfo, address: e.target.value})} className="col-span-2 w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none auth-input-focus text-sm"/>
                   </div>
                 )}
 
                 <div className="mb-3">
-                  <input type="email" placeholder="Email 信箱 (必填)" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 text-sm"/>
+                  <input type="email" placeholder="Email 信箱 (必填)" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none auth-input-focus text-sm"/>
                   {isRegistering && !!emailInput && !isValidEmail(emailInput) && <p className="text-[10px] text-rose-600 font-bold mt-1 px-1">Email 格式不正確</p>}
                 </div>
                 <div className="mb-5">
-                  <input type="password" placeholder="密碼 (必填)" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAuthSubmit()} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-amber-500 text-sm"/>
+                  <input type="password" placeholder="密碼 (必填)" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAuthSubmit()} className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none auth-input-focus text-sm"/>
                   {!isRegistering && (
                     <div className="flex justify-end mt-2">
                       <button
@@ -6043,7 +6106,7 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
                           setForgotPasswordPanelOpen(true)
                           setPasswordResetEmailInput(String(emailInput || '').trim())
                         }}
-                        className="text-xs font-bold text-amber-700 hover:text-amber-900 underline decoration-amber-700/50"
+                        className="text-xs font-bold auth-accent-text underline decoration-[#8B7355]/50"
                       >
                         忘記密碼？
                       </button>
@@ -6066,26 +6129,27 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
                     type="button"
                     onClick={handleAuthSubmit}
                     disabled={isRegistering && loginMode === 'customer' && !registerConsentReady}
-                    className="w-full bg-amber-500 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed"
+                    className="w-full auth-btn-primary font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed"
                   >
-                    {isRegistering ? '快速結帳' : '登入'}
+                    {isRegistering ? '快速結帳（建立會員帳號）' : '登入'}
                   </button>
-                  <button onClick={closeLoginModal} className="w-full bg-stone-100 text-stone-600 font-bold py-3 rounded-xl active:scale-95 transition-transform">取消</button>
+                  <button type="button" onClick={closeLoginModal} className="w-full bg-stone-100 text-stone-600 font-bold py-3 rounded-xl active:scale-95 transition-transform">取消</button>
                 </div>
 
                 <div className="mt-6 pt-4 border-t border-stone-100 flex justify-between items-center text-xs text-stone-500">
                   {loginMode === 'customer' ? (
                     <>
                       <button
+                        type="button"
                         onClick={() => {
                           setForgotPasswordPanelOpen(false)
                           setPasswordResetEmailInput('')
                           setIsRegistering(!isRegistering)
                           resetPrivacyConsentChecks()
                         }}
-                        className="hover:text-amber-600 font-bold"
+                        className="auth-accent-text hover:underline font-bold"
                       >
-                        {isRegistering ? '已有帳號？返回登入' : '非會員快速結帳'}
+                        {isRegistering ? '已有帳號？返回登入' : GUEST_CHECKOUT_LABEL}
                       </button>
                       <button
                         onClick={() => {

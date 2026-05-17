@@ -26,6 +26,34 @@ body.brand-page-bg {
   background-size: 400px 400px;
 }
 
+/* 登入／快速結帳（建立會員）— 深米色主題 */
+@layer components {
+  .auth-btn-primary {
+    @apply bg-[#7D6B52] text-white hover:bg-[#6A5A45];
+  }
+  .auth-btn-secondary {
+    @apply bg-[#8B7355] text-white hover:bg-[#75604A];
+  }
+  .auth-accent-text {
+    @apply text-[#6B5A45] hover:text-[#5C4A3A];
+  }
+  .auth-input-focus {
+    @apply focus:border-[#8B7355];
+  }
+  .auth-accent-control {
+    @apply accent-[#7D6B52];
+  }
+  .auth-surface {
+    @apply border-[#D4C4B0] bg-[#F5F0E8]/80;
+  }
+  .auth-surface-header {
+    @apply border-[#D4C4B0]/80 bg-[#EBE3D6]/80;
+  }
+  .auth-heading {
+    @apply text-[#5C4A3A];
+  }
+}
+
 /* 手機無左右菱格：淡大理石（避免 fixed 在 iOS 不穩） */
 @media (max-width: 1023px) {
   body.brand-page-bg {

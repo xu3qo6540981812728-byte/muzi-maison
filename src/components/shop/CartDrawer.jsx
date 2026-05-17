@@ -408,7 +408,7 @@ export default function CartDrawer({
                 <UserIcon size={48} className="text-stone-400 mb-4 opacity-60" />
                 <h3 className="text-lg font-bold text-stone-800 mb-2">請選擇結帳方式</h3>
                 <p className="text-sm text-stone-500 mb-6 leading-relaxed">
-                  已是會員可登入結帳；非會員也可快速結帳。
+                  已是會員可登入結帳；非會員也可快速結帳（建立會員帳號）。
                 </p>
                 <button
                   onClick={onRequireLogin}
