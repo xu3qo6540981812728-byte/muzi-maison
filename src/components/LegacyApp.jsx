@@ -1140,6 +1140,32 @@ useEffect(() => {
           )
       }
 
+      /** 揪團朋友填寫姓名手機後，加入 participantUids 才能讀寫 lines */
+      useEffect(() => {
+        if (!db || !activeFriendGroupSid || !friendGroupParticipantName || !friendGroupParticipantPhone) {
+          return undefined
+        }
+        const uid = currentUser?.uid
+        if (!uid) return undefined
+        let cancelled = false
+        ;(async () => {
+          try {
+            await registerGroupParticipant(activeFriendGroupSid, uid)
+          } catch (e) {
+            if (!cancelled) console.error('registerGroupParticipant', e)
+          }
+        })()
+        return () => {
+          cancelled = true
+        }
+      }, [
+        db,
+        activeFriendGroupSid,
+        friendGroupParticipantName,
+        friendGroupParticipantPhone,
+        currentUser?.uid
+      ])
+
       const handleGroupLineDelta = async (
         sessionId,
         participantName,
@@ -1168,6 +1194,7 @@ useEffect(() => {
             alert('此團購已失效或已結束')
             return
           }
+          await registerGroupParticipant(sessionId, uid)
           const lineKeyLabel = participantLineLabel(pname, pphone)
           const docId = groupLineDocId(productId, lineKeyLabel)
           const ref = db.collection('groupSessions').doc(sessionId).collection('lines').doc(docId)
@@ -1216,7 +1243,6 @@ useEffect(() => {
               },
               { merge: true }
             )
-            await registerGroupParticipant(sessionId, uid)
           }
         } catch (e) {
           alert(`更新失敗：${e.message}`)
@@ -4233,7 +4259,7 @@ const uploadTask = await storageRef.put(blob, metadata);
               <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-stone-200">
                 <h3 className="text-lg font-black text-stone-800 mb-2">揪團選購</h3>
                 <p className="text-sm text-stone-600 mb-4">
-                  請填寫真實姓名與手機（與主揪對帳聯絡用）。同一揪團連結內所有人可看到完整選購明細；再次從連結進入時請重新填寫。
+                  請填寫真實姓名與手機（與主揪對帳聯絡用）。加入後可與主揪、同場朋友查看選購明細並調整自己的品項；再次從連結進入時請重新填寫。
                 </p>
                 <label className="block text-xs font-bold text-stone-600 mb-1">姓名</label>
                 <input
@@ -4257,17 +4283,26 @@ const uploadTask = await storageRef.put(blob, metadata);
                 />
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={async () => {
                     const n = friendNicknameDraft.trim()
                     const digits = normalizeFriendPhoneDigits(friendPhoneDraft)
                     if (!n) return alert('請輸入姓名')
                     if (!/^09\d{8}$/.test(digits)) return alert('請輸入有效的台灣手機號碼（09 開頭共 10 碼）')
-                    if (typeof window !== 'undefined') {
-                      sessionStorage.setItem(GROUP_STORAGE_FRIEND_NAME, n)
-                      sessionStorage.setItem(GROUP_STORAGE_FRIEND_PHONE, digits)
+                    if (!activeFriendGroupSid) return alert('揪團連結無效，請向主揪索取新連結')
+                    try {
+                      if (auth && !auth.currentUser) await auth.signInAnonymously()
+                      const uid = auth?.currentUser?.uid
+                      if (!uid) return alert('無法取得連線身分，請重新整理後再試')
+                      await registerGroupParticipant(activeFriendGroupSid, uid)
+                      if (typeof window !== 'undefined') {
+                        sessionStorage.setItem(GROUP_STORAGE_FRIEND_NAME, n)
+                        sessionStorage.setItem(GROUP_STORAGE_FRIEND_PHONE, digits)
+                      }
+                      setFriendGroupParticipantName(n)
+                      setFriendGroupParticipantPhone(digits)
+                    } catch (e) {
+                      alert(`無法加入揪團選購：${e.message || e}`)
                     }
-                    setFriendGroupParticipantName(n)
-                    setFriendGroupParticipantPhone(digits)
                   }}
                   className="w-full brand-btn-primary font-black py-3 rounded-xl shadow-md transition-colors"
                 >
