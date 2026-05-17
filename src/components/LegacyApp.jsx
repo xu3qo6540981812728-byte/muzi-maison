@@ -937,6 +937,14 @@ useEffect(() => {
           setGroupSessionLines([])
           return undefined
         }
+        const friendPhoneDigits = String(friendGroupParticipantPhone || '').replace(/\D/g, '')
+        /** 揪團朋友須先加入 participantUids 才能讀 lines；過早訂閱會 permission-denied 且不會自動恢復 */
+        const friendLinesListenReady =
+          !activeFriendGroupSid ||
+          (Boolean(friendGroupParticipantName?.trim()) &&
+            /^09\d{8}$/.test(friendPhoneDigits) &&
+            Boolean(currentUser?.uid))
+
         const sessionRef = db.collection('groupSessions').doc(groupSubscribeSid)
         const unsubDoc = sessionRef.onSnapshot((docSnap) => {
           if (!docSnap.exists) {
@@ -945,14 +953,34 @@ useEffect(() => {
             setGroupSessionDoc({ id: docSnap.id, ...docSnap.data() })
           }
         })
-        const unsubLines = sessionRef.collection('lines').onSnapshot((snap) => {
-          setGroupSessionLines(snap.docs.map((d) => ({ ...d.data(), _docId: d.id })))
-        })
+        if (!friendLinesListenReady) {
+          setGroupSessionLines([])
+          return () => {
+            unsubDoc()
+          }
+        }
+        const unsubLines = sessionRef.collection('lines').onSnapshot(
+          (snap) => {
+            setGroupSessionLines(snap.docs.map((d) => ({ ...d.data(), _docId: d.id })))
+          },
+          (err) => {
+            console.error('groupSession lines snapshot', err)
+          }
+        )
         return () => {
           unsubDoc()
           unsubLines()
         }
-      }, [db, groupSubscribeSid, routeMode, routeGroupSessionId])
+      }, [
+        db,
+        groupSubscribeSid,
+        routeMode,
+        routeGroupSessionId,
+        activeFriendGroupSid,
+        friendGroupParticipantName,
+        friendGroupParticipantPhone,
+        currentUser?.uid
+      ])
 
       useEffect(() => {
         if (activeFriendGroupSid) {
@@ -5165,11 +5193,13 @@ const uploadTask = await storageRef.put(blob, metadata);
             </div>
           )}
 
-          {/* 購物車懸浮按鈕 */}
-          {cartData.totalQty > 0 && (!isAdminMode || adminOrderingFor) && !editingProduct && (
+          {/* 購物車懸浮按鈕（揪團朋友開始選購後即顯示；lines 訂閱見 friendLinesListenReady） */}
+          {(cartData.totalQty > 0 || groupBuyFriendMode) &&
+            (!isAdminMode || adminOrderingFor) &&
+            !editingProduct && (
             <div className="fixed bottom-0 left-0 right-0 max-w-md md:max-w-4xl lg:max-w-6xl mx-auto p-4 bg-gradient-to-t from-white via-white to-transparent pointer-events-none z-[34]">
               <Link to="/cart" className="w-full bg-stone-800 text-white rounded-2xl p-4 flex items-center justify-between shadow-xl pointer-events-auto active:scale-95 transition-transform">
-                <div className="flex items-center gap-3"><div className="relative"><ShoppingCart size={24} /><span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">{cartData.totalQty}</span></div><span className="font-medium">{groupBuyFriendMode ? '查看揪團選購' : '查看購物車'}</span></div>
+                <div className="flex items-center gap-3"><div className="relative"><ShoppingCart size={24} />{cartData.totalQty > 0 ? <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">{cartData.totalQty}</span> : null}</div><span className="font-medium">{groupBuyFriendMode ? '查看揪團選購' : '查看購物車'}</span></div>
                 <div className="text-lg font-bold">${cartData.currentTotal}</div>
               </Link>
             </div>
