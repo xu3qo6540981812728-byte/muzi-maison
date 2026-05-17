@@ -3813,7 +3813,7 @@ const uploadTask = await storageRef.put(blob, metadata);
 
       if (isAppLoading) {
         return (
-          <div className="min-h-screen bg-[#Fdfbf7] flex flex-col items-center justify-center space-y-4">
+          <div className="min-h-screen bg-brand-marble flex flex-col items-center justify-center space-y-4">
             <div className="w-12 h-12 border-4 border-amber-200 border-t-amber-600 rounded-full animate-spin"></div>
             <p className="text-stone-500 font-bold tracking-widest text-sm animate-pulse">系統載入中...</p>
           </div>
@@ -3823,7 +3823,7 @@ const uploadTask = await storageRef.put(blob, metadata);
       if (routeMode === 'product') {
         if (!productFromRoute) {
           return (
-            <div className="min-h-screen bg-[#Fdfbf7] flex flex-col items-center justify-center p-6 text-center">
+            <div className="min-h-screen bg-brand-marble flex flex-col items-center justify-center p-6 text-center">
               <h1 className="text-2xl font-black text-stone-800 mb-2">找不到此商品</h1>
               <p className="text-stone-500 mb-6">品號：{routeProductId || '未提供'}</p>
               <Link to="/" className="bg-stone-800 text-white px-5 py-2.5 rounded-xl font-bold">回到首頁</Link>
@@ -3868,8 +3868,8 @@ const uploadTask = await storageRef.put(blob, metadata);
               <meta name="twitter:card" content="summary_large_image" />
               {ogImage ? <meta name="twitter:image" content={ogImage} /> : null}
             </Helmet>
-            <div className="min-h-screen bg-[#Fdfbf7] p-2 md:p-6">
-            <div className="max-w-5xl mx-auto bg-[#Fdfbf7] w-full rounded-3xl h-[92vh] flex flex-col overflow-hidden shadow-2xl border border-stone-100">
+            <div className="min-h-screen p-2 md:p-6">
+            <div className="max-w-5xl mx-auto bg-brand-marble w-full rounded-3xl h-[92vh] flex flex-col overflow-hidden shadow-2xl border border-stone-100">
               <div className="flex items-center justify-between gap-2 p-4 bg-white/80 backdrop-blur-md border-b border-stone-100 shadow-sm">
                 <Link to="/" className="text-sm font-bold text-stone-600 hover:text-stone-900 shrink-0">← 返回首頁</Link>
                 <h2 className="font-bold text-stone-800 flex-1 text-center truncate px-1 min-w-0">{routeProduct.name}</h2>
@@ -3994,7 +3994,7 @@ const uploadTask = await storageRef.put(blob, metadata);
       }
 
       return (
-        <div className="max-w-md md:max-w-4xl lg:max-w-6xl mx-auto bg-[#Fdfbf7] min-h-screen relative font-sans text-stone-800 shadow-xl overflow-hidden flex flex-col">
+        <div className="max-w-md md:max-w-4xl lg:max-w-6xl mx-auto bg-brand-marble min-h-screen relative font-sans text-stone-800 shadow-xl overflow-hidden flex flex-col">
           {routeMode === 'home' && (
             <Helmet prioritizeSeoTags>
               <title>木子家 MUZI MAISON｜線上訂購</title>
@@ -4091,8 +4091,8 @@ const uploadTask = await storageRef.put(blob, metadata);
           )}
           {/* Sidebar */}
           <div className={`fixed inset-0 bg-black/50 z-[60] transition-opacity duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setSidebarOpen(false)}>
-            <div className={`absolute left-0 top-0 bottom-0 w-64 bg-[#Fdfbf7] shadow-xl transform transition-transform duration-300 flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`} onClick={e => e.stopPropagation()}>
-               <div className="p-4 border-b border-stone-200 flex items-center justify-between bg-white">
+            <div className={`absolute left-0 top-0 bottom-0 w-64 bg-brand-marble shadow-xl transform transition-transform duration-300 flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`} onClick={e => e.stopPropagation()}>
+               <div className="p-4 border-b border-stone-200/80 flex items-center justify-between bg-brand-marble">
                   <h2 className="font-bold text-stone-800 tracking-wider">木子家Muzi Maison選單</h2>
                   <button onClick={() => setSidebarOpen(false)} className="text-stone-400 hover:text-stone-600"><X size={24} /></button>
                </div>
@@ -4163,7 +4163,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                      )}
                   </ul>
                </div>
-               <div className="p-4 border-t border-stone-200 bg-stone-50">
+               <div className="p-4 border-t border-stone-200/80 bg-brand-marble">
                   <button onClick={() => { if (currentUser) { handleLogout(); } else { setSidebarOpen(false); setLoginMode('customer'); setShowLoginModal(true); } }} className={`w-full py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 ${currentUser ? 'bg-stone-200 text-stone-700 hover:bg-stone-300' : 'bg-stone-800 text-white shadow-md'}`}>
                      {currentUser ? <LogOut size={16} /> : <UserIcon size={16} />} {currentUser ? '登出' : '會員登入'}
                   </button>
@@ -4180,7 +4180,7 @@ const uploadTask = await storageRef.put(blob, metadata);
           )}
 
           {/* Header */}
-          <div className="sticky top-0 z-20 bg-white shadow-sm">
+          <div className="sticky top-0 z-20 bg-brand-marble shadow-sm border-b border-stone-100/80">
             <header className="px-4 py-3 flex items-center justify-between">
               <div className="flex items-center gap-3 relative">
                 <button onClick={() => setSidebarOpen(true)} className="p-2 -ml-2 text-stone-600 hover:bg-stone-100 rounded-full transition-colors"><Menu size={24} /></button>
@@ -4648,12 +4648,12 @@ const uploadTask = await storageRef.put(blob, metadata);
               </div>
             )}
 
-            <div className="relative z-10 px-4 py-3 flex gap-2 overflow-x-auto bg-white [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <div className="relative z-10 px-4 py-3 flex gap-2 overflow-x-auto bg-brand-marble [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {displayedTabs.map(category => {
                 const catObj = mergedCategories.find(c => c.name === category);
                 const isHidden = catObj?.isHidden;
                 return (
-                  <button key={category} onClick={() => setActiveCategory(category)} className={`whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center ${activeCategory === category ? 'bg-stone-800 text-white shadow-sm' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'}`}>
+                  <button key={category} onClick={() => setActiveCategory(category)} className={`whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center border shadow-sm ${activeCategory === category ? 'bg-white text-stone-800 border-stone-800 border-2 font-bold shadow-md' : 'bg-white text-stone-600 border-stone-200 hover:border-stone-300 hover:shadow-md'}`}>
                     {category} {isHidden && <EyeOff size={14} className="inline ml-1 mb-0.5 opacity-60" />}
                   </button>
                 );
@@ -4664,7 +4664,7 @@ const uploadTask = await storageRef.put(blob, metadata);
           <main className="flex-1 overflow-y-auto pb-24 px-4">
            {/* --- 首頁客戶端熱銷排行榜 (公用看板版) --- */}
             {(!isAdminMode || adminOrderingFor) && publicTopSellers.items && publicTopSellers.items.length >= 3 && activeCategory === '全部' && (
-              <div className="mt-6 mb-8 bg-white p-5 rounded-2xl shadow-sm border border-stone-100 relative overflow-hidden">
+              <div className="mt-6 mb-8 bg-brand-marble p-5 rounded-2xl shadow-sm border border-stone-100 relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-300 via-amber-500 to-amber-300"></div>
                 <h2 className="text-lg font-black mb-6 text-stone-800 flex items-center gap-2 justify-center">
                   <TrendingUp size={20} className="text-amber-500"/> {publicTopSellers.label}人氣熱銷 Top 5
@@ -4725,11 +4725,11 @@ const uploadTask = await storageRef.put(blob, metadata);
                 {publicTopSellers.items.length > 3 && (
                   <div className="space-y-2 pt-4 border-t border-stone-100">
                      {publicTopSellers.items.slice(3, 5).map((item, index) => (
-                       <div key={item.id || `${item.name}-${index}`} onClick={() => { rememberHomeScroll(); navigate(`/product/${item.id}`) }} className="flex items-center gap-3 bg-stone-50/50 p-2 rounded-xl border border-stone-100 hover:bg-amber-50 cursor-pointer transition-all duration-300 group">
-                           <span className="text-stone-300 font-black w-4 text-center group-hover:text-amber-400 transition-colors">{index + 4}</span>
+                       <div key={item.id || `${item.name}-${index}`} onClick={() => { rememberHomeScroll(); navigate(`/product/${item.id}`) }} className="flex items-center gap-3 bg-white p-2.5 rounded-xl border border-stone-200 shadow-md hover:shadow-lg hover:bg-amber-50 cursor-pointer transition-all duration-300 group">
+                           <span className="text-stone-700 text-base font-black w-5 text-center group-hover:text-amber-600 transition-colors">{index + 4}</span>
                            <img src={item.thumbUrl || item.image} loading="eager" decoding="async" fetchPriority="high" className="w-10 h-10 object-cover rounded-lg shadow-sm transition-transform duration-300 group-hover:scale-105" />
                            <span className="flex-1 text-sm font-bold text-stone-700 truncate group-hover:text-amber-700 transition-colors">{item.name}</span>
-                           <span className="text-xs font-black bg-white px-2 py-1 rounded shadow-sm text-stone-500 border border-stone-100 group-hover:border-amber-200 group-hover:text-amber-600 transition-colors">
+                           <span className="text-xs font-black bg-white px-2 py-1 rounded shadow-md text-stone-600 border border-stone-200 group-hover:border-amber-200 group-hover:text-amber-600 transition-colors">
                              {typeof item.percentage === 'number' ? `${item.percentage}%` : `#${index + 4}`}
                            </span>
                         </div>
@@ -4813,7 +4813,7 @@ const uploadTask = await storageRef.put(blob, metadata);
           {/* 商品編輯/詳情 */}
           {editingProduct && (
             <div className="fixed inset-0 z-50 flex justify-center items-end sm:items-center bg-black/60 backdrop-blur-sm">
-              <div className="bg-[#Fdfbf7] w-full max-w-md md:max-w-4xl h-[90vh] sm:h-[85vh] rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl animate-in slide-in-from-bottom-full duration-300">
+              <div className="bg-brand-marble w-full max-w-md md:max-w-4xl h-[90vh] sm:h-[85vh] rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl animate-in slide-in-from-bottom-full duration-300">
                 <div className="flex items-center justify-between p-4 bg-white/80 backdrop-blur-md absolute top-0 left-0 right-0 z-10 border-b border-stone-100 shadow-sm">
                   <h2 className="font-bold text-stone-800 flex-1 truncate pr-4">{isAdminMode && !adminOrderingFor ? (editingProduct.isNew ? '新增商品' : '編輯商品') : editingProduct.name}</h2>
                   <button onClick={() => setEditingProduct(null)} className="w-8 h-8 flex items-center justify-center bg-stone-100 rounded-full text-stone-500"><X size={20} /></button>
@@ -4988,7 +4988,7 @@ const uploadTask = await storageRef.put(blob, metadata);
           {/* 會員專區 */}
           {showMemberProfile && currentUser && !isAdminMode && false && (
             <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4 md:px-10 py-6">
-              <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-4xl h-full flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
+              <div className="bg-brand-marble p-6 rounded-3xl shadow-2xl w-full max-w-4xl h-full flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
                 <button onClick={() => setShowMemberProfile(false)} className="absolute top-4 right-4 text-stone-400"><X size={20} /></button>
                 <h2 className="text-xl md:text-2xl font-bold text-stone-800 mb-4 flex items-center gap-2 border-b border-stone-200 pb-2"><UserIcon size={24} className="text-amber-600"/> 會員中心</h2>
                 
@@ -5224,7 +5224,7 @@ const uploadTask = await storageRef.put(blob, metadata);
 
           {showAdminDashboard && isAdminMode && false && (
             <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4 md:px-10 py-6">
-              <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-5xl h-full flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
+              <div className="bg-brand-marble p-6 rounded-3xl shadow-2xl w-full max-w-5xl h-full flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
                 <button onClick={() => setShowAdminDashboard(false)} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full"><X size={24} /></button>
                 <h2 className="text-xl md:text-2xl font-bold text-stone-800 mb-6 flex items-center gap-2 border-b border-stone-200 pb-3">
                   <TrendingUp size={24} className="text-indigo-600"/> 營運數據儀表板
@@ -5461,7 +5461,7 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
 
           {showAdminOrders && isAdminMode && false && (
             <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4 md:px-10 py-6">
-              <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-6xl h-full flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
+              <div className="bg-brand-marble p-6 rounded-3xl shadow-2xl w-full max-w-6xl h-full flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
                 <button onClick={() => setShowAdminOrders(false)} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full"><X size={24} /></button>
                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 border-b border-stone-200 pb-3 gap-4">
                   <h2 className="text-xl md:text-2xl font-bold text-stone-800 flex items-center gap-2"><ClipboardList size={24} className="text-amber-600"/> 訂單管理中心</h2>
@@ -5666,7 +5666,7 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
           {/* Excel 表單式：商品總覽編輯 */}
           {showProductTable && isAdminMode && (
             <div className="fixed inset-0 z-[45] flex justify-center items-center bg-black/60 backdrop-blur-sm px-2 md:px-6 py-4">
-              <div className="bg-[#Fdfbf7] p-4 md:p-6 rounded-3xl shadow-2xl w-full h-full max-h-[95vh] flex flex-col relative border border-stone-100 overflow-hidden animate-in zoom-in-95 duration-200">
+              <div className="bg-brand-marble p-4 md:p-6 rounded-3xl shadow-2xl w-full h-full max-h-[95vh] flex flex-col relative border border-stone-100 overflow-hidden animate-in zoom-in-95 duration-200">
                 <button onClick={() => { setShowProductTable(false); navigate('/'); }} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-200 p-1.5 rounded-full z-10 bg-stone-100"><X size={20} /></button>
                 
                 <div className="flex justify-between items-center mb-4 border-b border-stone-200 pb-3">
@@ -5767,7 +5767,7 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
           {/* 登入註冊 */}
           {showCheckoutEntryChoice && (
             <div className="fixed inset-0 z-[55] flex justify-center items-center bg-black/50 backdrop-blur-sm px-4">
-              <div className="bg-white p-6 rounded-3xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 relative border border-stone-100">
+              <div className="bg-brand-marble p-6 rounded-3xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 relative border border-stone-100">
                 <button
                   onClick={() => {
                     setShowCheckoutEntryChoice(false)
@@ -5811,7 +5811,7 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
 
           {showLoginModal && (
             <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4">
-              <div className="bg-white p-6 md:p-8 rounded-3xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 relative">
+              <div className="bg-brand-marble p-6 md:p-8 rounded-3xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 relative border border-stone-100">
                 <button onClick={closeLoginModal} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full"><X size={20} /></button>
                 <h3 className="text-xl font-bold text-stone-800 mb-6 flex items-center gap-2 justify-center">
                   {forgotPasswordPanelOpen && !isRegistering ? (
@@ -5983,7 +5983,7 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
           {/* 系統設定彈窗（標題／關閉與儲存固定，內容可捲動） */}
           {showConfigModal && (
             <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto overscroll-contain">
-              <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm max-h-[min(90dvh,880px)] flex flex-col border border-stone-100 animate-in zoom-in-95 duration-200 relative my-auto">
+              <div className="bg-brand-marble rounded-3xl shadow-2xl w-full max-w-sm max-h-[min(90dvh,880px)] flex flex-col border border-stone-100 animate-in zoom-in-95 duration-200 relative my-auto">
                 <div className="shrink-0 flex items-center justify-between gap-2 border-b border-stone-100 px-5 pt-5 pb-3">
                   <h2 className="text-lg font-bold text-stone-800 flex items-center gap-2 min-w-0">
                     <SettingsIcon size={20} className="text-amber-600 shrink-0" /> 系統規則設定
@@ -6051,7 +6051,7 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
           {/* 公告設定彈窗 (管理員) */}
           {showAnnounceConfig && isAdminMode && (
              <div className="fixed inset-0 z-[60] flex justify-center items-center bg-black/50 backdrop-blur-sm px-4">
-              <div className="bg-white p-6 rounded-3xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 relative border border-stone-100 max-h-[90vh] overflow-y-auto flex flex-col">
+              <div className="bg-brand-marble p-6 rounded-3xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 relative border border-stone-100 max-h-[90vh] overflow-y-auto flex flex-col">
                 <button onClick={() => {setShowAnnounceConfig(false); setIsEditingAnnounce(false);}} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full"><X size={20} /></button>
                 <h2 className="text-lg font-bold text-stone-800 mb-4 flex items-center justify-between border-b border-stone-100 pb-3">
                   <span className="flex items-center gap-2"><Megaphone size={20} className="text-purple-600"/> 系統公告設定</span>
@@ -6174,7 +6174,7 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
           {/* 前台大公告視窗 */}
           {showAnnouncementModal && viewingAnnounce && (
              <div className="fixed inset-0 z-[60] flex justify-center items-center bg-black/60 backdrop-blur-sm px-4">
-              <div className="bg-white p-1 rounded-3xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 relative border border-stone-100 overflow-hidden flex flex-col max-h-[85vh]">
+              <div className="bg-brand-marble p-1 rounded-3xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 relative border border-stone-100 overflow-hidden flex flex-col max-h-[85vh]">
                 <button onClick={() => setShowAnnouncementModal(false)} className="absolute top-3 right-3 text-stone-400 hover:bg-stone-100 p-1.5 rounded-full z-10 bg-white/80 backdrop-blur"><X size={20} /></button>
                 <div className="flex-1 overflow-y-auto p-5">
                    <h2 className="text-xl font-black text-stone-800 mb-4 flex items-center gap-2 border-b border-stone-100 pb-3"><Megaphone size={24} className="text-amber-500"/> {viewingAnnounce.title}</h2>
@@ -6195,7 +6195,7 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
           {/* 商品分類管理彈窗 (管理員) */}
           {showCategoryManager && isAdminMode && (
              <div className="fixed inset-0 z-[70] flex justify-center items-center bg-black/50 backdrop-blur-sm px-4">
-              <div className="bg-white p-6 rounded-3xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 relative border border-stone-100">
+              <div className="bg-brand-marble p-6 rounded-3xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 relative border border-stone-100">
                  <button onClick={() => setShowCategoryManager(false)} className="absolute top-4 right-4 text-stone-400 hover:text-stone-800"><X size={20} /></button>
                  <h2 className="text-lg font-bold text-stone-800 mb-4 border-b border-stone-100 pb-2">管理商品分類</h2>
                  <div className="flex gap-2 mb-4">
@@ -6226,7 +6226,7 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
           {/* 聯絡我們 */}
           {showContactModal && (
             <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4">
-              <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 relative border border-stone-100">
+              <div className="bg-brand-marble p-6 rounded-3xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 relative border border-stone-100">
                 <button onClick={() => setShowContactModal(false)} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full transition-colors"><X size={20} /></button>
                 <div className="flex flex-col items-center mb-6">
                   <div className="h-48 mb-2 flex items-center justify-center relative group cursor-pointer">
@@ -6262,7 +6262,7 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
           {/* 關於我們 */}
           {showAboutModal && (
             <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4">
-               <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-md md:max-w-lg h-auto max-h-[85vh] flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
+               <div className="bg-brand-marble p-6 rounded-3xl shadow-2xl w-full max-w-md md:max-w-lg h-auto max-h-[85vh] flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
                   <button onClick={() => {setShowAboutModal(false); setIsEditingAbout(false);}} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full transition-colors z-10"><X size={20} /></button>
                   <h2 className="text-xl font-bold text-stone-800 mb-4 flex items-center justify-between border-b border-stone-100 pb-3">
                     <span className="flex items-center gap-2"><Info size={20} className="text-blue-600"/> 關於我們</span>
@@ -6294,7 +6294,7 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
 {/* 產品型錄視窗 */}
           {showCatalogModal && (
             <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4">
-              <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 relative border border-stone-100">
+              <div className="bg-brand-marble p-6 rounded-3xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 relative border border-stone-100">
                 <button onClick={() => setShowCatalogModal(false)} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full transition-colors"><X size={20} /></button>
                 
                 <h2 className="text-xl font-bold text-stone-800 mb-6 flex items-center gap-2 border-b border-stone-100 pb-3">

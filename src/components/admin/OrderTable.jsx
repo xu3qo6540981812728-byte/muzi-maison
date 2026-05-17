@@ -30,7 +30,7 @@ function OrderDetailModal({
       aria-modal="true"
       aria-labelledby={`order-detail-${order.id}`}
     >
-      <div className="bg-[#Fdfbf7] rounded-2xl shadow-2xl border border-stone-200 max-w-lg w-full max-h-[90vh] overflow-y-auto p-5 relative">
+      <div className="bg-brand-marble rounded-2xl shadow-2xl border border-stone-200 max-w-lg w-full max-h-[90vh] overflow-y-auto p-5 relative">
         <button
           type="button"
           onClick={onClose}

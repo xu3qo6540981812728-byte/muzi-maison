@@ -18,7 +18,7 @@ export default function PaymentConfirmModal({
       role="dialog"
       aria-modal="true"
     >
-      <div className="bg-[#Fdfbf7] rounded-2xl shadow-2xl border border-stone-200 w-full max-w-md p-5 relative">
+      <div className="bg-brand-marble rounded-2xl shadow-2xl border border-stone-200 w-full max-w-md p-5 relative">
         <button
           type="button"
           onClick={onCancel}

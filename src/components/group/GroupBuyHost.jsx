@@ -34,7 +34,7 @@ export default function GroupBuyHost({
 
   if (!sessionDoc) {
     return (
-      <div className="min-h-screen bg-[#Fdfbf7] flex items-center justify-center p-6">
+      <div className="min-h-screen bg-brand-marble flex items-center justify-center p-6">
         <p className="text-stone-500 font-bold">載入揪團資料中...</p>
       </div>
     )
@@ -42,7 +42,7 @@ export default function GroupBuyHost({
 
   if (sessionDoc.missing) {
     return (
-      <div className="min-h-screen bg-[#Fdfbf7] flex flex-col items-center justify-center p-6 gap-4">
+      <div className="min-h-screen bg-brand-marble flex flex-col items-center justify-center p-6 gap-4">
         <p className="text-stone-700 font-black">找不到此揪團連結</p>
         <p className="text-sm text-stone-500 text-center">此團購已失效或連結錯誤。</p>
         <Link to="/" className="text-amber-700 font-bold underline">
@@ -60,7 +60,7 @@ export default function GroupBuyHost({
         : '此揪團已結束。'
 
   return (
-    <div className="min-h-screen bg-[#Fdfbf7] p-4 md:p-8">
+    <div className="min-h-screen p-4 md:p-8">
       <div className="max-w-lg mx-auto bg-white rounded-3xl shadow-xl border border-stone-100 p-6">
         <div className="flex items-center gap-2 mb-4 border-b border-stone-100 pb-3">
           <UsersIcon size={24} className="text-amber-600 shrink-0" />

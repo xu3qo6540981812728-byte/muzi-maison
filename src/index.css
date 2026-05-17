@@ -6,6 +6,39 @@ html {
   overflow-y: scroll;
 }
 
+/* 桌機：菱格紋整屏鋪滿、固定不捲動（無平鋪接縫） */
+body.brand-page-bg {
+  background-color: #f3f0ea;
+  background-image: url('/backgrounds/diamond-full.webp');
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center center;
+  background-attachment: fixed;
+}
+
+/* 中間主內容欄、彈窗卡片：白色大理石（淡） */
+.bg-brand-marble {
+  background-color: #fdfbf7;
+  background-image:
+    linear-gradient(rgba(253, 251, 247, 0.62), rgba(253, 251, 247, 0.62)),
+    url('/backgrounds/marble-tile.webp');
+  background-repeat: repeat;
+  background-size: 400px 400px;
+}
+
+/* 手機無左右菱格：淡大理石（避免 fixed 在 iOS 不穩） */
+@media (max-width: 1023px) {
+  body.brand-page-bg {
+    background-color: #faf8f5;
+    background-image:
+      linear-gradient(rgba(250, 248, 245, 0.68), rgba(250, 248, 245, 0.68)),
+      url('/backgrounds/marble-tile.webp');
+    background-repeat: repeat;
+    background-size: 400px 400px;
+    background-attachment: scroll;
+  }
+}
+
 .animate-pulse-slow { animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .7; } }
 

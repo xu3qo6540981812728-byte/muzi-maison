@@ -3,7 +3,7 @@ import { X } from '../Icons'
 export default function AdminLogsModal({ onClose, adminLogs, formatAdminLog }) {
   return (
     <div className="fixed inset-0 z-[65] flex justify-center items-center bg-black/50 backdrop-blur-sm px-4 md:px-10 py-6">
-      <div className="bg-[#Fdfbf7] p-6 rounded-3xl shadow-2xl w-full max-w-4xl h-full flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
+      <div className="bg-brand-marble p-6 rounded-3xl shadow-2xl w-full max-w-4xl h-full flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
         <button onClick={onClose} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full">
           <X size={24} />
         </button>

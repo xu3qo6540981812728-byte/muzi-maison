@@ -85,7 +85,7 @@ export default function CartDrawer({
 
   return (
     <div className="fixed inset-0 z-50 flex justify-center items-end bg-black/50 backdrop-blur-sm sm:items-center">
-      <div className="w-full max-w-md md:max-w-4xl bg-[#Fdfbf7] rounded-t-3xl sm:rounded-3xl h-[85vh] sm:h-auto sm:max-h-[85vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-full duration-300">
+      <div className="w-full max-w-md md:max-w-4xl bg-brand-marble rounded-t-3xl sm:rounded-3xl h-[85vh] sm:h-auto sm:max-h-[85vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-full duration-300">
         <div className="flex items-center justify-between p-5 border-b border-stone-200">
           <h2 className="text-xl font-bold text-stone-800 flex items-center gap-2">
             <ShoppingCart size={20} /> {groupBuyFriendMode ? '揪團選購明細' : '訂單結帳'}

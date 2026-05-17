@@ -74,7 +74,7 @@ export default function AdminOrdersModal({
 
   return (
     <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-2 sm:px-4 md:px-5 py-4 md:py-6">
-      <div className="bg-[#Fdfbf7] p-4 sm:p-6 rounded-3xl shadow-2xl w-full max-w-[min(96vw,1920px)] h-full max-h-[calc(100vh-2rem)] flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
+      <div className="bg-brand-marble p-4 sm:p-6 rounded-3xl shadow-2xl w-full max-w-[min(96vw,1920px)] h-full max-h-[calc(100vh-2rem)] flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full"
