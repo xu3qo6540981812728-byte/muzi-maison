@@ -90,7 +90,6 @@ import {
 } from '../constants/linePayment'
 import { stripBankAccountFromContact } from '../utils/stripPublicContact'
 import { mergePrivacySettings } from '../constants/privacyPolicyDefaults'
-import { downloadConsentPdf } from '../utils/generateConsentPdf'
 import { savePrivacyConsentForUser, userNeedsPrivacyReconsent } from '../utils/privacyConsentRecord'
 
 const GUEST_CHECKOUT_LABEL = '非會員快速結帳（建立會員帳號）'
@@ -1120,7 +1119,25 @@ useEffect(() => {
             { merge: true }
           )
         }
+        batch.set(
+          sessionRef,
+          {
+            participantUids: firebase.firestore.FieldValue.arrayUnion(participantFirebaseUid)
+          },
+          { merge: true }
+        )
         await batch.commit()
+      }
+
+      const registerGroupParticipant = async (sessionId, uid) => {
+        if (!db || !sessionId || !uid) return
+        await db
+          .collection('groupSessions')
+          .doc(sessionId)
+          .set(
+            { participantUids: firebase.firestore.FieldValue.arrayUnion(uid) },
+            { merge: true }
+          )
       }
 
       const handleGroupLineDelta = async (
@@ -1199,6 +1216,7 @@ useEffect(() => {
               },
               { merge: true }
             )
+            await registerGroupParticipant(sessionId, uid)
           }
         } catch (e) {
           alert(`更新失敗：${e.message}`)
@@ -1543,22 +1561,31 @@ useEffect(() => {
               return alert('請先閱讀個人資料政策，並勾選「了解」與「同意」後再送出。')
             }
             const cred = await auth.createUserWithEmailAndPassword(authEmail, passwordInput)
-            await db.collection('users').doc(cred.user.uid).set({
-              ...customerInfo,
-              email: authEmail,
-              role: 'customer'
-            })
-            await savePrivacyConsentForUser(db, cred.user.uid, {
-              customerSnapshot: {
-                name: customerInfo.name,
-                gender: customerInfo.gender,
-                phone: customerInfo.phone,
-                address: customerInfo.address,
-                lineId: customerInfo.lineId || '',
-                email: authEmail
-              },
-              privacySettings
-            })
+            try {
+              await db.collection('users').doc(cred.user.uid).set({
+                ...customerInfo,
+                email: authEmail,
+                role: 'customer'
+              })
+              await savePrivacyConsentForUser(db, cred.user.uid, {
+                customerSnapshot: {
+                  name: customerInfo.name,
+                  gender: customerInfo.gender,
+                  phone: customerInfo.phone,
+                  address: customerInfo.address,
+                  lineId: customerInfo.lineId || '',
+                  email: authEmail
+                },
+                privacySettings
+              })
+            } catch (regErr) {
+              try {
+                await cred.user.delete()
+              } catch {
+                /* 略過刪除失敗 */
+              }
+              throw regErr
+            }
             alert("註冊成功！歡迎加入木子家MUZI MAISON！");
           } else {
             if (!authEmail || !passwordInput) return alert('請輸入 Email 與密碼')
@@ -1737,7 +1764,7 @@ useEffect(() => {
             if (isNewCustomer) {
                const newId = `CUST${Date.now()}`;
                await db.collection('users').doc(newId).set({
-                 name: selectedCustomer.name, phone: selectedCustomer.phone, address: selectedCustomer.address, lineId: selectedCustomer.lineId, gender: selectedCustomer.gender, role: 'customer', email: '', createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                 name: selectedCustomer.name, phone: selectedCustomer.phone, address: selectedCustomer.address, lineId: selectedCustomer.lineId, gender: selectedCustomer.gender, role: 'customer', email: '', electronicPrivacyConsent: 'none', privacyConsentNote: '無電子同意', createdAt: firebase.firestore.FieldValue.serverTimestamp()
                });
                await writeAdminLog('admin_customer_saved', {
                  isNew: true,
@@ -1848,6 +1875,7 @@ useEffect(() => {
         }
         if (!currentUser && !adminOrderingFor) return alert("請先登入或註冊會員！");
         if (!customerInfo.name || !customerInfo.phone) return alert("請填寫訂購人姓名與電話！");
+        if (!isValidPhone(customerInfo.phone)) return alert("手機格式不正確，請輸入 09 開頭共 10 碼");
         if (!customerInfo.address) return alert("請務必填寫聯絡/收件地址！");
         let finalUserId = adminOrderingFor ? adminOrderingFor.id : (currentUser ? currentUser.uid : 'guest');
         const orderId = `MZ${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 900 + 100)}`;
@@ -2384,6 +2412,7 @@ try {
           await db.collection('groupSessions').doc(sessionId).set({
             ownerUid: currentUser.uid,
             status: 'active',
+            participantUids: [currentUser.uid],
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
           })
           await flushHostCartToGroupLines(
@@ -3689,20 +3718,22 @@ const uploadTask = await storageRef.put(blob, metadata);
       }
 
       const handleDownloadCustomerConsentPdf = async (customer) => {
-        if (!db || !customer?.id) return
+        if (!requireAdminAccess() || !db || !customer?.id) return
         try {
           const snap = await db
             .collection('users')
             .doc(customer.id)
             .collection('privacyConsents')
             .orderBy('agreedAt', 'desc')
-            .limit(1)
+            .limit(20)
             .get()
-          if (snap.empty) {
+          const consentDoc = snap.docs.find((d) => d.id !== '_latest')
+          if (!consentDoc) {
             return alert('此客戶尚無個資同意紀錄（可能為政策實施前註冊或由管理員代建）')
           }
-          const consent = { id: snap.docs[0].id, ...snap.docs[0].data() }
+          const consent = { id: consentDoc.id, ...consentDoc.data() }
           alert('正在產生 PDF，請稍候…')
+          const { downloadConsentPdf } = await import('../utils/generateConsentPdf')
           await downloadConsentPdf(consent, customer.name)
         } catch (error) {
           alert('下載失敗：' + error.message)
@@ -5103,7 +5134,7 @@ const uploadTask = await storageRef.put(blob, metadata);
           {cartData.totalQty > 0 && (!isAdminMode || adminOrderingFor) && !editingProduct && (
             <div className="fixed bottom-0 left-0 right-0 max-w-md md:max-w-4xl lg:max-w-6xl mx-auto p-4 bg-gradient-to-t from-white via-white to-transparent pointer-events-none z-[34]">
               <Link to="/cart" className="w-full bg-stone-800 text-white rounded-2xl p-4 flex items-center justify-between shadow-xl pointer-events-auto active:scale-95 transition-transform">
-                <div className="flex items-center gap-3"><div className="relative"><ShoppingCart size={24} /><span className="absolute -top-2 -right-2 bg-[#7D6B52] text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">{cartData.totalQty}</span></div><span className="font-medium">{groupBuyFriendMode ? '查看揪團選購' : '查看購物車'}</span></div>
+                <div className="flex items-center gap-3"><div className="relative"><ShoppingCart size={24} /><span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">{cartData.totalQty}</span></div><span className="font-medium">{groupBuyFriendMode ? '查看揪團選購' : '查看購物車'}</span></div>
                 <div className="text-lg font-bold">${cartData.currentTotal}</div>
               </Link>
             </div>

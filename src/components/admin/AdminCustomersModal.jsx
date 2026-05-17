@@ -210,7 +210,9 @@ export default function AdminCustomersModal({
                       <div><span className="text-xs font-bold text-stone-400 block mb-1">預設地址</span><span className="font-bold">{selectedCustomer.address || '未提供'}</span></div>
                       <div className="pt-3 mt-1 border-t border-stone-200">
                         <span className="text-xs font-bold text-stone-400 block mb-1">個資同意紀錄</span>
-                        {selectedCustomer.privacyConsentAt || selectedCustomer.privacyConsentVersion ? (
+                        {selectedCustomer.electronicPrivacyConsent === 'none' ? (
+                          <p className="text-xs text-amber-800 font-bold">無電子同意（管理員代建）</p>
+                        ) : selectedCustomer.privacyConsentAt || selectedCustomer.privacyConsentVersion ? (
                           <div className="text-xs text-stone-600 space-y-1">
                             <p>
                               <span className="font-bold text-teal-700">已同意</span>
