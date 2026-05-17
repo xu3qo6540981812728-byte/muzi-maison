@@ -1,5 +1,6 @@
 import {
   ChevronRight,
+  DownloadIcon,
   EditIcon,
   LinkIcon,
   Plus,
@@ -10,6 +11,13 @@ import {
   UsersIcon,
   X
 } from '../Icons'
+
+function formatConsentAt(ts) {
+  if (!ts) return null
+  if (typeof ts.toDate === 'function') return ts.toDate().toLocaleString('zh-TW')
+  const d = new Date(ts)
+  return Number.isNaN(d.getTime()) ? null : d.toLocaleString('zh-TW')
+}
 
 export default function AdminCustomersModal({
   onClose,
@@ -43,7 +51,8 @@ export default function AdminCustomersModal({
   setOrderStatusFilter,
   setShowAdminOrders,
   navigate,
-  statusMap
+  statusMap,
+  onDownloadPrivacyConsentPdf
 }) {
   return (
     <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4 md:px-10 py-6">
@@ -155,9 +164,18 @@ export default function AdminCustomersModal({
                   </div>
 
                   {selectedCustomer.role !== 'deleted' && !isEditingAdminCustomer && (
-                    <button onClick={() => startAdminOrder(selectedCustomer)} className="w-full mt-3 mb-2 bg-amber-500 text-white font-bold py-2.5 rounded-md shadow-sm hover:bg-amber-600 transition-colors flex justify-center items-center gap-2">
-                      <ShoppingCart size={18} /> 幫客戶代建單
-                    </button>
+                    <>
+                      <button onClick={() => startAdminOrder(selectedCustomer)} className="w-full mt-3 mb-2 bg-amber-500 text-white font-bold py-2.5 rounded-md shadow-sm hover:bg-amber-600 transition-colors flex justify-center items-center gap-2">
+                        <ShoppingCart size={18} /> 幫客戶代建單
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onDownloadPrivacyConsentPdf?.(selectedCustomer)}
+                        className="w-full mb-2 bg-teal-600 text-white font-bold py-2.5 rounded-md shadow-sm hover:bg-teal-700 transition-colors flex justify-center items-center gap-2"
+                      >
+                        <DownloadIcon size={18} /> 下載個資同意書 PDF
+                      </button>
+                    </>
                   )}
 
                   {isEditingAdminCustomer ? (
@@ -190,6 +208,24 @@ export default function AdminCustomersModal({
                       <div><span className="text-xs font-bold text-stone-400 block mb-1">聯絡電話</span><span className="font-bold">{selectedCustomer.phone}</span></div>
                       <div><span className="text-xs font-bold text-stone-400 block mb-1">Line ID</span><span className="font-bold text-[#06C755]">{selectedCustomer.lineId || '未提供'}</span></div>
                       <div><span className="text-xs font-bold text-stone-400 block mb-1">預設地址</span><span className="font-bold">{selectedCustomer.address || '未提供'}</span></div>
+                      <div className="pt-3 mt-1 border-t border-stone-200">
+                        <span className="text-xs font-bold text-stone-400 block mb-1">個資同意紀錄</span>
+                        {selectedCustomer.privacyConsentAt || selectedCustomer.privacyConsentVersion ? (
+                          <div className="text-xs text-stone-600 space-y-1">
+                            <p>
+                              <span className="font-bold text-teal-700">已同意</span>
+                              {selectedCustomer.privacyConsentVersion
+                                ? ` · 版本 v${selectedCustomer.privacyConsentVersion}`
+                                : ''}
+                            </p>
+                            {formatConsentAt(selectedCustomer.privacyConsentAt) && (
+                              <p className="text-stone-500">{formatConsentAt(selectedCustomer.privacyConsentAt)}</p>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-stone-400">尚無紀錄（可能為政策實施前註冊）</p>
+                        )}
+                      </div>
 
                       {selectedCustomer.role === 'deleted' && (
                         <div className="mt-4 pt-4 border-t border-stone-200">
