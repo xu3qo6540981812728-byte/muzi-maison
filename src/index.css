@@ -10,6 +10,7 @@ html {
 
 html::-webkit-scrollbar {
   width: 10px;
+  height: 10px;
 }
 
 html::-webkit-scrollbar-track {
@@ -18,35 +19,11 @@ html::-webkit-scrollbar-track {
 
 html::-webkit-scrollbar-thumb {
   background: #4b5563;
-  border-radius: 5px;
+  border-radius: 9999px;
   border: 2px solid #e7e5e4;
 }
 
 html::-webkit-scrollbar-thumb:hover {
-  background: #374151;
-}
-
-* {
-  scrollbar-color: #4b5563 #e7e5e4;
-  scrollbar-width: thin;
-}
-
-*::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-
-*::-webkit-scrollbar-track {
-  background: #e7e5e4;
-}
-
-*::-webkit-scrollbar-thumb {
-  background: #4b5563;
-  border-radius: 5px;
-  border: 2px solid #e7e5e4;
-}
-
-*::-webkit-scrollbar-thumb:hover {
   background: #374151;
 }
 

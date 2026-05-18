@@ -12,8 +12,7 @@ export const DEFAULT_STORE_CONFIG = {
   freeAddonReminderMsg:
     '恭喜！您選購的主商品享有「0元加購」優惠！\n別忘了至下方加購專區挑選喔！',
   giftThreshold: 30,
-  giftProductId: '',
-  groupBuyShareTemplate: '我開了一場木子家的揪團，點下面連結一起選購：\n{link}'
+  giftProductId: ''
 }
 
 export function mergeStoreConfig(partial) {
@@ -64,6 +63,10 @@ export function calculateOrderTotals(itemsList, deliveryWay, storeConfig) {
     }
   })
 
+  const hasExplicitAddonFree = lines.some(
+    (item) => item.isAddon && item.freeQty != null && item.freeQty !== ''
+  )
+
   let itemsBaseTotal = 0
 
   lines.forEach((item) => {
@@ -75,9 +78,16 @@ export function calculateOrderTotals(itemsList, deliveryWay, storeConfig) {
     }
 
     if (item.isAddon) {
-      let freeCount = Math.min(q, freeAddonQuota)
-      let paidCount = q - freeCount
-      freeAddonQuota -= freeCount
+      let freeCount
+      let paidCount
+      if (hasExplicitAddonFree) {
+        freeCount = Math.min(q, Math.max(0, Number(item.freeQty) || 0))
+        paidCount = Math.max(0, q - freeCount)
+      } else {
+        freeCount = Math.min(q, freeAddonQuota)
+        paidCount = q - freeCount
+        freeAddonQuota -= freeCount
+      }
 
       item.freeQty = freeCount
       item.paidQty = paidCount

@@ -22,7 +22,11 @@ export async function savePrivacyConsentForUser(db, uid, { customerSnapshot, pri
   }
 
   const userRef = db.collection('users').doc(uid)
+  const consentsRef = userRef.collection('privacyConsents')
   const batch = db.batch()
+  // 規則要求 users 上的 privacyConsent* 須與 privacyConsents/_latest 同步（見 firestore.rules）
+  batch.set(consentsRef.doc('_latest'), consentRecord, { merge: true })
+  batch.set(consentsRef.doc(consentId), consentRecord)
   batch.set(
     userRef,
     {
@@ -31,7 +35,6 @@ export async function savePrivacyConsentForUser(db, uid, { customerSnapshot, pri
     },
     { merge: true }
   )
-  batch.set(userRef.collection('privacyConsents').doc(consentId), consentRecord)
   await batch.commit()
   return consentId
 }

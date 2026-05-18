@@ -4,24 +4,14 @@ import { Navigate, Route, Routes, matchPath, useLocation } from 'react-router-do
 function RoutedLegacyApp() {
   const { pathname } = useLocation()
   const productMatch = matchPath('/product/:productId', pathname)
-  const groupHostMatch = matchPath('/group/host/:sessionId', pathname)
-  const groupJoinMatch = matchPath('/group/join/:sessionId', pathname)
 
   let routeMode = 'home'
   let standaloneAdminPage = false
   let routeProductId = null
-  let routeGroupSessionId = null
-  let bootstrapFriendSessionId = null
 
   if (productMatch?.params?.productId) {
     routeMode = 'product'
     routeProductId = productMatch.params.productId
-  } else if (groupHostMatch?.params?.sessionId) {
-    routeMode = 'group-host'
-    routeGroupSessionId = groupHostMatch.params.sessionId
-  } else if (groupJoinMatch?.params?.sessionId) {
-    routeMode = 'home'
-    bootstrapFriendSessionId = groupJoinMatch.params.sessionId
   } else if (pathname === '/member') {
     routeMode = 'member'
   } else if (pathname === '/cart') {
@@ -46,8 +36,6 @@ function RoutedLegacyApp() {
     <LegacyApp
       routeMode={routeMode}
       routeProductId={routeProductId}
-      routeGroupSessionId={routeGroupSessionId || ''}
-      bootstrapFriendSessionId={bootstrapFriendSessionId || ''}
       standaloneAdminPage={standaloneAdminPage}
     />
   )

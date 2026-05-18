@@ -9,6 +9,7 @@ import {
   X
 } from '../Icons'
 import { getDiscountDisplay } from '../../utils/discountDisplay'
+import { formatAddonPriceHint, formatAddonQtyNote } from '../../utils/addonDisplay'
 import { LINE_PAYMENT_REMINDER } from '../../constants/linePayment'
 import {
   AWAITING_PAYMENT_STATUSES,
@@ -341,15 +342,15 @@ export default function MemberProfileModal({
                               )}{' '}
                               <span className="text-stone-400 text-[10px]">
                                 (
-                                {item.isAddon &&
-                                item.freeQty > 0 &&
-                                item.paidQty > 0
-                                  ? `${item.freeQty}件$0, ${item.paidQty}件$${item.price}`
-                                  : item.subtotal === 0
-                                    ? '0'
-                                    : item.price}
+                                {formatAddonPriceHint(item) ??
+                                  (item.subtotal === 0 ? '0' : item.price)}
                                 )
                               </span>
+                              {item.isAddon && formatAddonQtyNote(item) ? (
+                                <span className="block text-[10px] text-blue-700 font-bold">
+                                  {formatAddonQtyNote(item)}
+                                </span>
+                              ) : null}
                             </span>
                             <span className="font-bold">
                               x{item.qty} {item.unit || ''}

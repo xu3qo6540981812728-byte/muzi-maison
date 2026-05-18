@@ -70,7 +70,20 @@ function P(over) {
   assert.equal(r.discountAmount, 50)
 }
 
-// 6) 加購 0 元額度：主商品 2 提供額度，加購 3 件只付 1 件
+// 6) 購物車已標記附贈件數時，依 freeQty 計價
+{
+  const items = [
+    P({ id: 'm', price: 300, qty: 4, providesFreeAddon: true, isAddon: false }),
+    P({ id: 'a', price: 80, qty: 6, isAddon: true, freeQty: 4, paidQty: 2 })
+  ]
+  const r = calculateOrderTotals(items, 'pickup', cfg)
+  const addon = r.items.find((i) => i.id === 'a')
+  assert.equal(addon.freeQty, 4)
+  assert.equal(addon.paidQty, 2)
+  assert.equal(addon.subtotal, 160)
+}
+
+// 7) 加購 0 元額度：主商品 2 提供額度，加購 3 件只付 1 件
 {
   const items = [
     P({ id: 'm', price: 300, qty: 2, providesFreeAddon: true, isAddon: false }),

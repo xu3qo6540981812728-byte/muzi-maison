@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { Eye, Trash2, X } from '../Icons'
 import { getDiscountDisplay } from '../../utils/discountDisplay'
+import { formatAddonPriceHint, formatAddonQtyNote } from '../../utils/addonDisplay'
 import { getPaymentMethodLabel } from '../../constants/paymentMethod'
 import { PAID_STATUSES } from '../../constants/orderStatus'
 
@@ -143,13 +144,15 @@ function OrderDetailModal({
                 )}{' '}
                 <span className="text-stone-400 text-[10px]">
                   (
-                  {item.isAddon && item.freeQty > 0 && item.paidQty > 0
-                    ? `${item.freeQty}件$0, ${item.paidQty}件$${item.price}`
-                    : item.subtotal === 0
-                      ? '0'
-                      : item.price}
+                  {formatAddonPriceHint(item) ??
+                    (item.subtotal === 0 ? '0' : item.price)}
                   )
                 </span>
+                {item.isAddon && formatAddonQtyNote(item) ? (
+                  <span className="block text-[10px] text-blue-700 font-bold mt-0.5">
+                    {formatAddonQtyNote(item)}
+                  </span>
+                ) : null}
               </span>
               <span className="font-bold shrink-0">
                 ×{item.qty} {item.unit || ''}
