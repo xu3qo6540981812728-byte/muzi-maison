@@ -62,7 +62,7 @@ export default function AdminCustomersModal({
         </button>
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 border-b border-stone-200 pb-3 gap-4">
           <h2 className="text-xl md:text-2xl font-bold text-stone-800 flex items-center gap-2">
-            <UsersIcon size={24} className="text-blue-600" /> 客戶管理中心
+            <UsersIcon size={24} className="text-blue-600" /> ??????
           </h2>
           {!selectedCustomer && (
             <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
@@ -70,7 +70,7 @@ export default function AdminCustomersModal({
                 <SearchIcon size={16} className="text-stone-400" />
                 <input
                   type="text"
-                  placeholder="搜尋姓名、電話或 Email…"
+                  placeholder="???????? Email?"
                   value={customerSearchName}
                   onChange={(e) => setCustomerSearchName(e.target.value)}
                   className="w-full text-sm outline-none font-bold"
@@ -84,14 +84,14 @@ export default function AdminCustomersModal({
                     : 'bg-stone-100 text-stone-600 border-stone-200 hover:bg-stone-200'
                 }`}
               >
-                {showDeletedCustomers ? '返回正常名單' : '查看停用名單'}
+                {showDeletedCustomers ? '??????' : '??????'}
               </button>
               {!showDeletedCustomers && (
                 <button
                   onClick={handleAddCustomerBtn}
                   className="bg-blue-600 text-white text-sm font-bold px-3 py-2 rounded-lg shadow-sm hover:bg-blue-700 transition-colors flex items-center gap-1 whitespace-nowrap"
                 >
-                  <Plus size={16} /> 新增客戶
+                  <Plus size={16} /> ????
                 </button>
               )}
             </div>
@@ -101,7 +101,7 @@ export default function AdminCustomersModal({
         <div className="flex-1 overflow-y-auto">
           {!selectedCustomer ? (
             filteredUsers.length === 0 ? (
-              <p className="text-center text-stone-400 mt-10">找不到客戶資料</p>
+              <p className="text-center text-stone-400 mt-10">???????</p>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {filteredUsers.map((user) => (
@@ -118,22 +118,22 @@ export default function AdminCustomersModal({
                     <h3 className="font-black text-stone-800 text-lg">
                       {user.name} <span className="text-sm font-normal text-stone-500">({user.gender || '-'})</span>
                     </h3>
-                    {user.role === 'deleted' && <div className="bg-rose-100 text-rose-600 text-[10px] font-bold px-2 py-0.5 rounded-md mt-1">已停用</div>}
+                    {user.role === 'deleted' && <div className="bg-rose-100 text-rose-600 text-[10px] font-bold px-2 py-0.5 rounded-md mt-1">???</div>}
                     <p className="text-sm text-stone-500 font-bold mt-1">{user.phone}</p>
                     <p
                       className="text-[11px] text-stone-400 font-mono mt-1 w-full px-1 truncate"
                       title={user.email || ''}
                     >
-                      {user.email ? `註冊 ${user.email}` : '（無 Email 紀錄）'}
+                      {user.email ? `?? ${user.email}` : '?? Email ???'}
                     </p>
-                    <span className="mt-3 text-[10px] bg-stone-100 text-stone-500 px-3 py-1 rounded-full font-bold">點擊查看詳細資料與訂單</span>
+                    <span className="mt-3 text-[10px] bg-stone-100 text-stone-500 px-3 py-1 rounded-full font-bold">???????????</span>
                   </div>
                 ))}
 
                 {filteredUsers.length >= userLimit && (
                   <div className="col-span-full flex justify-center mt-6 mb-8">
                     <button onClick={() => setUserLimit((prev) => prev + 50)} className="bg-stone-200 text-stone-600 px-6 py-2 rounded-full font-bold text-sm hover:bg-stone-300 transition-colors">
-                      載入更多客戶...
+                      ??????...
                     </button>
                   </div>
                 )}
@@ -144,7 +144,7 @@ export default function AdminCustomersModal({
               <div className="md:w-1/3">
                 <div className="bg-white p-6 rounded-2xl border border-blue-200 shadow-sm sticky top-0 relative">
                   <button onClick={() => { setSelectedCustomer(null); setIsEditingAdminCustomer(false); setIsMergeMode(false); setMergeSelection([]) }} className="absolute top-4 right-4 text-stone-400 hover:text-stone-700 font-bold text-xs flex items-center gap-1 bg-stone-100 px-2 py-1 rounded-md">
-                    <ChevronRight size={14} className="rotate-180" /> 返回
+                    <ChevronRight size={14} className="rotate-180" /> ??
                   </button>
                   <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-4 mt-4 mx-auto ${selectedCustomer.role === 'deleted' ? 'bg-rose-100 text-rose-600' : 'bg-blue-100 text-blue-600'}`}>
                     <UserIcon size={40} />
@@ -154,11 +154,11 @@ export default function AdminCustomersModal({
                     {selectedCustomer.role !== 'deleted' &&
                       (!isEditingAdminCustomer ? (
                         <button onClick={() => { setIsEditingAdminCustomer(true) }} className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-md flex items-center gap-1 hover:bg-blue-100">
-                          <EditIcon size={14} /> 編輯
+                          <EditIcon size={14} /> ??
                         </button>
                       ) : (
                         <button onClick={() => { setIsEditingAdminCustomer(false); setSelectedCustomer(allUsers.find((u) => u.id === selectedCustomer.id)) }} className="text-xs font-bold text-stone-400 hover:text-stone-600">
-                          取消
+                          ??
                         </button>
                       ))}
                   </div>
@@ -166,14 +166,14 @@ export default function AdminCustomersModal({
                   {selectedCustomer.role !== 'deleted' && !isEditingAdminCustomer && (
                     <>
                       <button onClick={() => startAdminOrder(selectedCustomer)} className="w-full mt-3 mb-2 bg-amber-500 text-white font-bold py-2.5 rounded-md shadow-sm hover:bg-amber-600 transition-colors flex justify-center items-center gap-2">
-                        <ShoppingCart size={18} /> 幫客戶代建單
+                        <ShoppingCart size={18} /> ??????
                       </button>
                       <button
                         type="button"
                         onClick={() => onDownloadPrivacyConsentPdf?.(selectedCustomer)}
                         className="w-full mb-2 bg-teal-600 text-white font-bold py-2.5 rounded-md shadow-sm hover:bg-teal-700 transition-colors flex justify-center items-center gap-2"
                       >
-                        <DownloadIcon size={18} /> 下載個資同意書 PDF
+                        <DownloadIcon size={18} /> ??????? PDF
                       </button>
                     </>
                   )}
@@ -181,43 +181,43 @@ export default function AdminCustomersModal({
                   {isEditingAdminCustomer ? (
                     <div className="space-y-3 text-sm bg-stone-50 p-4 rounded-xl border border-stone-200 mt-4">
                       <div className="rounded-md px-2 py-2 bg-white border border-stone-200 border-dashed">
-                        <span className="text-[10px] font-bold text-stone-400 block mb-0.5">註冊 Email（登入帳號，僅供檢視）</span>
-                        <span className="font-mono text-xs text-stone-700 break-all">{selectedCustomer.email || '（無紀錄，可能為舊資料）'}</span>
+                        <span className="text-[10px] font-bold text-stone-400 block mb-0.5">?? Email???????????</span>
+                        <span className="font-mono text-xs text-stone-700 break-all">{selectedCustomer.email || '????????????'}</span>
                       </div>
-                      <input type="text" placeholder="姓名" value={selectedCustomer.name} onChange={(e) => setSelectedCustomer({ ...selectedCustomer, name: e.target.value })} className="w-full bg-white border border-stone-200 rounded-md px-2 py-1.5 outline-none focus:border-blue-400" />
+                      <input type="text" placeholder="??" value={selectedCustomer.name} onChange={(e) => setSelectedCustomer({ ...selectedCustomer, name: e.target.value })} className="w-full bg-white border border-stone-200 rounded-md px-2 py-1.5 outline-none focus:border-blue-400" />
                       <div className="flex gap-4">
-                        <label className="flex items-center gap-1"><input type="radio" name="adminGender" value="男" checked={selectedCustomer.gender === '男'} onChange={(e) => setSelectedCustomer({ ...selectedCustomer, gender: e.target.value })} />男</label>
-                        <label className="flex items-center gap-1"><input type="radio" name="adminGender" value="女" checked={selectedCustomer.gender === '女'} onChange={(e) => setSelectedCustomer({ ...selectedCustomer, gender: e.target.value })} />女</label>
+                        <label className="flex items-center gap-1"><input type="radio" name="adminGender" value="?" checked={selectedCustomer.gender === '?'} onChange={(e) => setSelectedCustomer({ ...selectedCustomer, gender: e.target.value })} />?</label>
+                        <label className="flex items-center gap-1"><input type="radio" name="adminGender" value="?" checked={selectedCustomer.gender === '?'} onChange={(e) => setSelectedCustomer({ ...selectedCustomer, gender: e.target.value })} />?</label>
                       </div>
-                      <input type="tel" placeholder="聯絡電話" value={selectedCustomer.phone} onChange={(e) => setSelectedCustomer({ ...selectedCustomer, phone: e.target.value })} className="w-full bg-white border border-stone-200 rounded-md px-2 py-1.5 outline-none focus:border-blue-400" />
+                      <input type="tel" placeholder="????" value={selectedCustomer.phone} onChange={(e) => setSelectedCustomer({ ...selectedCustomer, phone: e.target.value })} className="w-full bg-white border border-stone-200 rounded-md px-2 py-1.5 outline-none focus:border-blue-400" />
                       <input type="text" placeholder="Line ID" value={selectedCustomer.lineId} onChange={(e) => setSelectedCustomer({ ...selectedCustomer, lineId: e.target.value })} className="w-full bg-white border border-stone-200 rounded-md px-2 py-1.5 outline-none focus:border-blue-400" />
-                      <textarea placeholder="聯絡地址" value={selectedCustomer.address} onChange={(e) => setSelectedCustomer({ ...selectedCustomer, address: e.target.value })} rows="2" className="w-full bg-white border border-stone-200 rounded-md px-2 py-1.5 outline-none focus:border-blue-400"></textarea>
+                      <textarea placeholder="????" value={selectedCustomer.address} onChange={(e) => setSelectedCustomer({ ...selectedCustomer, address: e.target.value })} rows="2" className="w-full bg-white border border-stone-200 rounded-md px-2 py-1.5 outline-none focus:border-blue-400"></textarea>
 
                       <div className="flex gap-2">
-                        {!isNewCustomer && <button onClick={handleDeleteCustomer} className="bg-red-100 text-red-600 font-bold px-3 py-2 rounded-md hover:bg-red-200 transition-colors" title="刪除客戶"><Trash2 size={18} /></button>}
-                        <button onClick={handleUpdateCustomerByAdmin} className="flex-1 bg-blue-600 text-white font-bold py-2 rounded-md shadow-sm hover:bg-blue-700 transition-colors">儲存修改</button>
+                        {!isNewCustomer && <button onClick={handleDeleteCustomer} className="bg-red-100 text-red-600 font-bold px-3 py-2 rounded-md hover:bg-red-200 transition-colors" title="????"><Trash2 size={18} /></button>}
+                        <button onClick={handleUpdateCustomerByAdmin} className="flex-1 bg-blue-600 text-white font-bold py-2 rounded-md shadow-sm hover:bg-blue-700 transition-colors">????</button>
                       </div>
                     </div>
                   ) : (
                     <div className="space-y-4 text-sm text-stone-600 bg-stone-50 p-4 rounded-xl mt-4">
                       <div>
-                        <span className="text-xs font-bold text-stone-400 block mb-1">註冊 Email</span>
-                        <span className="font-mono text-xs font-bold text-stone-800 break-all">{selectedCustomer.email || '未提供'}</span>
+                        <span className="text-xs font-bold text-stone-400 block mb-1">?? Email</span>
+                        <span className="font-mono text-xs font-bold text-stone-800 break-all">{selectedCustomer.email || '???'}</span>
                       </div>
-                      <div><span className="text-xs font-bold text-stone-400 block mb-1">性別</span><span className="font-bold">{selectedCustomer.gender || '-'}</span></div>
-                      <div><span className="text-xs font-bold text-stone-400 block mb-1">聯絡電話</span><span className="font-bold">{selectedCustomer.phone}</span></div>
-                      <div><span className="text-xs font-bold text-stone-400 block mb-1">Line ID</span><span className="font-bold text-[#06C755]">{selectedCustomer.lineId || '未提供'}</span></div>
-                      <div><span className="text-xs font-bold text-stone-400 block mb-1">預設地址</span><span className="font-bold">{selectedCustomer.address || '未提供'}</span></div>
+                      <div><span className="text-xs font-bold text-stone-400 block mb-1">??</span><span className="font-bold">{selectedCustomer.gender || '-'}</span></div>
+                      <div><span className="text-xs font-bold text-stone-400 block mb-1">????</span><span className="font-bold">{selectedCustomer.phone}</span></div>
+                      <div><span className="text-xs font-bold text-stone-400 block mb-1">Line ID</span><span className="font-bold text-[#06C755]">{selectedCustomer.lineId || '???'}</span></div>
+                      <div><span className="text-xs font-bold text-stone-400 block mb-1">????</span><span className="font-bold">{selectedCustomer.address || '???'}</span></div>
                       <div className="pt-3 mt-1 border-t border-stone-200">
-                        <span className="text-xs font-bold text-stone-400 block mb-1">個資同意紀錄</span>
+                        <span className="text-xs font-bold text-stone-400 block mb-1">??????</span>
                         {selectedCustomer.electronicPrivacyConsent === 'none' ? (
-                          <p className="text-xs text-amber-800 font-bold">無電子同意（管理員代建）</p>
+                          <p className="text-xs text-amber-700 font-bold">????????????</p>
                         ) : selectedCustomer.privacyConsentAt || selectedCustomer.privacyConsentVersion ? (
                           <div className="text-xs text-stone-600 space-y-1">
                             <p>
-                              <span className="font-bold text-teal-700">已同意</span>
+                              <span className="font-bold text-teal-700">???</span>
                               {selectedCustomer.privacyConsentVersion
-                                ? ` · 版本 v${selectedCustomer.privacyConsentVersion}`
+                                ? ` � ?? v${selectedCustomer.privacyConsentVersion}`
                                 : ''}
                             </p>
                             {formatConsentAt(selectedCustomer.privacyConsentAt) && (
@@ -225,15 +225,15 @@ export default function AdminCustomersModal({
                             )}
                           </div>
                         ) : (
-                          <p className="text-xs text-stone-400">尚無紀錄（可能為政策實施前註冊）</p>
+                          <p className="text-xs text-stone-400">????????????????</p>
                         )}
                       </div>
 
                       {selectedCustomer.role === 'deleted' && (
                         <div className="mt-4 pt-4 border-t border-stone-200">
-                          <p className="text-xs text-rose-600 font-bold mb-3 text-center bg-rose-50 py-2 rounded-lg">⚠️ 此帳號目前為停用狀態</p>
+                          <p className="text-xs text-rose-600 font-bold mb-3 text-center bg-rose-50 py-2 rounded-lg">?? ??????????</p>
                           <button onClick={handleRestoreCustomer} className="w-full bg-emerald-500 text-white font-bold py-2 rounded-md shadow-sm hover:bg-emerald-600 transition-colors flex justify-center items-center gap-1">
-                            恢復帳號權限
+                            ??????
                           </button>
                         </div>
                       )}
@@ -244,12 +244,12 @@ export default function AdminCustomersModal({
 
               <div className="md:w-2/3">
                 <div className="flex justify-between items-center mb-4 border-b border-stone-200 pb-2">
-                  <h3 className="font-bold text-stone-800">歷史訂單</h3>
+                  <h3 className="font-bold text-stone-800">????</h3>
                   <div className="flex gap-2">
-                    {isMergeMode && mergeSelection.length > 0 && <button onClick={handleConfirmMerge} className="bg-purple-600 text-white text-xs font-bold px-3 py-1.5 rounded shadow-md hover:bg-purple-700 transition-colors flex items-center gap-1"><LinkIcon size={14} /> 確認合併 ({mergeSelection.length})</button>}
+                    {isMergeMode && mergeSelection.length > 0 && <button onClick={handleConfirmMerge} className="bg-purple-600 text-white text-xs font-bold px-3 py-1.5 rounded shadow-md hover:bg-purple-700 transition-colors flex items-center gap-1"><LinkIcon size={14} /> ???? ({mergeSelection.length})</button>}
                     {selectedCustomer.role !== 'deleted' && (
                       <button onClick={() => { setIsMergeMode(!isMergeMode); setMergeSelection([]) }} className={`text-xs font-bold px-3 py-1.5 rounded transition-colors flex items-center gap-1 ${isMergeMode ? 'bg-stone-200 text-stone-600' : 'bg-purple-100 text-purple-700 hover:bg-purple-200'}`}>
-                        <LinkIcon size={14} /> {isMergeMode ? '取消合併模式' : '合併未處理訂單'}
+                        <LinkIcon size={14} /> {isMergeMode ? '??????' : '???????'}
                       </button>
                     )}
                   </div>
@@ -257,7 +257,7 @@ export default function AdminCustomersModal({
 
                 <div className="space-y-4 pb-10">
                   {[...allOrders, ...oldOrders].filter((o) => o.userId === selectedCustomer.id).length === 0 ? (
-                    <p className="text-center text-stone-400 py-10 bg-white rounded-2xl border border-stone-200 border-dashed">尚無訂單紀錄</p>
+                    <p className="text-center text-stone-400 py-10 bg-white rounded-2xl border border-stone-200 border-dashed">??????</p>
                   ) : (
                     [...allOrders, ...oldOrders].filter((o) => o.userId === selectedCustomer.id).map((order) => {
                       const canMerge = isMergeMode && (order.status === 'pending' || order.status === 'confirming')
@@ -270,7 +270,7 @@ export default function AdminCustomersModal({
                               <div className="flex items-center gap-2">
                                 <span className="font-black text-blue-600 hover:text-blue-800 text-lg tracking-wide cursor-pointer underline" onClick={(e) => { e.stopPropagation(); setOrderSearchId(order.id); setOrderStatusFilter('all'); setShowAdminOrders(true); navigate('/admin/orders') }}>{order.id}</span>
                                 <span className={`px-2 py-0.5 rounded text-xs font-bold ${statusMap[order.status]?.color || 'bg-stone-100'}`}>{statusMap[order.status]?.label}</span>
-                                {order.createdByAdmin && <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded inline-block ml-1">代建</span>}
+                                {order.createdByAdmin && <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded inline-block ml-1">??</span>}
                               </div>
                               <p className="text-xs text-stone-400 mt-1">{order.createdAt?.toDate().toLocaleString()}</p>
                             </div>

@@ -32,18 +32,18 @@ export default function CartDrawer({
   setOrderNote,
   onRequireLogin,
   handleCheckout,
+  checkoutSubmitting = false,
   products,
   topSellers,
   groupBuyFriendMode = false,
   getItemQty = null
 }) {
   if (!isOpen) return null
-  const changeCartQty = groupBuyFriendMode ? null : updateCart
   /** 至少一項「非贈品」商品才可結帳（避免只有贈品或空車仍可按送出） */
   const purchasedQty = (cartData.items || [])
     .filter((item) => !item.isGift)
     .reduce((sum, item) => sum + (Number(item.qty) || 0), 0)
-  const canSubmitOrder = purchasedQty > 0
+  const canSubmitOrder = purchasedQty > 0 && !checkoutSubmitting
   const productList = products || []
   const qtyOf = (pid) =>
     typeof getItemQty === 'function' ? Number(getItemQty(pid)) || 0 : cart[pid] || 0
@@ -161,14 +161,12 @@ export default function CartDrawer({
                 </div>
                 <div className="flex items-center gap-4">
                   {!item.isGift ? (
-                    <div
-                      className={`flex items-center gap-3 bg-white rounded-full px-2 py-1 border border-stone-200${groupBuyFriendMode ? ' pointer-events-none opacity-50' : ''}`}
-                    >
-                      <button onClick={() => changeCartQty?.(item.id, -1)} className="p-1 text-stone-500">
+                    <div className="flex items-center gap-3 bg-white rounded-full px-2 py-1 border border-stone-200">
+                      <button onClick={() => updateCart(item.id, -1)} className="p-1 text-stone-500">
                         <Minus size={14} />
                       </button>
                       <span className="w-4 text-center text-sm font-bold">{item.qty}</span>
-                      <button onClick={() => changeCartQty?.(item.id, 1)} className="p-1 text-stone-800">
+                      <button onClick={() => updateCart(item.id, 1)} className="p-1 text-stone-800">
                         <Plus size={14} />
                       </button>
                     </div>
@@ -353,7 +351,7 @@ export default function CartDrawer({
             <div className="mt-4 bg-stone-50 p-4 rounded-2xl space-y-2">
               {groupBuyFriendMode && (
                 <p className="text-xs font-bold brand-accent-strong mb-2">
-                  以下為全團選購參考（含試算運費），實際結帳由主揪統一處理；數量請於商品頁調整自己的品項。
+                  以下金額為參考（含試算運費），實際結帳由主揪統一處理。
                 </p>
               )}
               <div className="flex justify-between text-sm text-stone-600">
@@ -401,7 +399,7 @@ export default function CartDrawer({
                   <div>
                     <h3 className="text-base font-black brand-accent-strong mb-2">無法在此結帳</h3>
                     <p className="text-sm brand-accent-strong leading-relaxed">
-                      揪團訂單須由主揪從購物車統一送出。此處可查看全團選購明細；若要調整自己的品項，請關閉後於商品頁操作。
+                      揪團訂單須由主揪從購物車統一送出。你可在此確認自己的選購數量，或關閉視窗繼續逛商店。
                     </p>
                   </div>
                 </div>
@@ -507,7 +505,11 @@ export default function CartDrawer({
                 }`}
               >
                 <MessageCircle size={20} />
-                {adminOrderingFor ? '完成代建訂單' : '送出訂單並前往確認'}
+                {checkoutSubmitting
+                  ? '訂單送出中…'
+                  : adminOrderingFor
+                    ? '完成代建訂單'
+                    : '送出訂單並前往確認'}
               </button>
               <p className="text-center text-[10px] text-stone-400 mt-3 font-medium">
                 ※ 為保持良好賞味，商品皆為接單製作，接單後5~7天出貨，敬請見諒

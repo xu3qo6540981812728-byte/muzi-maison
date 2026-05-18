@@ -146,6 +146,7 @@ function toAbsoluteOgUrl(origin, url) {
       const [privacyAgreed, setPrivacyAgreed] = useState(false);
       const [showAdminPrivacyModal, setShowAdminPrivacyModal] = useState(false);
       const [privacySaving, setPrivacySaving] = useState(false);
+      const [checkoutSubmitting, setCheckoutSubmitting] = useState(false);
       const [showPrivacyReconsentModal, setShowPrivacyReconsentModal] = useState(false);
       const [privacyReconsentSubmitting, setPrivacyReconsentSubmitting] = useState(false);
       const [showCheckoutEntryChoice, setShowCheckoutEntryChoice] = useState(false);
@@ -310,9 +311,7 @@ const [publicTopSellers, setPublicTopSellers] = useState({ items: [], label: '�
       useLayoutEffect(() => {
         if (!bootstrapFriendSessionId || typeof window === 'undefined') return
         sessionStorage.setItem(GROUP_STORAGE_FRIEND_SID, bootstrapFriendSessionId)
-        sessionStorage.removeItem(GROUP_STORAGE_HOST_SID)
         setActiveFriendGroupSid(bootstrapFriendSessionId)
-        setActiveHostGroupSid(null)
         navigate('/', { replace: true })
       }, [bootstrapFriendSessionId, navigate])
 
@@ -928,11 +927,10 @@ useEffect(() => {
         };
       }, [currentUser, isAdminMode, orderLimit, userLimit, isAdminRouteMode]);
 
-      /** 被揪連結優先於本機主揪場次，避免訂閱到已結束的舊主揪 session 而誤判連結失效 */
       const groupSubscribeSid =
         routeMode === 'group-host' && routeGroupSessionId
           ? routeGroupSessionId
-          : activeFriendGroupSid || activeHostGroupSid
+          : activeHostGroupSid || activeFriendGroupSid
 
       useEffect(() => {
         if (!db || !groupSubscribeSid) {
@@ -940,14 +938,6 @@ useEffect(() => {
           setGroupSessionLines([])
           return undefined
         }
-        const friendPhoneDigits = String(friendGroupParticipantPhone || '').replace(/\D/g, '')
-        /** 揪團朋友須先填姓名手機並有 uid 才訂閱 lines（可讀全場明細，寫入仍僅自己的 line） */
-        const friendLinesListenReady =
-          !activeFriendGroupSid ||
-          (Boolean(friendGroupParticipantName?.trim()) &&
-            /^09\d{8}$/.test(friendPhoneDigits) &&
-            Boolean(currentUser?.uid))
-
         const sessionRef = db.collection('groupSessions').doc(groupSubscribeSid)
         const unsubDoc = sessionRef.onSnapshot((docSnap) => {
           if (!docSnap.exists) {
@@ -956,34 +946,14 @@ useEffect(() => {
             setGroupSessionDoc({ id: docSnap.id, ...docSnap.data() })
           }
         })
-        if (!friendLinesListenReady) {
-          setGroupSessionLines([])
-          return () => {
-            unsubDoc()
-          }
-        }
-        const unsubLines = sessionRef.collection('lines').onSnapshot(
-          (snap) => {
-            setGroupSessionLines(snap.docs.map((d) => ({ ...d.data(), _docId: d.id })))
-          },
-          (err) => {
-            console.error('groupSession lines snapshot', err)
-          }
-        )
+        const unsubLines = sessionRef.collection('lines').onSnapshot((snap) => {
+          setGroupSessionLines(snap.docs.map((d) => ({ ...d.data(), _docId: d.id })))
+        })
         return () => {
           unsubDoc()
           unsubLines()
         }
-      }, [
-        db,
-        groupSubscribeSid,
-        routeMode,
-        routeGroupSessionId,
-        activeFriendGroupSid,
-        friendGroupParticipantName,
-        friendGroupParticipantPhone,
-        currentUser?.uid
-      ])
+      }, [db, groupSubscribeSid, routeMode, routeGroupSessionId])
 
       useEffect(() => {
         if (activeFriendGroupSid) {
@@ -993,7 +963,6 @@ useEffect(() => {
 
       useEffect(() => {
         if (!activeFriendGroupSid || !groupSessionDoc || groupSessionDoc.missing) return
-        if (groupSessionDoc.id !== activeFriendGroupSid) return
         if (groupSessionDoc.status === 'active') return
         if (groupFriendEndedRef.current) return
         groupFriendEndedRef.current = true
@@ -1014,7 +983,6 @@ useEffect(() => {
 
       useEffect(() => {
         if (!activeFriendGroupSid || !groupSessionDoc?.missing) return
-        if (groupSessionDoc.id !== activeFriendGroupSid) return
         sessionStorage.removeItem(GROUP_STORAGE_FRIEND_SID)
         sessionStorage.removeItem(GROUP_STORAGE_FRIEND_NAME)
         sessionStorage.removeItem(GROUP_STORAGE_FRIEND_PHONE)
@@ -1152,52 +1120,8 @@ useEffect(() => {
             { merge: true }
           )
         }
-        batch.set(
-          sessionRef,
-          {
-            participantUids: firebase.firestore.FieldValue.arrayUnion(participantFirebaseUid)
-          },
-          { merge: true }
-        )
         await batch.commit()
       }
-
-      const registerGroupParticipant = async (sessionId, uid) => {
-        if (!db || !sessionId || !uid) return
-        await db
-          .collection('groupSessions')
-          .doc(sessionId)
-          .set(
-            { participantUids: firebase.firestore.FieldValue.arrayUnion(uid) },
-            { merge: true }
-          )
-      }
-
-      /** 揪團朋友填寫姓名手機後，加入 participantUids 才能讀寫 lines */
-      useEffect(() => {
-        if (!db || !activeFriendGroupSid || !friendGroupParticipantName || !friendGroupParticipantPhone) {
-          return undefined
-        }
-        const uid = currentUser?.uid
-        if (!uid) return undefined
-        let cancelled = false
-        ;(async () => {
-          try {
-            await registerGroupParticipant(activeFriendGroupSid, uid)
-          } catch (e) {
-            if (!cancelled) console.error('registerGroupParticipant', e)
-          }
-        })()
-        return () => {
-          cancelled = true
-        }
-      }, [
-        db,
-        activeFriendGroupSid,
-        friendGroupParticipantName,
-        friendGroupParticipantPhone,
-        currentUser?.uid
-      ])
 
       const handleGroupLineDelta = async (
         sessionId,
@@ -1227,7 +1151,6 @@ useEffect(() => {
             alert('此團購已失效或已結束')
             return
           }
-          await registerGroupParticipant(sessionId, uid)
           const lineKeyLabel = participantLineLabel(pname, pphone)
           const docId = groupLineDocId(productId, lineKeyLabel)
           const ref = db.collection('groupSessions').doc(sessionId).collection('lines').doc(docId)
@@ -1283,21 +1206,6 @@ useEffect(() => {
       }
 
       const updateCart = (id, delta) => {
-        if (
-          activeFriendGroupSid &&
-          friendGroupParticipantName &&
-          friendGroupParticipantPhone
-        ) {
-          void handleGroupLineDelta(
-            activeFriendGroupSid,
-            friendGroupParticipantName,
-            friendGroupParticipantPhone,
-            id,
-            delta
-          )
-          return
-        }
-
         const hostSid =
           routeMode === 'group-host' && routeGroupSessionId
             ? routeGroupSessionId
@@ -1306,7 +1214,6 @@ useEffect(() => {
           !!hostSid &&
           groupSessionDoc &&
           !groupSessionDoc.missing &&
-          groupSessionDoc.id === hostSid &&
           groupSessionDoc.status === 'active' &&
           currentUser &&
           !currentUser.isAnonymous &&
@@ -1325,6 +1232,21 @@ useEffect(() => {
             return
           }
           void handleGroupLineDelta(hostSid, hostName, hostPhone, id, delta)
+          return
+        }
+
+        if (
+          activeFriendGroupSid &&
+          friendGroupParticipantName &&
+          friendGroupParticipantPhone
+        ) {
+          void handleGroupLineDelta(
+            activeFriendGroupSid,
+            friendGroupParticipantName,
+            friendGroupParticipantPhone,
+            id,
+            delta
+          )
           return
         }
         setCart(prev => {
@@ -1378,10 +1300,8 @@ useEffect(() => {
           routeMode === 'group-host' && routeGroupSessionId ? routeGroupSessionId : activeHostGroupSid
         const isHostGroupMerge =
           !!sid &&
-          !activeFriendGroupSid &&
           groupSessionDoc &&
           !groupSessionDoc.missing &&
-          groupSessionDoc.id === sid &&
           groupSessionDoc.status === 'active' &&
           currentUser &&
           !currentUser.isAnonymous &&
@@ -1419,21 +1339,8 @@ useEffect(() => {
           friendGroupParticipantPhone &&
           groupSessionDoc &&
           !groupSessionDoc.missing &&
-          groupSessionDoc.id === activeFriendGroupSid &&
           groupSessionDoc.status === 'active'
         ) {
-          const myLabel = participantLineLabel(
-            friendGroupParticipantName,
-            friendGroupParticipantPhone
-          )
-          const myLines = groupSessionLines.filter((l) => {
-            const lb =
-              participantLineLabel(l.participantName, l.participantPhone) ||
-              String(l.participantName || '').trim()
-            return lb === myLabel
-          })
-          const { cart: myCart } = aggregateGroupLines(myLines)
-          const friendMyTotalQty = Object.values(myCart).reduce((s, q) => s + (Number(q) || 0), 0)
           const { cart: fc, labels: friendAllLabels, labelsDisplay: friendLabelsDisplay } =
             aggregateGroupLines(groupSessionLines)
           let items = Object.entries(fc)
@@ -1455,11 +1362,7 @@ useEffect(() => {
             storeConfig
           )
           const itemsWithGiftFriend = appendGiftLinesToCart(calcItemsFriend, totalsRestFriend, products)
-          return {
-            items: itemsWithGiftFriend,
-            ...totalsRestFriend,
-            friendMyTotalQty
-          }
+          return { items: itemsWithGiftFriend, ...totalsRestFriend }
         }
 
         let items = Object.entries(cart)
@@ -1629,6 +1532,7 @@ useEffect(() => {
       const handleAuthSubmit = async () => {
         if (!auth) return alert("請先設定 Firebase 金鑰！");
         const authEmail = String(emailInput || '').trim().toLowerCase()
+        let createdAuthUser = null
         try {
           if (isRegistering) {
             if (!customerInfo.name || !customerInfo.phone || !customerInfo.address || !emailInput || !passwordInput) {
@@ -1640,31 +1544,23 @@ useEffect(() => {
               return alert('請先閱讀個人資料政策，並勾選「了解」與「同意」後再送出。')
             }
             const cred = await auth.createUserWithEmailAndPassword(authEmail, passwordInput)
-            try {
-              await db.collection('users').doc(cred.user.uid).set({
-                ...customerInfo,
-                email: authEmail,
-                role: 'customer'
-              })
-              await savePrivacyConsentForUser(db, cred.user.uid, {
-                customerSnapshot: {
-                  name: customerInfo.name,
-                  gender: customerInfo.gender,
-                  phone: customerInfo.phone,
-                  address: customerInfo.address,
-                  lineId: customerInfo.lineId || '',
-                  email: authEmail
-                },
-                privacySettings
-              })
-            } catch (regErr) {
-              try {
-                await cred.user.delete()
-              } catch {
-                /* 略過刪除失敗 */
-              }
-              throw regErr
-            }
+            createdAuthUser = cred.user
+            await db.collection('users').doc(cred.user.uid).set({
+              ...customerInfo,
+              email: authEmail,
+              role: 'customer'
+            })
+            await savePrivacyConsentForUser(db, cred.user.uid, {
+              customerSnapshot: {
+                name: customerInfo.name,
+                gender: customerInfo.gender,
+                phone: customerInfo.phone,
+                address: customerInfo.address,
+                lineId: customerInfo.lineId || '',
+                email: authEmail
+              },
+              privacySettings
+            })
             alert("註冊成功！歡迎加入木子家MUZI MAISON！");
           } else {
             if (!authEmail || !passwordInput) return alert('請輸入 Email 與密碼')
@@ -1674,6 +1570,13 @@ useEffect(() => {
           }
           closeLoginModal();
         } catch (error) {
+          if (createdAuthUser) {
+            try {
+              await createdAuthUser.delete()
+            } catch (_) {
+              /* 若刪除失敗仍提示註冊失敗，避免留下半套帳號卻無提示 */
+            }
+          }
           alert(isRegistering ? "註冊失敗：" + error.message : "登入失敗，請檢查帳號密碼！");
         }
       };
@@ -1843,7 +1746,7 @@ useEffect(() => {
             if (isNewCustomer) {
                const newId = `CUST${Date.now()}`;
                await db.collection('users').doc(newId).set({
-                 name: selectedCustomer.name, phone: selectedCustomer.phone, address: selectedCustomer.address, lineId: selectedCustomer.lineId, gender: selectedCustomer.gender, role: 'customer', email: '', electronicPrivacyConsent: 'none', privacyConsentNote: '無電子同意', createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                 name: selectedCustomer.name, phone: selectedCustomer.phone, address: selectedCustomer.address, lineId: selectedCustomer.lineId, gender: selectedCustomer.gender, role: 'customer', email: '', electronicPrivacyConsent: 'none', adminConsentNote: '無電子同意', createdAt: firebase.firestore.FieldValue.serverTimestamp()
                });
                await writeAdminLog('admin_customer_saved', {
                  isNew: true,
@@ -1937,6 +1840,7 @@ useEffect(() => {
       }
 
       const handleCheckout = async () => {
+        if (checkoutSubmitting) return
         if (promptPrivacyReconsentIfNeeded()) {
           alert('個人資料政策已更新，請先重新閱讀並同意後再結帳。')
           return
@@ -1956,6 +1860,8 @@ useEffect(() => {
         if (!customerInfo.name || !customerInfo.phone) return alert("請填寫訂購人姓名與電話！");
         if (!isValidPhone(customerInfo.phone)) return alert("手機格式不正確，請輸入 09 開頭共 10 碼");
         if (!customerInfo.address) return alert("請務必填寫聯絡/收件地址！");
+        setCheckoutSubmitting(true)
+        try {
         let finalUserId = adminOrderingFor ? adminOrderingFor.id : (currentUser ? currentUser.uid : 'guest');
         const orderId = `MZ${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 900 + 100)}`;
         const initialStatus = 'confirming';
@@ -2079,6 +1985,11 @@ try {
              lineLink: contactData.lineLink || ''
            })
            setShowMemberProfile(true);
+        }
+        } catch (checkoutErr) {
+          alert('訂單送出失敗：' + (checkoutErr?.message || '請稍後再試'))
+        } finally {
+          setCheckoutSubmitting(false)
         }
       };
 
@@ -2491,7 +2402,6 @@ try {
           await db.collection('groupSessions').doc(sessionId).set({
             ownerUid: currentUser.uid,
             status: 'active',
-            participantUids: [currentUser.uid],
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
           })
           await flushHostCartToGroupLines(
@@ -3775,19 +3685,38 @@ const uploadTask = await storageRef.put(blob, metadata);
         setIsEditingAbout(false);
       };
 
+      const bumpPrivacyVersion = (ver) => {
+        const s = String(ver || '1.0').trim()
+        const m = s.match(/^(\d+)\.(\d+)$/)
+        if (m) return `${m[1]}.${Number(m[2]) + 1}`
+        const m2 = s.match(/^(\d+)$/)
+        if (m2) return `${m2[1]}.1`
+        return '1.1'
+      }
+
+      const formatPrivacyEffectiveDate = () => {
+        const d = new Date()
+        const y = d.getFullYear()
+        const mo = String(d.getMonth() + 1).padStart(2, '0')
+        const day = String(d.getDate()).padStart(2, '0')
+        return `${y}-${mo}-${day}`
+      }
+
       const savePrivacyPolicy = async (draft) => {
         if (!requireAdminAccess() || !db) return
         setPrivacySaving(true)
         try {
-          await db.collection('settings').doc('privacy').set(
-            {
-              ...draft,
-              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            },
-            { merge: true }
-          )
-          await writeAdminLog('privacy_policy_updated', { version: draft.version || '' })
-          alert('個資政策與同意書已儲存！')
+          const nextVersion = bumpPrivacyVersion(privacySettings?.version || draft.version)
+          const nextEffectiveDate = formatPrivacyEffectiveDate()
+          const payload = {
+            ...draft,
+            version: nextVersion,
+            effectiveDate: nextEffectiveDate,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          }
+          await db.collection('settings').doc('privacy').set(payload, { merge: true })
+          await writeAdminLog('privacy_policy_updated', { version: nextVersion })
+          alert(`個資政策與同意書已儲存！\n版本：v${nextVersion}\n生效日期：${nextEffectiveDate}`)
           setShowAdminPrivacyModal(false)
         } catch (error) {
           alert('儲存失敗：' + error.message)
@@ -3797,20 +3726,19 @@ const uploadTask = await storageRef.put(blob, metadata);
       }
 
       const handleDownloadCustomerConsentPdf = async (customer) => {
-        if (!requireAdminAccess() || !db || !customer?.id) return
+        if (!db || !customer?.id) return
         try {
           const snap = await db
             .collection('users')
             .doc(customer.id)
             .collection('privacyConsents')
             .orderBy('agreedAt', 'desc')
-            .limit(20)
+            .limit(1)
             .get()
-          const consentDoc = snap.docs.find((d) => d.id !== '_latest')
-          if (!consentDoc) {
+          if (snap.empty) {
             return alert('此客戶尚無個資同意紀錄（可能為政策實施前註冊或由管理員代建）')
           }
-          const consent = { id: consentDoc.id, ...consentDoc.data() }
+          const consent = { id: snap.docs[0].id, ...snap.docs[0].data() }
           alert('正在產生 PDF，請稍候…')
           const { downloadConsentPdf } = await import('../utils/generateConsentPdf')
           await downloadConsentPdf(consent, customer.name)
@@ -4303,7 +4231,6 @@ const uploadTask = await storageRef.put(blob, metadata);
           {activeFriendGroupSid &&
             groupSessionDoc &&
             !groupSessionDoc.missing &&
-            groupSessionDoc.id === activeFriendGroupSid &&
             groupSessionDoc.status === 'active' &&
             !(
               friendGroupParticipantName.trim() &&
@@ -4313,7 +4240,7 @@ const uploadTask = await storageRef.put(blob, metadata);
               <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-stone-200">
                 <h3 className="text-lg font-black text-stone-800 mb-2">揪團選購</h3>
                 <p className="text-sm text-stone-600 mb-4">
-                  請填寫真實姓名與手機（與主揪對帳聯絡用）。加入後可與主揪、同場朋友查看選購明細並調整自己的品項；再次從連結進入時請重新填寫。
+                  請填寫真實姓名與手機（與主揪對帳聯絡用）。同一揪團連結內所有人可看到完整選購明細；再次從連結進入時請重新填寫。
                 </p>
                 <label className="block text-xs font-bold text-stone-600 mb-1">姓名</label>
                 <input
@@ -4337,26 +4264,17 @@ const uploadTask = await storageRef.put(blob, metadata);
                 />
                 <button
                   type="button"
-                  onClick={async () => {
+                  onClick={() => {
                     const n = friendNicknameDraft.trim()
                     const digits = normalizeFriendPhoneDigits(friendPhoneDraft)
                     if (!n) return alert('請輸入姓名')
                     if (!/^09\d{8}$/.test(digits)) return alert('請輸入有效的台灣手機號碼（09 開頭共 10 碼）')
-                    if (!activeFriendGroupSid) return alert('揪團連結無效，請向主揪索取新連結')
-                    try {
-                      if (auth && !auth.currentUser) await auth.signInAnonymously()
-                      const uid = auth?.currentUser?.uid
-                      if (!uid) return alert('無法取得連線身分，請重新整理後再試')
-                      await registerGroupParticipant(activeFriendGroupSid, uid)
-                      if (typeof window !== 'undefined') {
-                        sessionStorage.setItem(GROUP_STORAGE_FRIEND_NAME, n)
-                        sessionStorage.setItem(GROUP_STORAGE_FRIEND_PHONE, digits)
-                      }
-                      setFriendGroupParticipantName(n)
-                      setFriendGroupParticipantPhone(digits)
-                    } catch (e) {
-                      alert(`無法加入揪團選購：${e.message || e}`)
+                    if (typeof window !== 'undefined') {
+                      sessionStorage.setItem(GROUP_STORAGE_FRIEND_NAME, n)
+                      sessionStorage.setItem(GROUP_STORAGE_FRIEND_PHONE, digits)
                     }
+                    setFriendGroupParticipantName(n)
+                    setFriendGroupParticipantPhone(digits)
                   }}
                   className="w-full brand-btn-primary font-black py-3 rounded-xl shadow-md transition-colors"
                 >
@@ -4941,7 +4859,7 @@ const uploadTask = await storageRef.put(blob, metadata);
           <main className="flex-1 overflow-y-auto pb-24 px-4">
            {/* --- 首頁客戶端熱銷排行榜 (公用看板版) --- */}
             {(!isAdminMode || adminOrderingFor) && publicTopSellers.items && publicTopSellers.items.length >= 3 && activeCategory === '全部' && (
-              <div className="mt-6 mb-8 bg-brand-marble p-5 rounded-2xl shadow-sm border border-stone-100 relative overflow-hidden">
+              <div className="mt-6 mb-8 bg-brand-marble p-5 rounded-2xl shadow-lg border border-stone-200 relative overflow-hidden ring-1 ring-stone-200/80">
                 <div className="absolute top-0 left-0 w-full h-1 brand-bar-top-gray"></div>
                 <h2 className="text-lg font-black mb-6 text-stone-800 flex items-center gap-2 justify-center">
                   <TrendingUp size={20} className="brand-accent"/> {publicTopSellers.label}人氣熱銷 Top 5
@@ -4956,7 +4874,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                         <div className="absolute -bottom-1 -right-1 bg-slate-400 text-white text-[11px] font-black w-7 h-7 rounded-full flex items-center justify-center border-2 border-white shadow-sm">2</div>
                      </div>
                      <span className="text-xs md:text-sm font-bold text-stone-700 w-full text-center px-1 group-hover:text-[#7D6B52] transition-colors leading-snug break-words">{publicTopSellers.items[1].name}</span>
-                     <div className="w-full bg-gradient-to-b from-slate-100 to-white h-20 md:h-24 rounded-t-2xl mt-3 flex items-start justify-center pt-3 border-t-4 border-slate-300 shadow-[0_-2px_10px_rgba(0,0,0,0.02)] group-hover:bg-slate-50 transition-colors">
+                     <div className="w-full bg-gradient-to-b from-slate-100 to-white h-20 md:h-24 rounded-t-2xl mt-3 flex items-start justify-center pt-3 border-t-4 border-slate-300 shadow-[0_-4px_16px_rgba(0,0,0,0.12)] group-hover:bg-slate-50 transition-colors">
                         {typeof publicTopSellers.items[1].percentage === 'number' ? (
                           <span className="text-slate-500 font-black text-sm md:text-base">{publicTopSellers.items[1].percentage}%</span>
                         ) : (
@@ -4972,7 +4890,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                         <div className="absolute -bottom-1 -right-1 bg-amber-500 text-white text-sm font-black w-8 h-8 rounded-full flex items-center justify-center border-2 border-white shadow-sm">1</div>
                      </div>
                      <span className="text-sm md:text-base font-black text-stone-800 w-full text-center px-1 group-hover:text-[#7D6B52] transition-colors leading-snug break-words">{publicTopSellers.items[0].name}</span>
-                     <div className="w-full bg-gradient-to-b from-amber-50 to-white h-28 md:h-36 rounded-t-2xl mt-3 flex items-start justify-center pt-3 border-t-4 border-amber-400 shadow-[0_-4px_15px_rgba(251,191,36,0.2)] group-hover:bg-amber-100/50 transition-colors">
+                     <div className="w-full bg-gradient-to-b from-amber-50 to-white h-28 md:h-36 rounded-t-2xl mt-3 flex items-start justify-center pt-3 border-t-4 border-amber-400 shadow-[0_-6px_20px_rgba(251,191,36,0.35)] group-hover:bg-amber-100/50 transition-colors">
                         {typeof publicTopSellers.items[0].percentage === 'number' ? (
                           <span className="text-amber-600 font-black text-xl md:text-2xl">{publicTopSellers.items[0].percentage}%</span>
                         ) : (
@@ -4988,7 +4906,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                         <div className="absolute -bottom-1 -right-1 bg-orange-400 text-white text-[11px] font-black w-7 h-7 rounded-full flex items-center justify-center border-2 border-white shadow-sm">3</div>
                      </div>
                      <span className="text-xs md:text-sm font-bold text-stone-700 w-full text-center px-1 group-hover:text-[#7D6B52] transition-colors leading-snug break-words">{publicTopSellers.items[2].name}</span>
-                     <div className="w-full bg-gradient-to-b from-orange-50 to-white h-16 md:h-20 rounded-t-2xl mt-3 flex items-start justify-center pt-3 border-t-4 border-orange-300 shadow-[0_-2px_10px_rgba(0,0,0,0.02)] group-hover:bg-orange-50 transition-colors">
+                     <div className="w-full bg-gradient-to-b from-orange-50 to-white h-16 md:h-20 rounded-t-2xl mt-3 flex items-start justify-center pt-3 border-t-4 border-orange-300 shadow-[0_-4px_16px_rgba(0,0,0,0.12)] group-hover:bg-orange-50 transition-colors">
                         {typeof publicTopSellers.items[2].percentage === 'number' ? (
                           <span className="text-orange-600 font-black text-sm md:text-base">{publicTopSellers.items[2].percentage}%</span>
                         ) : (
@@ -5002,7 +4920,7 @@ const uploadTask = await storageRef.put(blob, metadata);
                 {publicTopSellers.items.length > 3 && (
                   <div className="space-y-2 pt-4 border-t border-stone-100">
                      {publicTopSellers.items.slice(3, 5).map((item, index) => (
-                       <div key={item.id || `${item.name}-${index}`} onClick={() => { rememberHomeScroll(); navigate(`/product/${item.id}`) }} className="flex items-center gap-3 bg-white p-2.5 rounded-xl border border-stone-200 shadow-md hover:shadow-lg hover:bg-[#F5F0E8] cursor-pointer transition-all duration-300 group">
+                       <div key={item.id || `${item.name}-${index}`} onClick={() => { rememberHomeScroll(); navigate(`/product/${item.id}`) }} className="flex items-center gap-3 bg-white p-2.5 rounded-xl border border-stone-200 shadow-lg hover:shadow-xl hover:bg-[#F5F0E8] cursor-pointer transition-all duration-300 group">
                            <span className="text-stone-700 text-base font-black w-5 text-center group-hover:text-[#7D6B52] transition-colors">{index + 4}</span>
                            <img src={item.thumbUrl || item.image} loading="eager" decoding="async" fetchPriority="high" className="w-10 h-10 object-cover rounded-lg shadow-sm transition-transform duration-300 group-hover:scale-105" />
                            <span className="flex-1 text-sm font-bold text-stone-700 truncate group-hover:text-[#6B5A45] transition-colors">{item.name}</span>
@@ -5073,12 +4991,18 @@ const uploadTask = await storageRef.put(blob, metadata);
                   >
                     分享商店
                   </button>
-                  <Link
-                    to="/member"
-                    className="hover:text-[#6B5A45] underline-offset-2 hover:underline"
-                  >
-                    會員中心
-                  </Link>
+                  {currentUser && !isAdminMode ? (
+                    <Link
+                      to="/member"
+                      className="hover:text-[#6B5A45] underline-offset-2 hover:underline"
+                    >
+                      會員中心
+                    </Link>
+                  ) : (
+                    <span className="text-stone-400 cursor-default" aria-disabled="true">
+                      會員中心
+                    </span>
+                  )}
                 </nav>
                 <p className="text-center text-[11px] text-stone-400 mt-5 px-2">
                   © {new Date().getFullYear()} 木子家 MUZI MAISON. All rights reserved.
@@ -5219,14 +5143,11 @@ const uploadTask = await storageRef.put(blob, metadata);
             </div>
           )}
 
-          {/* 購物車懸浮按鈕（揪團朋友開始選購後即顯示；lines 訂閱見 friendLinesListenReady） */}
-          {((groupBuyFriendMode ? (cartData.friendMyTotalQty || 0) : cartData.totalQty) > 0 ||
-            groupBuyFriendMode) &&
-            (!isAdminMode || adminOrderingFor) &&
-            !editingProduct && (
+          {/* 購物車懸浮按鈕 */}
+          {cartData.totalQty > 0 && (!isAdminMode || adminOrderingFor) && !editingProduct && (
             <div className="fixed bottom-0 left-0 right-0 max-w-md md:max-w-4xl lg:max-w-6xl mx-auto p-4 bg-gradient-to-t from-white via-white to-transparent pointer-events-none z-[34]">
               <Link to="/cart" className="w-full bg-stone-800 text-white rounded-2xl p-4 flex items-center justify-between shadow-xl pointer-events-auto active:scale-95 transition-transform">
-                <div className="flex items-center gap-3"><div className="relative"><ShoppingCart size={24} />{(groupBuyFriendMode ? (cartData.friendMyTotalQty || 0) : cartData.totalQty) > 0 ? <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">{groupBuyFriendMode ? cartData.friendMyTotalQty : cartData.totalQty}</span> : null}</div><span className="font-medium">{groupBuyFriendMode ? '查看揪團選購' : '查看購物車'}</span></div>
+                <div className="flex items-center gap-3"><div className="relative"><ShoppingCart size={24} /><span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">{cartData.totalQty}</span></div><span className="font-medium">{groupBuyFriendMode ? '查看揪團選購' : '查看購物車'}</span></div>
                 <div className="text-lg font-bold">${cartData.currentTotal}</div>
               </Link>
             </div>
@@ -5261,6 +5182,7 @@ const uploadTask = await storageRef.put(blob, metadata);
               openCheckoutEntryChoice()
             }}
             handleCheckout={handleCheckout}
+            checkoutSubmitting={checkoutSubmitting}
             groupBuyFriendMode={groupBuyFriendMode}
             getItemQty={getDisplayQtyForProduct}
           />
@@ -6115,10 +6037,10 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
           )}
 
           {showLoginModal && (
-            <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4">
-              <div className={`bg-brand-marble p-6 md:p-8 rounded-3xl shadow-2xl w-full animate-in zoom-in-95 duration-200 relative border border-stone-100 ${isRegistering && loginMode === 'customer' ? 'max-w-lg max-h-[92vh] overflow-y-auto' : 'max-w-md'}`}>
-                <button type="button" onClick={closeLoginModal} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full"><X size={20} /></button>
-                <h3 className="text-xl font-bold text-stone-800 mb-6 flex items-center gap-2 justify-center">
+            <div className={`fixed inset-0 z-50 flex justify-center bg-black/50 backdrop-blur-sm ${isRegistering && loginMode === 'customer' && !forgotPasswordPanelOpen ? 'items-end sm:items-center p-0 sm:p-4' : 'items-center px-4'}`}>
+              <div className={`bg-brand-marble shadow-2xl w-full animate-in zoom-in-95 duration-200 relative border border-stone-100 ${isRegistering && loginMode === 'customer' && !forgotPasswordPanelOpen ? 'max-w-lg max-h-[92dvh] sm:max-h-[92vh] flex flex-col overflow-hidden rounded-t-3xl sm:rounded-3xl' : 'max-w-md p-6 md:p-8 rounded-3xl'}`}>
+                <button type="button" onClick={closeLoginModal} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full z-10"><X size={20} /></button>
+                <h3 className={`text-xl font-bold text-stone-800 flex items-center gap-2 justify-center shrink-0 ${isRegistering && loginMode === 'customer' && !forgotPasswordPanelOpen ? 'px-6 pt-6 pb-4' : 'mb-6'}`}>
                   {forgotPasswordPanelOpen && !isRegistering ? (
                     loginMode === 'admin' ? (
                       <Lock size={24} className="text-rose-600" />
@@ -6198,6 +6120,7 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
                   </div>
                 ) : (
                   <>
+                <div className={isRegistering && loginMode === 'customer' ? 'flex-1 overflow-y-auto px-6 min-h-0' : ''}>
                 {isRegistering && loginMode === 'customer' && (
                   <div className="grid grid-cols-2 gap-3 mb-3">
                     <input type="text" placeholder="真實姓名 (必填)" value={customerInfo.name} onChange={e => setCustomerInfo({...customerInfo, name: e.target.value})} className="col-span-2 w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 outline-none auth-input-focus text-sm"/>
@@ -6246,8 +6169,9 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
                     setAgreed={setPrivacyAgreed}
                   />
                 )}
+                </div>
 
-                <div className="flex flex-col gap-3">
+                <div className={`flex flex-col gap-3 ${isRegistering && loginMode === 'customer' ? 'shrink-0 px-6 pb-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] bg-brand-marble border-t border-stone-100' : ''}`}>
                   <button
                     type="button"
                     onClick={handleAuthSubmit}
@@ -6257,8 +6181,36 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
                     {isRegistering ? '快速結帳（建立會員帳號）' : '登入'}
                   </button>
                   <button type="button" onClick={closeLoginModal} className="w-full bg-stone-100 text-stone-600 font-bold py-3 rounded-xl active:scale-95 transition-transform">取消</button>
+                  {isRegistering && loginMode === 'customer' && (
+                    <div className="pt-3 border-t border-stone-100 flex justify-between items-center text-xs text-stone-500">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForgotPasswordPanelOpen(false)
+                          setPasswordResetEmailInput('')
+                          setIsRegistering(false)
+                          resetPrivacyConsentChecks()
+                        }}
+                        className="auth-accent-text hover:underline font-bold"
+                      >
+                        已有帳號？返回登入
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForgotPasswordPanelOpen(false)
+                          setPasswordResetEmailInput('')
+                          setLoginMode('admin')
+                        }}
+                        className="hover:text-rose-600"
+                      >
+                        管理員通道
+                      </button>
+                    </div>
+                  )}
                 </div>
 
+                {!(isRegistering && loginMode === 'customer') && (
                 <div className="mt-6 pt-4 border-t border-stone-100 flex justify-between items-center text-xs text-stone-500">
                   {loginMode === 'customer' ? (
                     <>
@@ -6272,7 +6224,7 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
                         }}
                         className="auth-accent-text hover:underline font-bold"
                       >
-                        {isRegistering ? '已有帳號？返回登入' : GUEST_CHECKOUT_LABEL}
+                        {GUEST_CHECKOUT_LABEL}
                       </button>
                       <button
                         onClick={() => {
@@ -6298,6 +6250,7 @@ if (isThisMonth && ['confirmed', 'shipping', 'shipped', 'completed'].includes(or
                     </button>
                   )}
                 </div>
+                )}
                   </>
                 )}
               </div>
