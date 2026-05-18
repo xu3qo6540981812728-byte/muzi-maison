@@ -32,6 +32,7 @@ export default function CartDrawer({
   setOrderNote,
   onRequireLogin,
   handleCheckout,
+  checkoutSubmitting = false,
   products,
   topSellers,
   groupBuyFriendMode = false,
@@ -496,15 +497,19 @@ export default function CartDrawer({
               <button
                 type="button"
                 onClick={handleCheckout}
-                disabled={!canSubmitOrder}
+                disabled={!canSubmitOrder || checkoutSubmitting}
                 className={`w-full font-bold rounded-2xl p-4 flex items-center justify-center gap-2 shadow-lg transition-transform ${
-                  canSubmitOrder
+                  canSubmitOrder && !checkoutSubmitting
                     ? 'bg-[#06C755] text-white active:scale-95'
                     : 'bg-stone-300 text-stone-500 cursor-not-allowed'
                 }`}
               >
                 <MessageCircle size={20} />
-                {adminOrderingFor ? '完成代建訂單' : '送出訂單並前往確認'}
+                {checkoutSubmitting
+                  ? '送出中…'
+                  : adminOrderingFor
+                    ? '完成代建訂單'
+                    : '送出訂單並前往確認'}
               </button>
               <p className="text-center text-[10px] text-stone-400 mt-3 font-medium">
                 ※ 為保持良好賞味，商品皆為接單製作，接單後5~7天出貨，敬請見諒

@@ -1,3 +1,15 @@
+/** 揪團已結束（主揪結帳或取消） */
+export const GROUP_SESSION_CLOSED_STATUSES = ['checked_out', 'cancelled']
+
+export function isGroupSessionOpen(status) {
+  if (status == null || status === '') return true
+  return status === 'active'
+}
+
+export function isGroupSessionClosed(status) {
+  return GROUP_SESSION_CLOSED_STATUSES.includes(status)
+}
+
 /** sessionStorage keys（揪團） */
 export const GROUP_STORAGE_HOST_SID = 'muzi_group_host_sid'
 export const GROUP_STORAGE_FRIEND_SID = 'muzi_group_friend_sid'

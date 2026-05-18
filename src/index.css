@@ -6,6 +6,27 @@ html {
   overflow-y: scroll;
 }
 
+/* 全站捲動條：深灰 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #525252 #e7e5e4;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: #525252;
+  border-radius: 9999px;
+  border: 2px solid #e7e5e4;
+}
+
+*::-webkit-scrollbar-track {
+  background-color: #e7e5e4;
+}
+
 /* 桌機：菱格紋整屏鋪滿、固定不捲動（無平鋪接縫） */
 body.brand-page-bg {
   background-color: #f3f0ea;

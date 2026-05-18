@@ -11,6 +11,7 @@ import {
   UsersIcon,
   X
 } from '../Icons'
+import CustomerTable from './CustomerTable'
 
 function formatConsentAt(ts) {
   if (!ts) return null
@@ -35,9 +36,16 @@ export default function AdminCustomersModal({
   customerSearchName,
   setCustomerSearchName,
   handleAddCustomerBtn,
-  filteredUsers,
+  pagedCustomers,
+  filteredUsersCount,
   userLimit,
   setUserLimit,
+  currentPage,
+  totalPages,
+  onPrevPage,
+  onNextPage,
+  canGoPrev,
+  canGoNext,
   startAdminOrder,
   allUsers,
   handleDeleteCustomer,
@@ -55,8 +63,8 @@ export default function AdminCustomersModal({
   onDownloadPrivacyConsentPdf
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-4 md:px-10 py-6">
-      <div className="bg-brand-marble p-6 rounded-3xl shadow-2xl w-full max-w-6xl h-full flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
+    <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm px-2 sm:px-4 md:px-5 py-4 md:py-6">
+      <div className="bg-brand-marble p-4 sm:p-6 rounded-3xl shadow-2xl w-full max-w-[min(96vw,1920px)] h-full max-h-[calc(100vh-2rem)] flex flex-col animate-in zoom-in-95 duration-200 relative border border-stone-100">
         <button onClick={onClose} className="absolute top-4 right-4 text-stone-400 hover:bg-stone-100 p-1 rounded-full">
           <X size={24} />
         </button>
@@ -98,46 +106,49 @@ export default function AdminCustomersModal({
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto min-h-0">
           {!selectedCustomer ? (
-            filteredUsers.length === 0 ? (
+            filteredUsersCount === 0 ? (
               <p className="text-center text-stone-400 mt-10">找不到客戶資料</p>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {filteredUsers.map((user) => (
-                  <div
-                    key={user.id}
-                    onClick={() => setSelectedCustomer({ ...user })}
-                    className={`bg-white p-5 rounded-2xl border shadow-sm cursor-pointer hover:shadow-md transition-all flex flex-col items-center text-center relative overflow-hidden ${
-                      user.role === 'deleted' ? 'border-rose-200 opacity-80' : 'border-stone-200 hover:border-blue-400'
-                    }`}
+              <>
+                <CustomerTable customers={pagedCustomers} onSelectCustomer={setSelectedCustomer} />
+                <div className="flex flex-wrap items-center justify-center gap-3 mt-6 mb-4">
+                  <button
+                    type="button"
+                    onClick={onPrevPage}
+                    disabled={!canGoPrev}
+                    className="bg-stone-200 text-stone-700 px-5 py-2 rounded-full font-bold text-sm hover:bg-stone-300 transition-colors shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-3 mt-2 ${user.role === 'deleted' ? 'bg-rose-100 text-rose-600' : 'bg-blue-100 text-blue-600'}`}>
-                      <UserIcon size={32} />
-                    </div>
-                    <h3 className="font-black text-stone-800 text-lg">
-                      {user.name} <span className="text-sm font-normal text-stone-500">({user.gender || '-'})</span>
-                    </h3>
-                    {user.role === 'deleted' && <div className="bg-rose-100 text-rose-600 text-[10px] font-bold px-2 py-0.5 rounded-md mt-1">已停用</div>}
-                    <p className="text-sm text-stone-500 font-bold mt-1">{user.phone}</p>
-                    <p
-                      className="text-[11px] text-stone-400 font-mono mt-1 w-full px-1 truncate"
-                      title={user.email || ''}
+                    上一頁
+                  </button>
+                  <span className="text-sm font-bold text-stone-600 min-w-[160px] text-center">
+                    第 {currentPage} 頁 / {totalPages}
+                    <span className="block text-[10px] text-stone-400 font-bold mt-0.5">
+                      共 {filteredUsersCount} 位客戶
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={onNextPage}
+                    disabled={!canGoNext}
+                    className="bg-stone-800 text-white px-5 py-2 rounded-full font-bold text-sm hover:bg-stone-700 transition-colors shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    下一頁
+                  </button>
+                </div>
+                {filteredUsersCount >= userLimit && currentPage === totalPages && (
+                  <div className="flex justify-center mb-6">
+                    <button
+                      type="button"
+                      onClick={() => setUserLimit((prev) => prev + 50)}
+                      className="bg-stone-200 text-stone-600 px-6 py-2 rounded-full font-bold text-sm hover:bg-stone-300 transition-colors"
                     >
-                      {user.email ? `註冊 ${user.email}` : '（無 Email 紀錄）'}
-                    </p>
-                    <span className="mt-3 text-[10px] bg-stone-100 text-stone-500 px-3 py-1 rounded-full font-bold">點擊查看詳細資料與訂單</span>
-                  </div>
-                ))}
-
-                {filteredUsers.length >= userLimit && (
-                  <div className="col-span-full flex justify-center mt-6 mb-8">
-                    <button onClick={() => setUserLimit((prev) => prev + 50)} className="bg-stone-200 text-stone-600 px-6 py-2 rounded-full font-bold text-sm hover:bg-stone-300 transition-colors">
-                      載入更多客戶...
+                      從資料庫載入更多客戶…
                     </button>
                   </div>
                 )}
-              </div>
+              </>
             )
           ) : (
             <div className="flex flex-col md:flex-row gap-6 h-full">
@@ -166,14 +177,14 @@ export default function AdminCustomersModal({
                   {selectedCustomer.role !== 'deleted' && !isEditingAdminCustomer && (
                     <>
                       <button onClick={() => startAdminOrder(selectedCustomer)} className="w-full mt-3 mb-2 bg-amber-500 text-white font-bold py-2.5 rounded-md shadow-sm hover:bg-amber-600 transition-colors flex justify-center items-center gap-2">
-                        <ShoppingCart size={18} /> 幫客戶代建單
+                        <ShoppingCart size={18} /> 代客下單
                       </button>
                       <button
                         type="button"
                         onClick={() => onDownloadPrivacyConsentPdf?.(selectedCustomer)}
                         className="w-full mb-2 bg-teal-600 text-white font-bold py-2.5 rounded-md shadow-sm hover:bg-teal-700 transition-colors flex justify-center items-center gap-2"
                       >
-                        <DownloadIcon size={18} /> 下載個資同意書 PDF
+                        <DownloadIcon size={18} /> 下載個資同意 PDF
                       </button>
                     </>
                   )}
@@ -181,43 +192,43 @@ export default function AdminCustomersModal({
                   {isEditingAdminCustomer ? (
                     <div className="space-y-3 text-sm bg-stone-50 p-4 rounded-xl border border-stone-200 mt-4">
                       <div className="rounded-md px-2 py-2 bg-white border border-stone-200 border-dashed">
-                        <span className="text-[10px] font-bold text-stone-400 block mb-0.5">註冊 Email（登入帳號，僅供檢視）</span>
-                        <span className="font-mono text-xs text-stone-700 break-all">{selectedCustomer.email || '（無紀錄，可能為舊資料）'}</span>
+                        <span className="text-[10px] font-bold text-stone-400 block mb-0.5">會員 Email（僅供顯示，無法修改）</span>
+                        <span className="font-mono text-xs text-stone-700 break-all">{selectedCustomer.email || '（尚未綁定 Email）'}</span>
                       </div>
                       <input type="text" placeholder="姓名" value={selectedCustomer.name} onChange={(e) => setSelectedCustomer({ ...selectedCustomer, name: e.target.value })} className="w-full bg-white border border-stone-200 rounded-md px-2 py-1.5 outline-none focus:border-blue-400" />
                       <div className="flex gap-4">
-                        <label className="flex items-center gap-1"><input type="radio" name="adminGender" value="男" checked={selectedCustomer.gender === '男'} onChange={(e) => setSelectedCustomer({ ...selectedCustomer, gender: e.target.value })} />男</label>
-                        <label className="flex items-center gap-1"><input type="radio" name="adminGender" value="女" checked={selectedCustomer.gender === '女'} onChange={(e) => setSelectedCustomer({ ...selectedCustomer, gender: e.target.value })} />女</label>
+                        <label className="flex items-center gap-1"><input type="radio" name="adminGender" value="?" checked={selectedCustomer.gender === '?'} onChange={(e) => setSelectedCustomer({ ...selectedCustomer, gender: e.target.value })} />?</label>
+                        <label className="flex items-center gap-1"><input type="radio" name="adminGender" value="?" checked={selectedCustomer.gender === '?'} onChange={(e) => setSelectedCustomer({ ...selectedCustomer, gender: e.target.value })} />?</label>
                       </div>
-                      <input type="tel" placeholder="聯絡電話" value={selectedCustomer.phone} onChange={(e) => setSelectedCustomer({ ...selectedCustomer, phone: e.target.value })} className="w-full bg-white border border-stone-200 rounded-md px-2 py-1.5 outline-none focus:border-blue-400" />
+                      <input type="tel" placeholder="手機號碼" value={selectedCustomer.phone} onChange={(e) => setSelectedCustomer({ ...selectedCustomer, phone: e.target.value })} className="w-full bg-white border border-stone-200 rounded-md px-2 py-1.5 outline-none focus:border-blue-400" />
                       <input type="text" placeholder="Line ID" value={selectedCustomer.lineId} onChange={(e) => setSelectedCustomer({ ...selectedCustomer, lineId: e.target.value })} className="w-full bg-white border border-stone-200 rounded-md px-2 py-1.5 outline-none focus:border-blue-400" />
                       <textarea placeholder="聯絡地址" value={selectedCustomer.address} onChange={(e) => setSelectedCustomer({ ...selectedCustomer, address: e.target.value })} rows="2" className="w-full bg-white border border-stone-200 rounded-md px-2 py-1.5 outline-none focus:border-blue-400"></textarea>
 
                       <div className="flex gap-2">
-                        {!isNewCustomer && <button onClick={handleDeleteCustomer} className="bg-red-100 text-red-600 font-bold px-3 py-2 rounded-md hover:bg-red-200 transition-colors" title="刪除客戶"><Trash2 size={18} /></button>}
-                        <button onClick={handleUpdateCustomerByAdmin} className="flex-1 bg-blue-600 text-white font-bold py-2 rounded-md shadow-sm hover:bg-blue-700 transition-colors">儲存修改</button>
+                        {!isNewCustomer && <button onClick={handleDeleteCustomer} className="bg-red-100 text-red-600 font-bold px-3 py-2 rounded-md hover:bg-red-200 transition-colors" title="停用帳號"><Trash2 size={18} /></button>}
+                        <button onClick={handleUpdateCustomerByAdmin} className="flex-1 bg-blue-600 text-white font-bold py-2 rounded-md shadow-sm hover:bg-blue-700 transition-colors">儲存變更</button>
                       </div>
                     </div>
                   ) : (
                     <div className="space-y-4 text-sm text-stone-600 bg-stone-50 p-4 rounded-xl mt-4">
                       <div>
-                        <span className="text-xs font-bold text-stone-400 block mb-1">註冊 Email</span>
-                        <span className="font-mono text-xs font-bold text-stone-800 break-all">{selectedCustomer.email || '未提供'}</span>
+                        <span className="text-xs font-bold text-stone-400 block mb-1">會員 Email</span>
+                        <span className="font-mono text-xs font-bold text-stone-800 break-all">{selectedCustomer.email || '（無）'}</span>
                       </div>
                       <div><span className="text-xs font-bold text-stone-400 block mb-1">性別</span><span className="font-bold">{selectedCustomer.gender || '-'}</span></div>
-                      <div><span className="text-xs font-bold text-stone-400 block mb-1">聯絡電話</span><span className="font-bold">{selectedCustomer.phone}</span></div>
-                      <div><span className="text-xs font-bold text-stone-400 block mb-1">Line ID</span><span className="font-bold text-[#06C755]">{selectedCustomer.lineId || '未提供'}</span></div>
-                      <div><span className="text-xs font-bold text-stone-400 block mb-1">預設地址</span><span className="font-bold">{selectedCustomer.address || '未提供'}</span></div>
+                      <div><span className="text-xs font-bold text-stone-400 block mb-1">手機號碼</span><span className="font-bold">{selectedCustomer.phone}</span></div>
+                      <div><span className="text-xs font-bold text-stone-400 block mb-1">Line ID</span><span className="font-bold text-[#06C755]">{selectedCustomer.lineId || '（無）'}</span></div>
+                      <div><span className="text-xs font-bold text-stone-400 block mb-1">聯絡地址</span><span className="font-bold">{selectedCustomer.address || '（無）'}</span></div>
                       <div className="pt-3 mt-1 border-t border-stone-200">
                         <span className="text-xs font-bold text-stone-400 block mb-1">個資同意紀錄</span>
                         {selectedCustomer.electronicPrivacyConsent === 'none' ? (
-                          <p className="text-xs text-amber-800 font-bold">無電子同意（管理員代建）</p>
+                          <p className="text-xs text-amber-800 font-bold">未提供電子個資同意</p>
                         ) : selectedCustomer.privacyConsentAt || selectedCustomer.privacyConsentVersion ? (
                           <div className="text-xs text-stone-600 space-y-1">
                             <p>
                               <span className="font-bold text-teal-700">已同意</span>
                               {selectedCustomer.privacyConsentVersion
-                                ? ` · 版本 v${selectedCustomer.privacyConsentVersion}`
+                                ? `· 版本 v${selectedCustomer.privacyConsentVersion}`
                                 : ''}
                             </p>
                             {formatConsentAt(selectedCustomer.privacyConsentAt) && (
@@ -225,15 +236,15 @@ export default function AdminCustomersModal({
                             )}
                           </div>
                         ) : (
-                          <p className="text-xs text-stone-400">尚無紀錄（可能為政策實施前註冊）</p>
+                          <p className="text-xs text-stone-400">尚無同意紀錄（可能為舊客戶或線下同意）</p>
                         )}
                       </div>
 
                       {selectedCustomer.role === 'deleted' && (
                         <div className="mt-4 pt-4 border-t border-stone-200">
-                          <p className="text-xs text-rose-600 font-bold mb-3 text-center bg-rose-50 py-2 rounded-lg">⚠️ 此帳號目前為停用狀態</p>
+                          <p className="text-xs text-rose-600 font-bold mb-3 text-center bg-rose-50 py-2 rounded-lg">此客戶已停用</p>
                           <button onClick={handleRestoreCustomer} className="w-full bg-emerald-500 text-white font-bold py-2 rounded-md shadow-sm hover:bg-emerald-600 transition-colors flex justify-center items-center gap-1">
-                            恢復帳號權限
+                            還原客戶資料
                           </button>
                         </div>
                       )}
@@ -249,7 +260,7 @@ export default function AdminCustomersModal({
                     {isMergeMode && mergeSelection.length > 0 && <button onClick={handleConfirmMerge} className="bg-purple-600 text-white text-xs font-bold px-3 py-1.5 rounded shadow-md hover:bg-purple-700 transition-colors flex items-center gap-1"><LinkIcon size={14} /> 確認合併 ({mergeSelection.length})</button>}
                     {selectedCustomer.role !== 'deleted' && (
                       <button onClick={() => { setIsMergeMode(!isMergeMode); setMergeSelection([]) }} className={`text-xs font-bold px-3 py-1.5 rounded transition-colors flex items-center gap-1 ${isMergeMode ? 'bg-stone-200 text-stone-600' : 'bg-purple-100 text-purple-700 hover:bg-purple-200'}`}>
-                        <LinkIcon size={14} /> {isMergeMode ? '取消合併模式' : '合併未處理訂單'}
+                        <LinkIcon size={14} /> {isMergeMode ? '取消合併' : '合併待確認訂單'}
                       </button>
                     )}
                   </div>
@@ -257,7 +268,7 @@ export default function AdminCustomersModal({
 
                 <div className="space-y-4 pb-10">
                   {[...allOrders, ...oldOrders].filter((o) => o.userId === selectedCustomer.id).length === 0 ? (
-                    <p className="text-center text-stone-400 py-10 bg-white rounded-2xl border border-stone-200 border-dashed">尚無訂單紀錄</p>
+                    <p className="text-center text-stone-400 py-10 bg-white rounded-2xl border border-stone-200 border-dashed">尚未有訂單紀錄</p>
                   ) : (
                     [...allOrders, ...oldOrders].filter((o) => o.userId === selectedCustomer.id).map((order) => {
                       const canMerge = isMergeMode && (order.status === 'pending' || order.status === 'confirming')
@@ -270,7 +281,7 @@ export default function AdminCustomersModal({
                               <div className="flex items-center gap-2">
                                 <span className="font-black text-blue-600 hover:text-blue-800 text-lg tracking-wide cursor-pointer underline" onClick={(e) => { e.stopPropagation(); setOrderSearchId(order.id); setOrderStatusFilter('all'); setShowAdminOrders(true); navigate('/admin/orders') }}>{order.id}</span>
                                 <span className={`px-2 py-0.5 rounded text-xs font-bold ${statusMap[order.status]?.color || 'bg-stone-100'}`}>{statusMap[order.status]?.label}</span>
-                                {order.createdByAdmin && <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded inline-block ml-1">代建</span>}
+                                {order.createdByAdmin && <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded inline-block ml-1">代下</span>}
                               </div>
                               <p className="text-xs text-stone-400 mt-1">{order.createdAt?.toDate().toLocaleString()}</p>
                             </div>
